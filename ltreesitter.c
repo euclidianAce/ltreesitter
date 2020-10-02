@@ -93,27 +93,23 @@ int lua_make_query(lua_State *L) {
 		&err_type
 	);
 	if (!q) {
-		lua_pushnil(L);
+		char *slice = malloc(sizeof(char) * 16);
+		strncpy(slice, &query_src[
+			err_offset >= 10 ? err_offset - 10 : err_offset
+		], 15);
+		slice[15] = 0;
+
 		switch (err_type) {
-		// TODO: look into these errors and make more helpful messages
-		case TSQueryErrorSyntax:
-			lua_pushfstring(L, "Syntax error at offset %u", err_offset);
-			break;
-		case TSQueryErrorNodeType:
-			lua_pushfstring(L, "Node type error at offset %u", err_offset);
-			break;
-		case TSQueryErrorField:
-			lua_pushfstring(L, "Field error at offset %u", err_offset);
-			break;
-		case TSQueryErrorCapture:
-			lua_pushfstring(L, "Capture error at offset %u", err_offset);
-			break;
-		case TSQueryErrorStructure:
-			lua_pushfstring(L, "Structure error at offset %u", err_offset);
-			break;
-		default: return luaL_error(L, "unreachable");
+		case TSQueryErrorSyntax:    lua_pushfstring(L, "Query syntax error: around '%s' (at offset %d)",    slice, (int)err_offset); break;
+		case TSQueryErrorNodeType:  lua_pushfstring(L, "Query node type error: around '%s' (at offset %d)", slice, (int)err_offset); break;
+		case TSQueryErrorField:     lua_pushfstring(L, "Query field error: around '%s' (at offset %d)",     slice, (int)err_offset); break;
+		case TSQueryErrorCapture:   lua_pushfstring(L, "Query capture error: around '%s' (at offset %d)",   slice, (int)err_offset); break;
+		case TSQueryErrorStructure: lua_pushfstring(L, "Query structure error: around '%s' (at offset %d)", slice, (int)err_offset); break;
+		default: free(slice); return luaL_error(L, "unreachable, this is a bug");
 		}
-		return 2;
+
+		free(slice);
+		return lua_error(L);
 	}
 
 	struct LuaTSQuery *lq = lua_newuserdata(L, sizeof(struct LuaTSQuery));
@@ -151,6 +147,7 @@ int lua_query_cursor_gc(lua_State *L) {
 	return 0;
 }
 
+// TODO: what is the difference between matches and captures?
 /// @teal Query.match: function(Query, Node): function(): Node...
 int lua_query_match(lua_State *L) {
 	GET_LUA_QUERY_CURSOR(c, lua_upvalueindex(1));

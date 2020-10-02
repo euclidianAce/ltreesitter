@@ -32,28 +32,28 @@ print(tree)
 print()
 print("Tree:")
 print(inspect(tree))
-print("metatable: ", inspect(getmetatable(tree)))
+print("metatable:", inspect(getmetatable(tree)))
 print()
 print("Root node:")
 print(inspect(root))
-print("metatable: ", inspect(getmetatable(root)))
+print("metatable:", inspect(getmetatable(root)))
 print("node type:", root:type())
-print("root: ", root)
+print("root:", root)
 
 print("node child_count:",       root:child_count())
 print("node named_child_count:", root:named_child_count())
 
 -- api is 0 indexed, may have lua index it from one?
-print("node child 1:",        root:child(0))
-print("node named_child 1:",  root:named_child(0))
+print("node first child:",        root:child(0))
+print("node first named_child:",  root:named_child(0))
 
-print("node start point: ",   inspect(root:start_point()))
-print("node end point: ",     inspect(root:end_point()))
+print("node start point:",   inspect(root:start_point()))
+print("node end point:",     inspect(root:end_point()))
 
-print("node start byte: ",    inspect(root:start_byte()))
-print("node end byte: ",      inspect(root:end_byte()))
+print("node start byte:",    inspect(root:start_byte()))
+print("node end byte:",      inspect(root:end_byte()))
 
-print("node next sibling",    inspect(root:next_sibling()))
+print("node next sibling:",    inspect(root:next_sibling()))
 
 -- Some convenient iterators over a node's children
 print("iteration: over ", root:child_count(), "children")
