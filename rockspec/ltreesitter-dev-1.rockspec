@@ -21,5 +21,10 @@ build = {
          incdirs = {"$(TREE_SITTER_INCDIR)"},
          libdirs = {"$(TREE_SITTER_LIBDIR)"},
       },
-   }
+   },
+   install = {
+      lua = {
+         ["ltreesitter"] = "ltreesitter.d.tl",
+      },
+   },
 }
