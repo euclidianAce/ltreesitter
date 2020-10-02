@@ -1,6 +1,7 @@
 
+local r = require
 local ts      = require "ltreesitter"
-local inspect = require "inspect"
+local inspect = r "inspect" as function(any, table): string -- TODO: is this .d.tl really not written yet???
 
 print("Testing expected errors...")
 do
@@ -25,7 +26,7 @@ print("Teal parser metatable: ", inspect(getmetatable(teal_parser)))
 
 local string_to_parse = [[local x: {string:boolean} = { blah = true }]]
 local tree = teal_parser:parse_string(string_to_parse)
-local root = tree:get_root()
+local root = tree:root()
 print(string.format("Parsing string %q", string_to_parse))
 print(tree)
 print()
@@ -39,23 +40,23 @@ print("metatable: ", inspect(getmetatable(root)))
 print("node type:", root:type())
 print("root: ", root)
 
-print("node child_count:",       root:get_child_count())
-print("node named_child_count:", root:get_named_child_count())
+print("node child_count:",       root:child_count())
+print("node named_child_count:", root:named_child_count())
 
 -- api is 0 indexed, may have lua index it from one?
-print("node child 1:",       root:get_child(0))
-print("node named_child 1:", root:get_named_child(0))
+print("node child 1:",        root:child(0))
+print("node named_child 1:",  root:named_child(0))
 
-print("node start point: ", inspect(root:get_start_point()))
-print("node end point: ",   inspect(root:get_end_point()))
+print("node start point: ",   inspect(root:start_point()))
+print("node end point: ",     inspect(root:end_point()))
 
-print("node start byte: ", inspect(root:get_start_byte()))
-print("node end byte: ",   inspect(root:get_end_byte()))
+print("node start byte: ",    inspect(root:start_byte()))
+print("node end byte: ",      inspect(root:end_byte()))
 
-print("node next sibling", inspect(root:get_next_sibling()))
+print("node next sibling",    inspect(root:next_sibling()))
 
 -- Some convenient iterators over a node's children
-print("iteration: over ", root:get_child_count(), "children")
+print("iteration: over ", root:child_count(), "children")
 for child in root:children() do
 	print(child)
 	print("all children:");

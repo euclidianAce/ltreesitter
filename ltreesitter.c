@@ -12,10 +12,10 @@
 
 #include <tree_sitter/api.h>
 
-#define LUA_TSPARSER_METATABLE   "ltreesitter.TSParser"
-#define LUA_TSTREE_METATABLE     "ltreesitter.TSTree"
-#define LUA_TSNODE_METATABLE     "ltreesitter.TSNode"
-#define LUA_TSQUERY_METATABLE    "ltreesitter.TSQuery"
+#define LUA_TSPARSER_METATABLE         "ltreesitter.TSParser"
+#define LUA_TSTREE_METATABLE           "ltreesitter.TSTree"
+#define LUA_TSNODE_METATABLE           "ltreesitter.TSNode"
+#define LUA_TSQUERY_METATABLE          "ltreesitter.TSQuery"
 #define LUA_TSQUERYCURSOR_METATABLE    "ltreesitter.TSQueryCursor"
 
 struct LuaTSParser {
@@ -240,7 +240,7 @@ static const luaL_Reg query_cursor_metamethods[] = {
 };
 /* }}}*/
 /* {{{ Parser Object */
-/// @teal load: function(string, string): Parser
+/// @teal load: function(string, string): Parser, string
 int lua_load_parser(lua_State *L) {
 	const char *lang_name = luaL_checkstring(L, -1);
 	const char *parser_file = luaL_checkstring(L, -2);
@@ -304,7 +304,7 @@ int lua_parser_parse_string(lua_State *L) {
 	return 1;
 }
 
-/// @teal Parser.set_timeout: function(Parser)
+/// @teal Parser.set_timeout: function(Parser, number)
 int lua_parser_set_timeout(lua_State *L) {
 	GET_PARSER(p, 1);
 	const lua_Number n = luaL_checknumber(L, 2);
@@ -336,7 +336,7 @@ static const luaL_Reg parser_metamethods[] = {
 };
 /* }}}*/
 /* {{{ Tree Object */
-/// @teal Tree.get_root: function(Tree): Node
+/// @teal Tree.root: function(Tree): Node
 int lua_tree_root(lua_State *L) {
 	GET_LUA_TREE(t, 1);
 	struct LuaTSNode *const n = lua_newuserdata(L, sizeof(struct LuaTSNode));
@@ -395,7 +395,7 @@ void expect_nested_arg_field(lua_State *L, int idx, const char *parent_name, con
 	}
 }
 
-/* @teal-inline
+/* @teal-inline [[
    record TreeEdit
       start_byte: number
       old_end_byte: number
@@ -404,8 +404,8 @@ void expect_nested_arg_field(lua_State *L, int idx, const char *parent_name, con
       old_point_byte: Point
       new_point_byte: Point
    end
-*/
-/// @teal Tree.edit: function(Tree)
+]]*/
+/// @teal Tree.edit: function(Tree, TreeEdit)
 int lua_tree_edit(lua_State *L) {
 	lua_settop(L, 2);
 	GET_TREE(t, 1);
@@ -464,7 +464,7 @@ int lua_tree_gc(lua_State *L) {
 }
 
 static const luaL_Reg tree_methods[] = {
-	{"get_root", lua_tree_root},
+	{"root", lua_tree_root},
 	{"copy", lua_tree_copy},
 	{"edit", lua_tree_edit},
 	{NULL, NULL}
@@ -483,14 +483,14 @@ int lua_node_type(lua_State *L) {
 	return 1;
 }
 
-/// @teal Node.get_start_byte: function(Node): number
+/// @teal Node.start_byte: function(Node): number
 int lua_node_start_byte(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushnumber(L, ts_node_start_byte(n));
 	return 1;
 }
 
-/// @teal Node.get_end_byte: function(Node): number
+/// @teal Node.end_byte: function(Node): number
 int lua_node_end_byte(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushnumber(L, ts_node_end_byte(n));
@@ -505,14 +505,14 @@ int lua_node_byte_range(lua_State *L) {
 	return 2;
 }
 
-/* @teal-inline
+/* @teal-inline [[
    record Point
       row: number
       column: number
    end
-*/
+]]*/
 
-/// @teal Node.get_start_point: function(Node): Point
+/// @teal Node.start_point: function(Node): Point
 int lua_node_start_point(lua_State *L) {
 	GET_NODE(n, 1);
 	TSPoint p = ts_node_start_point(n);
@@ -527,7 +527,7 @@ int lua_node_start_point(lua_State *L) {
 	return 1;
 }
 
-/// @teal Node.get_end_point: function(Node): Point
+/// @teal Node.end_point: function(Node): Point
 int lua_node_end_point(lua_State *L) {
 	GET_NODE(n, 1);
 	TSPoint p = ts_node_end_point(n);
@@ -562,7 +562,7 @@ int lua_node_is_extra(lua_State *L) {
 	return 1;
 }
 
-/// @teal Node.get_child: function(Node, number): Node
+/// @teal Node.child: function(Node, number): Node
 int lua_node_child(lua_State *L) {
 	GET_LUA_NODE(parent, 1);
 	const uint32_t idx = luaL_checknumber(L, 2);
@@ -579,14 +579,14 @@ int lua_node_child(lua_State *L) {
 	return 1;
 }
 
-/// @teal Node.get_child_count: function(Node): number
+/// @teal Node.child_count: function(Node): number
 int lua_node_child_count(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushnumber(L, ts_node_child_count(n));
 	return 1;
 }
 
-/// @teal Node.get_named_child: function(Node, number): Node
+/// @teal Node.named_child: function(Node, number): Node
 int lua_node_named_child(lua_State *L) {
 	GET_LUA_NODE(parent, 1);
 	const uint32_t idx = luaL_checknumber(L, 2);
@@ -602,7 +602,7 @@ int lua_node_named_child(lua_State *L) {
 	return 1;
 }
 
-/// @teal Node.get_named_child_count: function(Node): number
+/// @teal Node.named_child_count: function(Node): number
 int lua_node_named_child_count(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushnumber(L, ts_node_named_child_count(n));
@@ -661,7 +661,7 @@ int lua_node_named_children(lua_State *L) {
 	return 1;
 }
 
-/// @teal Node.get_next_sibling: function(Node): Node
+/// @teal Node.next_sibling: function(Node): Node
 int lua_node_next_sibling(lua_State *L) {
 	GET_LUA_NODE(n, 1);
 	TSNode sibling = ts_node_next_sibling(n->n);
@@ -670,7 +670,7 @@ int lua_node_next_sibling(lua_State *L) {
 	return 1;
 }
 
-/// @teal Node.get_prev_sibling: function(Node): Node
+/// @teal Node.prev_sibling: function(Node): Node
 int lua_node_prev_sibling(lua_State *L) {
 	GET_LUA_NODE(n, 1);
 	TSNode sibling = ts_node_prev_sibling(n->n);
@@ -679,7 +679,7 @@ int lua_node_prev_sibling(lua_State *L) {
 	return 1;
 }
 
-/// @teal Node.get_next_sibling: function(Node): Node
+/// @teal Node.next_sibling: function(Node): Node
 int lua_node_next_named_sibling(lua_State *L) {
 	GET_LUA_NODE(n, 1);
 	TSNode sibling = ts_node_next_named_sibling(n->n);
@@ -688,7 +688,7 @@ int lua_node_next_named_sibling(lua_State *L) {
 	return 1;
 }
 
-/// @teal Node.get_prev_sibling: function(Node): Node
+/// @teal Node.prev_sibling: function(Node): Node
 int lua_node_prev_named_sibling(lua_State *L) {
 	GET_LUA_NODE(n, 1);
 	TSNode sibling = ts_node_prev_named_sibling(n->n);
@@ -714,7 +714,7 @@ int lua_node_name(lua_State *L) {
 	return 1;
 }
 
-/// @teal Node.get_child_by_field_name: function(Node, string): Node
+/// @teal Node.child_by_field_name: function(Node, string): Node
 int lua_node_child_by_field_name(lua_State *L) {
 	GET_LUA_NODE(n, 1);
 	const char *name = luaL_checkstring(L, 2);
@@ -734,27 +734,26 @@ int lua_node_child_by_field_name(lua_State *L) {
 static const luaL_Reg node_methods[] = {
 	{"type", lua_node_type},
 	{"name", lua_node_name},
-
-	{"get_child", lua_node_child},
-	{"get_child_count", lua_node_child_count},
-
-	{"get_named_child", lua_node_named_child},
-	{"get_named_child_count", lua_node_named_child_count},
-	{"get_child_by_field_name", lua_node_child_by_field_name},
-
-	{"get_start_byte", lua_node_start_byte},
-	{"get_end_byte", lua_node_end_byte},
-
 	{"range", lua_node_byte_range},
 
-	{"get_start_point", lua_node_start_point},
-	{"get_end_point", lua_node_end_point},
+	{"child", lua_node_child},
+	{"child_count", lua_node_child_count},
 
-	{"get_next_sibling", lua_node_next_sibling},
-	{"get_prev_sibling", lua_node_prev_sibling},
+	{"named_child", lua_node_named_child},
+	{"named_child_count", lua_node_named_child_count},
+	{"child_by_field_name", lua_node_child_by_field_name},
 
-	{"get_next_named_sibling", lua_node_next_named_sibling},
-	{"get_prev_named_sibling", lua_node_prev_named_sibling},
+	{"start_byte", lua_node_start_byte},
+	{"end_byte", lua_node_end_byte},
+
+	{"start_point", lua_node_start_point},
+	{"end_point", lua_node_end_point},
+
+	{"next_sibling", lua_node_next_sibling},
+	{"prev_sibling", lua_node_prev_sibling},
+
+	{"next_named_sibling", lua_node_next_named_sibling},
+	{"prev_named_sibling", lua_node_prev_named_sibling},
 
 	{"children", lua_node_children},
 	{"named_children", lua_node_named_children},
