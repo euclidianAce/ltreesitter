@@ -79,7 +79,7 @@ void create_metatable(
 }
 /* }}}*/
 /* {{{ Query Object */
-/// @teal Parser.query: function(string): Query
+/// @teal Parser.query: function(Parser, string): Query
 int lua_make_query(lua_State *L) {
 	GET_LUA_PARSER(p, 1);
 	const char *query_src = luaL_checkstring(L, 2);
