@@ -32,6 +32,8 @@ struct LuaTSNode {
 };
 struct LuaTSInputEdit { TSInputEdit *e; };
 
+#define TREE_SITTER_SYM "tree_sitter_"
+
 /* {{{ Utility */
 #define GET_NODE(name, idx) TSNode name = ((struct LuaTSNode *)luaL_checkudata(L, (idx), LUA_TSNODE_METATABLE))->n
 #define GET_LUA_NODE(name, idx) struct LuaTSNode *const name = luaL_checkudata(L, (idx), LUA_TSNODE_METATABLE)
@@ -67,15 +69,14 @@ int lua_load_parser(lua_State *L) {
 		return 2;
 	}
 	char buf[128];
-	if (snprintf(buf, 128-12, "tree_sitter_%s", lang_name) == 0) {
+	if (snprintf(buf, sizeof(buf) - sizeof(TREE_SITTER_SYM), TREE_SITTER_SYM "%s", lang_name) == 0) {
 		dlclose(handle);
 		lua_pushnil(L);
 		lua_pushstring(L, "Unable to copy language name into buffer");
 		return 2;
 	}
-	TSLanguage *(*tree_sitter_lang)(void);
-	
-	tree_sitter_lang = (TSLanguage *(*)(void)) dlsym(handle, buf);
+	/* tree_sitter_lang = (TSLanguage *(*)(void)) dlsym(handle, buf)*/
+	TSLanguage *(*tree_sitter_lang)(void) = dlsym(handle, buf);
 	if (!tree_sitter_lang) {
 		dlclose(handle);
 		lua_pushnil(L);
