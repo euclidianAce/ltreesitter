@@ -1,5 +1,5 @@
 
-local inspect = require "inspect"
+-- local inspect = require "inspect"
 local ts = require "ltreesitter"
 local p = assert(ts.load("./teal_parser.so", "teal"))
 
