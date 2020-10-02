@@ -79,6 +79,7 @@ void create_metatable(
 }
 /* }}}*/
 /* {{{ Query Object */
+/// @teal Parser.query: Query
 int lua_make_query(lua_State *L) {
 	GET_LUA_PARSER(p, 1);
 	const char *query_src = luaL_checkstring(L, 2);
@@ -150,6 +151,7 @@ int lua_query_cursor_gc(lua_State *L) {
 	return 0;
 }
 
+/// @teal Query.match: function(Query, Node): function(): Node...
 int lua_query_match(lua_State *L) {
 	GET_LUA_QUERY_CURSOR(c, lua_upvalueindex(1));
 	TSQueryMatch m;
@@ -168,6 +170,7 @@ int lua_query_match(lua_State *L) {
 	return 0;
 }
 
+/// @teal Query.capture: function(Query, Node): function(): Node...
 int lua_query_capture(lua_State *L) {
 	GET_LUA_QUERY_CURSOR(c, lua_upvalueindex(1));
 	TSQueryMatch m;
@@ -237,7 +240,7 @@ static const luaL_Reg query_cursor_metamethods[] = {
 };
 /* }}}*/
 /* {{{ Parser Object */
-//@teal function(parser_so_file_name: string, language_name: string): TSParser
+///@teal load: function(string, string): Parser
 int lua_load_parser(lua_State *L) {
 	const char *lang_name = luaL_checkstring(L, -1);
 	const char *parser_file = luaL_checkstring(L, -2);
@@ -284,7 +287,7 @@ int lua_close_parser(lua_State *L) {
 	return 0;
 }
 
-// function(TSParser, string): TSTree
+/// @teal Parser.parse_string: function(Parser, string): Tree
 int lua_parser_parse_string(lua_State *L) {
 	GET_LUA_PARSER(p, 1);
 	const char *str = luaL_checkstring(L, 2);
@@ -331,7 +334,7 @@ static const luaL_Reg parser_metamethods[] = {
 };
 /* }}}*/
 /* {{{ Tree Object */
-// function(TSTree): TSNode
+/// @teal Tree.get_root: function(Tree): Node
 int lua_tree_root(lua_State *L) {
 	GET_LUA_TREE(t, 1);
 	struct LuaTSNode *const n = lua_newuserdata(L, sizeof(struct LuaTSNode));
@@ -459,28 +462,28 @@ static const luaL_Reg tree_metamethods[] = {
 };
 /* }}}*/
 /* {{{ Node Object */
-//@teal function(TSNode): string
+/// @teal Node.type: function(Node): string
 int lua_node_type(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushstring(L, ts_node_type(n));
 	return 1;
 }
 /* int lua_node_symbol(lua_State *L); // TODO: function(TSNode): TSSymbol (u16)*/
-//@teal function(TSNode): u32
+///@teal Node.get_start_byte: function(Node): number
 int lua_node_start_byte(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushnumber(L, ts_node_start_byte(n));
 	return 1;
 }
 
-//@teal function(TSNode): u32
+///@teal Node.get_end_byte: function(Node): number
 int lua_node_end_byte(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushnumber(L, ts_node_end_byte(n));
 	return 1;
 }
 
-//@teal function(TSNode): u32, u32
+///@teal Node.range: function(Node): number, number
 int lua_node_byte_range(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushnumber(L, ts_node_start_byte(n));
@@ -488,7 +491,9 @@ int lua_node_byte_range(lua_State *L) {
 	return 2;
 }
 
-//@teal function(TSNode): { row: u32, column: u32 }
+// TODO: define records in comments?
+// @teal Point = record row: number column: number end
+//@teal Node.get_start_point: function(Node): { row: u32, column: u32 }
 int lua_node_start_point(lua_State *L) {
 	GET_NODE(n, 1);
 	TSPoint p = ts_node_start_point(n);
@@ -502,7 +507,7 @@ int lua_node_start_point(lua_State *L) {
 
 	return 1;
 }
-//@teal function(TSNode): u32*/
+///@teal Node.get_end_point: function(Node): number
 int lua_node_end_point(lua_State *L) {
 	GET_NODE(n, 1);
 	TSPoint p = ts_node_end_point(n);
@@ -516,28 +521,28 @@ int lua_node_end_point(lua_State *L) {
 	return 1;
 }
 
-//@teal function(TSNode): boolean
+///@teal Node.is_named: function(Node): boolean
 int lua_node_is_named(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushboolean(L, ts_node_is_named(n));
 	return 1;
 }
 
-//@teal function(TSNode): boolean
+///@teal Node.is_missing: function(Node): boolean
 int lua_node_is_missing(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushboolean(L, ts_node_is_missing(n));
 	return 1;
 }
 
-//@teal function(TSNode): boolean
+///@teal Node.is_extra: function(Node): boolean
 int lua_node_is_extra(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushboolean(L, ts_node_is_extra(n));
 	return 1;
 }
 
-//@teal function(TSNode, u32): TSNode
+///@teal Node.get_child: function(Node, number): Node
 int lua_node_child(lua_State *L) {
 	GET_LUA_NODE(parent, 1);
 	const uint32_t idx = luaL_checknumber(L, 2);
@@ -554,14 +559,14 @@ int lua_node_child(lua_State *L) {
 	return 1;
 }
 
- //@teal function(TSNode): u32
+///@teal Node.get_child_count: function(Node): number
 int lua_node_child_count(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushnumber(L, ts_node_child_count(n));
 	return 1;
 }
 
-//@teal function(TSNode, u32): TSNode
+///@teal Node.get_named_child: function(Node, number): Node
 int lua_node_named_child(lua_State *L) {
 	GET_LUA_NODE(parent, 1);
 	const uint32_t idx = luaL_checknumber(L, 2);
@@ -577,7 +582,7 @@ int lua_node_named_child(lua_State *L) {
 	return 1;
 }
 
-//@teal function(TSNode): u32
+///@teal Node.get_named_child_count: function(Node): number
 int lua_node_named_child_count(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushnumber(L, ts_node_named_child_count(n));
@@ -620,6 +625,7 @@ int lua_node_named_children_iterator(lua_State *L) {
 	return 1;
 }
 
+/// @teal Node.children: function(Node): function(): Node
 int lua_node_children(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushnumber(L, 0);
@@ -627,6 +633,7 @@ int lua_node_children(lua_State *L) {
 	return 1;
 }
 
+/// @teal Node.named_children: function(Node): function(): Node
 int lua_node_named_children(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushnumber(L, 0);
@@ -634,14 +641,14 @@ int lua_node_named_children(lua_State *L) {
 	return 1;
 }
 
-//@teal function(TSNode): TSNode
+/// @teal Node.get_next_sibling: function(Node): Node
 int lua_node_next_sibling(lua_State *L) {
 	GET_LUA_NODE(n, 1);
 	PUSH_LUA_NODE(_, ts_node_next_sibling(n->n), n->lang);
 	return 1;
 }
 
-//@teal function(TSNode): TSNode
+/// @teal Node.get_prev_sibling: function(Node): Node
 int lua_node_prev_sibling(lua_State *L) {
 	GET_LUA_NODE(n, 1);
 	PUSH_LUA_NODE(_, ts_node_prev_sibling(n->n), n->lang);
@@ -656,6 +663,7 @@ int lua_node_string(lua_State *L) {
 	return 1;
 }
 
+/// @teal Node.name: function(Node): string
 int lua_node_name(lua_State *L) {
 	GET_LUA_NODE(n, 1);
 	TSSymbol sym = ts_node_symbol(n->n);

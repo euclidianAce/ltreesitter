@@ -1,10 +1,10 @@
 package = "ltreesitter"
 version = "dev-1"
 source = {
-   url = ""
+   url = "git://github.com/euclidianAce/ltreesitter"
 }
 description = {
-   homepage = "",
+   homepage = "https://github.com/euclidianAce/ltreesitter",
    license = "MIT",
 }
 external_dependencies = {
