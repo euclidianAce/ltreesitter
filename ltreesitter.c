@@ -15,13 +15,14 @@
 #define LUA_TSPARSER_METATABLE   "ltreesitter.TSParser"
 #define LUA_TSTREE_METATABLE     "ltreesitter.TSTree"
 #define LUA_TSNODE_METATABLE     "ltreesitter.TSNode"
+#define LUA_TSQUERY_METATABLE    "ltreesitter.TSQuery"
+#define LUA_TSQUERYCURSOR_METATABLE    "ltreesitter.TSQueryCursor"
 
 struct LuaTSParser {
 	const TSLanguage *lang;
 	void *dlhandle;
 	TSParser *parser;
 };
-
 struct LuaTSTree {
 	const TSLanguage *lang;
 	TSTree *t;
@@ -31,6 +32,14 @@ struct LuaTSNode {
 	TSNode n;
 };
 struct LuaTSInputEdit { TSInputEdit *e; };
+struct LuaTSQuery {
+	const TSLanguage *lang;
+	TSQuery *q;
+};
+struct LuaTSQueryCursor {
+	struct LuaTSQuery *q;
+	TSQueryCursor *c;
+};
 
 #define TREE_SITTER_SYM "tree_sitter_"
 
@@ -43,6 +52,19 @@ struct LuaTSInputEdit { TSInputEdit *e; };
 
 #define GET_PARSER(name, idx) TSParser *const name = ((struct LuaTSParser *)luaL_checkudata(L, (idx), LUA_TSPARSER_METATABLE))->parser
 #define GET_LUA_PARSER(name, idx) struct LuaTSParser *const name = luaL_checkudata(L, (idx), LUA_TSPARSER_METATABLE)
+
+#define GET_QUERY(name, idx) TSQuery *const name = ((struct LuaTSQuery *)luaL_checkudata(L, (idx), LUA_TSQUERY_METATABLE))->q
+#define GET_LUA_QUERY(name, idx) struct LuaTSQuery *const name = luaL_checkudata(L, (idx), LUA_TSQUERY_METATABLE)
+
+#define GET_QUERY_CURSOR(name, idx) TSQueryCursor *const name = ((struct LuaTSQueryCursor *)luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE))->c
+#define GET_LUA_QUERY_CURSOR(name, idx) struct LuaTSQueryCursor *const name = luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE)
+
+#define PUSH_LUA_NODE(_name, _node, _lang) \
+	struct LuaTSNode *const _name = lua_newuserdata(L, sizeof(struct LuaTSNode)) ; \
+	(_name)->lang = (_lang) ; \
+	(_name)->n = (_node) ; \
+	luaL_setmetatable(L, LUA_TSNODE_METATABLE)
+
 void create_metatable(
 	lua_State *L,
 	const char *name,
@@ -55,6 +77,164 @@ void create_metatable(
 	luaL_setfuncs(L, index, 0); // metatable, table
 	lua_setfield(L, -2, "__index"); // metatable
 }
+/* }}}*/
+/* {{{ Query Object */
+int lua_make_query(lua_State *L) {
+	GET_LUA_PARSER(p, 1);
+	const char *query_src = luaL_checkstring(L, 2);
+	uint32_t err_offset;
+	TSQueryError err_type;
+	TSQuery *q = ts_query_new(
+		p->lang,
+		query_src,
+		strlen(query_src),
+		&err_offset,
+		&err_type
+	);
+	if (!q) {
+		lua_pushnil(L);
+		switch (err_type) {
+		// TODO: look into these errors and make more helpful messages
+		case TSQueryErrorSyntax:
+			lua_pushfstring(L, "Syntax error at offset %u", err_offset);
+			break;
+		case TSQueryErrorNodeType:
+			lua_pushfstring(L, "Node type error at offset %u", err_offset);
+			break;
+		case TSQueryErrorField:
+			lua_pushfstring(L, "Field error at offset %u", err_offset);
+			break;
+		case TSQueryErrorCapture:
+			lua_pushfstring(L, "Capture error at offset %u", err_offset);
+			break;
+		case TSQueryErrorStructure:
+			lua_pushfstring(L, "Structure error at offset %u", err_offset);
+			break;
+		default: return luaL_error(L, "unreachable");
+		}
+		return 2;
+	}
+
+	struct LuaTSQuery *lq = lua_newuserdata(L, sizeof(struct LuaTSQuery));
+	luaL_setmetatable(L, LUA_TSQUERY_METATABLE);
+	lq->lang = p->lang;
+	lq->q = q;
+	return 1;
+}
+
+int lua_query_gc(lua_State *L) {
+	GET_QUERY(q, 1);
+	ts_query_delete(q);
+	return 1;
+}
+
+int lua_query_pattern_count(lua_State *L) {
+	GET_QUERY(q, 1);
+	lua_pushnumber(L, ts_query_pattern_count(q));
+	return 1;
+}
+int lua_query_capture_count(lua_State *L) {
+	GET_QUERY(q, 1);
+	lua_pushnumber(L, ts_query_capture_count(q));
+	return 1;
+}
+int lua_query_string_count(lua_State *L) {
+	GET_QUERY(q, 1);
+	lua_pushnumber(L, ts_query_string_count(q));
+	return 1;
+}
+
+int lua_query_cursor_gc(lua_State *L) {
+	GET_QUERY_CURSOR(c, 1);
+	ts_query_cursor_delete(c);
+	return 0;
+}
+
+int lua_query_match(lua_State *L) {
+	GET_LUA_QUERY_CURSOR(c, lua_upvalueindex(1));
+	TSQueryMatch m;
+	if (ts_query_cursor_next_match(c->c, &m)) {
+		// TODO: how much of the match do we want to just dump into lua?
+		// for now just the captured nodes
+		for (uint16_t i = 0; i < m.capture_count; ++i) {
+			PUSH_LUA_NODE(
+				_,
+				m.captures[i].node,
+				c->q->lang
+			);
+		}
+		return (int)m.capture_count;
+	}
+	return 0;
+}
+
+int lua_query_capture(lua_State *L) {
+	GET_LUA_QUERY_CURSOR(c, lua_upvalueindex(1));
+	TSQueryMatch m;
+	uint32_t capture_index;
+	if (ts_query_cursor_next_capture(c->c, &m, &capture_index)) {
+		// TODO: how much of the capture do we want to just dump into lua?
+		// for now just the captured nodes
+		for (uint16_t i = 0; i < m.capture_count; ++i) {
+			PUSH_LUA_NODE(
+				_,
+				m.captures[i].node,
+				c->q->lang
+			);
+		}
+		return (int)m.capture_count;
+	}
+	return 0;
+}
+
+int lua_query_match_factory(lua_State *L) {
+	GET_LUA_QUERY(q, 1);
+	GET_NODE(n, 2);
+	TSQueryCursor *c = ts_query_cursor_new();
+	struct LuaTSQueryCursor *lc = lua_newuserdata(L, sizeof(struct LuaTSQueryCursor));
+	luaL_setmetatable(L, LUA_TSQUERYCURSOR_METATABLE);
+	lc->c = c;
+	lc->q = q;
+	ts_query_cursor_exec(c, q->q, n);
+	lua_pushcclosure(L, lua_query_match, 1);
+	return 1;
+}
+
+int lua_query_capture_factory(lua_State *L) {
+	GET_LUA_QUERY(q, 1);
+	GET_NODE(n, 2);
+	TSQueryCursor *c = ts_query_cursor_new();
+	struct LuaTSQueryCursor *lc = lua_newuserdata(L, sizeof(struct LuaTSQueryCursor));
+	luaL_setmetatable(L, LUA_TSQUERYCURSOR_METATABLE);
+	lc->c = c;
+	lc->q = q;
+	ts_query_cursor_exec(c, q->q, n);
+	lua_pushcclosure(L, lua_query_match, 1);
+	return 1;
+}
+
+static const luaL_Reg query_methods[] = {
+	{"pattern_count", lua_query_pattern_count},
+	{"capture_count", lua_query_capture_count},
+	{"string_count", lua_query_string_count},
+	{"match", lua_query_match_factory},
+	{"capture", lua_query_capture_factory},
+	{NULL, NULL}
+};
+
+static const luaL_Reg query_metamethods[] = {
+	{"__gc", lua_query_gc},
+	{NULL, NULL}
+};
+
+static const luaL_Reg query_cursor_methods[] = {
+	{NULL, NULL}
+};
+
+static const luaL_Reg query_cursor_metamethods[] = {
+	{"__gc", lua_query_cursor_gc},
+	{NULL, NULL}
+};
 /* }}}*/
 /* {{{ Parser Object */
 //@teal function(parser_so_file_name: string, language_name: string): TSParser
@@ -142,6 +322,7 @@ static const luaL_Reg parser_methods[] = {
 	{"parse_string", lua_parser_parse_string},
 	{"set_timeout", lua_parser_set_timeout},
 	{"node_name", lua_parser_node_name},
+	{"query", lua_make_query},
 	{NULL, NULL}
 };
 static const luaL_Reg parser_metamethods[] = {
@@ -278,12 +459,6 @@ static const luaL_Reg tree_metamethods[] = {
 };
 /* }}}*/
 /* {{{ Node Object */
-#define PUSH_LUA_NODE(_name, _node, _lang) \
-	struct LuaTSNode *const _name = lua_newuserdata(L, sizeof(struct LuaTSNode)) ; \
-	(_name)->lang = (_lang) ; \
-	(_name)->n = (_node) ; \
-	luaL_setmetatable(L, LUA_TSNODE_METATABLE)
-
 //@teal function(TSNode): string
 int lua_node_type(lua_State *L) {
 	GET_NODE(n, 1);
@@ -303,6 +478,14 @@ int lua_node_end_byte(lua_State *L) {
 	GET_NODE(n, 1);
 	lua_pushnumber(L, ts_node_end_byte(n));
 	return 1;
+}
+
+//@teal function(TSNode): u32, u32
+int lua_node_byte_range(lua_State *L) {
+	GET_NODE(n, 1);
+	lua_pushnumber(L, ts_node_start_byte(n));
+	lua_pushnumber(L, ts_node_end_byte(n) + 1);
+	return 2;
 }
 
 //@teal function(TSNode): { row: u32, column: u32 }
@@ -483,7 +666,6 @@ int lua_node_name(lua_State *L) {
 
 static const luaL_Reg node_methods[] = {
 	{"type", lua_node_type},
-
 	{"name", lua_node_name},
 
 	{"get_child", lua_node_child},
@@ -494,6 +676,8 @@ static const luaL_Reg node_methods[] = {
 
 	{"get_start_byte", lua_node_start_byte},
 	{"get_end_byte", lua_node_end_byte},
+
+	{"range", lua_node_byte_range},
 
 	{"get_start_point", lua_node_start_point},
 	{"get_end_point", lua_node_end_point},
@@ -512,8 +696,6 @@ static const luaL_Reg node_metamethods[] = {
 
 /* }}}*/
 
-// TODO: Cursor stuff
-
 static const luaL_Reg lib_funcs[] = {
 	{"load", lua_load_parser},
 	{NULL, NULL}
@@ -523,6 +705,9 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 	create_metatable(L, LUA_TSPARSER_METATABLE, parser_metamethods, parser_methods);
 	create_metatable(L, LUA_TSTREE_METATABLE, tree_metamethods, tree_methods);
 	create_metatable(L, LUA_TSNODE_METATABLE, node_metamethods, node_methods);
+	create_metatable(L, LUA_TSQUERY_METATABLE, query_metamethods, query_methods);
+	create_metatable(L, LUA_TSQUERYCURSOR_METATABLE, query_cursor_metamethods, query_cursor_methods);
+
 	luaL_newlib(L, lib_funcs);
 	return 1;
 }

@@ -4,5 +4,4 @@ lua_modules
 .luarocks
 *.o
 *.so
-scratch.lua
 

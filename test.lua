@@ -20,7 +20,9 @@ print("Done with expected errors\n")
 local teal_parser = assert(ts.load("./teal_parser.so", "teal"))
 
 print("Teal parser: ", inspect(teal_parser))
+-- for some reason inspect doesn't print the metatable of userdata...
 print("Teal parser metatable: ", inspect(getmetatable(teal_parser)))
+
 local string_to_parse = [[local x: {string:boolean} = { blah = true }]]
 local tree = teal_parser:parse_string(string_to_parse)
 local root = tree:get_root()
@@ -40,6 +42,7 @@ print("root: ", root)
 print("node child_count:",       root:get_child_count())
 print("node named_child_count:", root:get_named_child_count())
 
+-- api is 0 indexed, may have lua index it from one?
 print("node child 1:",       root:get_child(0))
 print("node named_child 1:", root:get_named_child(0))
 
@@ -51,6 +54,7 @@ print("node end byte: ",   inspect(root:get_end_byte()))
 
 print("node next sibling", inspect(root:get_next_sibling()))
 
+-- Some convenient iterators over a node's children
 print("iteration: over ", root:get_child_count(), "children")
 for child in root:children() do
 	print(child)
