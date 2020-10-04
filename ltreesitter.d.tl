@@ -2,45 +2,55 @@
 
 local record ltreesitter
    record Parser
-      query: function(Parser, string): Query -- from 82
-      parse_string: function(Parser, string): Tree -- from 286
-      set_timeout: function(Parser, number) -- from 303
-   end
-
-   record Query
-      capture: function(Query, Node): function(): Node... -- from 169
-      match: function(Query, Node): function(): Node... -- from 150
+      set_timeout: function(Parser, number) -- from 316
+      parse_string: function(Parser, string): Tree -- from 299
+      query: function(Parser, string): Query -- from 94
    end
 
    record Node
-      end_point: function(Node): Point -- from 526
-      named_children: function(Node): function(): Node -- from 652
-      range: function(Node): number, number -- from 496
-      start_point: function(Node): Point -- from 511
-      child_by_field_name: function(Node, string): Node -- from 713
-      prev_sibling: function(Node): Node -- from 687
-      is_extra: function(Node): boolean -- from 554
-      named_child_count: function(Node): number -- from 601
-      start_byte: function(Node): number -- from 482
-      named_child: function(Node, number): Node -- from 585
-      next_sibling: function(Node): Node -- from 678
-      child: function(Node, number): Node -- from 561
-      end_byte: function(Node): number -- from 489
-      is_missing: function(Node): boolean -- from 547
-      children: function(Node): function(): Node -- from 644
-      name: function(Node): string -- from 704
-      child_count: function(Node): number -- from 578
-      is_named: function(Node): boolean -- from 540
-      type: function(Node): string -- from 475
+      is_extra: function(Node): boolean -- from 645
+      named_children: function(Node): function(): Node -- from 743
+      children: function(Node): function(): Node -- from 735
+      named_child: function(Node, number): Node -- from 676
+      end_byte: function(Node): number -- from 580
+      child_count: function(Node): number -- from 669
+      create_cursor: function(Node): Cursor -- from 490
+      start_byte: function(Node): number -- from 573
+      named_child_count: function(Node): number -- from 692
+      end_point: function(Node): Point -- from 617
+      type: function(Node): string -- from 566
+      is_missing: function(Node): boolean -- from 638
+      child_by_field_name: function(Node, string): Node -- from 804
+      prev_sibling: function(Node): Node -- from 778
+      is_named: function(Node): boolean -- from 631
+      next_sibling: function(Node): Node -- from 769
+      range: function(Node): number, number -- from 587
+      name: function(Node): string -- from 795
+      start_point: function(Node): Point -- from 602
+      child: function(Node, number): Node -- from 652
+   end
+
+   record Cursor
+      goto_parent: function(Cursor): boolean -- from 526
+      current_node: function(Cursor): Node -- from 499
+      current_field_name: function(Cursor): string -- from 510
+      goto_first_child: function(Cursor): boolean -- from 540
+      goto_next_sibling: function(Cursor): boolean -- from 533
+      reset: function(Cursor, Node) -- from 518
    end
 
    record Tree
-      root: function(Tree): Node -- from 335
-      copy: function(Tree): Tree -- from 354
-      edit: function(Tree, TreeEdit) -- from 404
+      copy: function(Tree): Tree -- from 367
+      edit: function(Tree, TreeEdit) -- from 417
+      root: function(Tree): Node -- from 348
    end
 
-   load: function(string, string): Parser, string -- from 239
+   record Query
+      capture: function(Query, Node): function(): Node... -- from 182
+      match: function(Query, Node): function(): Node... -- from 163
+   end
+
+   load: function(string, string): Parser, string -- from 252
 
 
    record TreeEdit
@@ -50,12 +60,12 @@ local record ltreesitter
       start_point: Point
       old_point_byte: Point
       new_point_byte: Point
-   end -- from 393
+   end -- from 406
 
    record Point
       row: number
       column: number
-   end -- from 503
+   end -- from 594
 end
 
 return ltreesitter

@@ -4,7 +4,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef _WIN32
+#error To be implemented :D
+#else
 #include <dlfcn.h>
+#endif
 
 #include <lua.h>
 #include <lualib.h>
@@ -14,6 +18,7 @@
 
 #define LUA_TSPARSER_METATABLE         "ltreesitter.TSParser"
 #define LUA_TSTREE_METATABLE           "ltreesitter.TSTree"
+#define LUA_TSTREECURSOR_METATABLE     "ltreesitter.TSTreeCursor"
 #define LUA_TSNODE_METATABLE           "ltreesitter.TSNode"
 #define LUA_TSQUERY_METATABLE          "ltreesitter.TSQuery"
 #define LUA_TSQUERYCURSOR_METATABLE    "ltreesitter.TSQueryCursor"
@@ -26,6 +31,10 @@ struct LuaTSParser {
 struct LuaTSTree {
 	const TSLanguage *lang;
 	TSTree *t;
+};
+struct LuaTSTreeCursor {
+	const TSLanguage *lang;
+	TSTreeCursor c;
 };
 struct LuaTSNode {
 	const TSLanguage *lang;
@@ -49,6 +58,9 @@ struct LuaTSQueryCursor {
 
 #define GET_TREE(name, idx) TSTree *const name = ((struct LuaTSTree *)luaL_checkudata(L, (idx), LUA_TSTREE_METATABLE))->t
 #define GET_LUA_TREE(name, idx) struct LuaTSTree *const name = luaL_checkudata(L, (idx), LUA_TSTREE_METATABLE)
+
+#define GET_TREE_CURSOR(name, idx) TSTreeCursor name = ((struct LuaTSTreeCursor *)luaL_checkudata(L, (idx), LUA_TSTREECURSOR_METATABLE))->c
+#define GET_LUA_TREE_CURSOR(name, idx) struct LuaTSTreeCursor *const name = luaL_checkudata(L, (idx), LUA_TSTREECURSOR_METATABLE)
 
 #define GET_PARSER(name, idx) TSParser *const name = ((struct LuaTSParser *)luaL_checkudata(L, (idx), LUA_TSPARSER_METATABLE))->parser
 #define GET_LUA_PARSER(name, idx) struct LuaTSParser *const name = luaL_checkudata(L, (idx), LUA_TSPARSER_METATABLE)
@@ -472,6 +484,87 @@ static const luaL_Reg tree_metamethods[] = {
 	{NULL, NULL}
 };
 /* }}}*/
+/* {{{ Tree Cursor Object */
+// TODO: should this be exposed, or only used internally
+
+/// @teal Node.create_cursor: function(Node): Cursor
+int lua_tree_cursor_create(lua_State *L) {
+	GET_NODE(n, 1);
+	struct LuaTSTreeCursor *c = lua_newuserdata(L, sizeof(struct LuaTSTreeCursor));
+	c->c = ts_tree_cursor_new(n);
+	luaL_setmetatable(L, LUA_TSTREECURSOR_METATABLE);
+	return 1;
+}
+
+/// @teal Cursor.current_node: function(Cursor): Node
+int lua_tree_cursor_current_node(lua_State *L) {
+	GET_LUA_TREE_CURSOR(c, 1);
+	PUSH_LUA_NODE(
+		_,
+		ts_tree_cursor_current_node(&c->c),
+		c->lang
+	);
+	return 1;
+}
+
+/// @teal Cursor.current_field_name: function(Cursor): string
+int lua_tree_cursor_current_field_name(lua_State *L) {
+	GET_TREE_CURSOR(c, 1);
+	const char *field_name = ts_tree_cursor_current_field_name(&c);
+	lua_pushstring(L, field_name);
+	return 1;
+}
+
+/// @teal Cursor.reset: function(Cursor, Node)
+int lua_tree_cursor_reset(lua_State *L) {
+	GET_LUA_TREE_CURSOR(c, 1);
+	GET_NODE(n, 2);
+	ts_tree_cursor_reset(&c->c, n);
+	return 0;
+}
+
+/// @teal Cursor.goto_parent: function(Cursor): boolean
+int lua_tree_cursor_goto_parent(lua_State *L) {
+	GET_LUA_TREE_CURSOR(c, 1);
+	lua_pushboolean(L, ts_tree_cursor_goto_parent(&c->c));
+	return 1;
+}
+
+/// @teal Cursor.goto_next_sibling: function(Cursor): boolean
+int lua_tree_cursor_goto_next_sibling(lua_State *L) {
+	GET_LUA_TREE_CURSOR(c, 1);
+	lua_pushboolean(L, ts_tree_cursor_goto_next_sibling(&c->c));
+	return 1;
+}
+
+/// @teal Cursor.goto_first_child: function(Cursor): boolean
+int lua_tree_cursor_goto_first_child(lua_State *L) {
+	GET_LUA_TREE_CURSOR(c, 1);
+	lua_pushboolean(L, ts_tree_cursor_goto_first_child(&c->c));
+	return 1;
+}
+
+int lua_tree_cursor_gc(lua_State *L) {
+	GET_LUA_TREE_CURSOR(c, 1);
+	ts_tree_cursor_delete(&c->c);
+	return 0;
+}
+
+static const luaL_Reg tree_cursor_methods[] = {
+	{"current_node", lua_tree_cursor_current_node},
+	{"current_field_name", lua_tree_cursor_current_field_name},
+	{"goto_parent", lua_tree_cursor_goto_parent},
+	{"goto_first_child", lua_tree_cursor_goto_first_child},
+	{"goto_next_sibling", lua_tree_cursor_goto_next_sibling},
+	{"reset", lua_tree_cursor_reset},
+	{NULL, NULL}
+};
+static const luaL_Reg tree_cursor_metamethods[] = {
+	{"__gc", lua_tree_cursor_gc},
+	{NULL, NULL}
+};
+
+/* }}}*/
 /* {{{ Node Object */
 /// @teal Node.type: function(Node): string
 int lua_node_type(lua_State *L) {
@@ -754,6 +847,8 @@ static const luaL_Reg node_methods[] = {
 
 	{"children", lua_node_children},
 	{"named_children", lua_node_named_children},
+
+	{"create_cursor", lua_tree_cursor_create},
 	{NULL, NULL}
 };
 static const luaL_Reg node_metamethods[] = {
@@ -771,6 +866,7 @@ static const luaL_Reg lib_funcs[] = {
 LUA_API int luaopen_ltreesitter(lua_State *L) {
 	create_metatable(L, LUA_TSPARSER_METATABLE, parser_metamethods, parser_methods);
 	create_metatable(L, LUA_TSTREE_METATABLE, tree_metamethods, tree_methods);
+	create_metatable(L, LUA_TSTREECURSOR_METATABLE, tree_cursor_metamethods, tree_cursor_methods);
 	create_metatable(L, LUA_TSNODE_METATABLE, node_metamethods, node_methods);
 	create_metatable(L, LUA_TSQUERY_METATABLE, query_metamethods, query_methods);
 	create_metatable(L, LUA_TSQUERYCURSOR_METATABLE, query_cursor_metamethods, query_cursor_methods);
