@@ -175,26 +175,31 @@ int lua_query_cursor_gc(lua_State *L) {
 /// @teal Query.Match.pattern_index: number
 /// @teal Query.Match.capture_count: number
 /// @teal Query.Match.captures: {Node}
+/// @teal Query.Match.map: {string:Node}
 
 /// @teal Query.match: function(Query, Node): function(): Match
 int lua_query_match(lua_State *L) {
 	struct LuaTSQueryCursor *c = get_lua_query_cursor(L, lua_upvalueindex(3));
 	TSQueryMatch m;
 	if (ts_query_cursor_next_match(c->c, &m)) {
-		lua_createtable(L, 0, 4);
+		lua_createtable(L, 0, 5);
 		lua_pushnumber(L, m.id); lua_setfield(L, -2, "id");
 		lua_pushnumber(L, m.pattern_index); lua_setfield(L, -2, "pattern_index");
 		lua_pushnumber(L, m.capture_count); lua_setfield(L, -2, "capture_count");
 		lua_createtable(L, m.capture_count, 0);
 		for (uint16_t i = 0; i < m.capture_count; ++i) {
-			push_lua_node(
-				L,
-				c->q->lang,
-				m.captures[i].node
-			);
+			push_lua_node(L, c->q->lang, m.captures[i].node);
 			lua_seti(L, -2, i+1);
 		}
 		lua_setfield(L, -2, "captures");
+		lua_createtable(L, 0, m.capture_count);
+		for (uint16_t i = 0; i < m.capture_count; ++i) {
+			push_lua_node(L, c->q->lang, m.captures[i].node);
+			uint32_t len;
+			const char *name = ts_query_capture_name_for_id(c->q->q, i, &len);
+			lua_setfield(L, -2, name);
+		}
+		lua_setfield(L, -2, "map");
 		return 1;
 	}
 	return 0;
@@ -747,7 +752,7 @@ int lua_node_children_iterator(lua_State *L) {
 }
 
 int lua_node_named_children_iterator(lua_State *L) {
-	struct LuaTSNode *const n = get_lua_node(L, 1);
+	struct LuaTSNode *const n = get_lua_node(L, lua_upvalueindex(1));
 
 	const uint32_t idx = lua_tonumber(L, lua_upvalueindex(2));
 	lua_pushnumber(L, idx + 1);

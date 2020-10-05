@@ -3,61 +3,62 @@
 local record ltreesitter
    record Query
       record Match
-         capture_count: number -- from 176
+         id: number -- from 174
          captures: {Node} -- from 177
          pattern_index: number -- from 175
-         id: number -- from 174
+         capture_count: number -- from 176
+         map: {string:Node} -- from 178
       end
 
-      capture: function(Query, Node): function(): Node, string -- from 203
-      match: function(Query, Node): function(): Match -- from 179
-   end
-
-   record Parser
-      set_timeout: function(Parser, number) -- from 336
-      parse_string: function(Parser, string): Tree -- from 319
-      query: function(Parser, string): Query -- from 104
-   end
-
-   record Cursor
-      goto_next_sibling: function(Cursor): boolean -- from 559
-      current_field_name: function(Cursor): string -- from 532
-      goto_first_child: function(Cursor): boolean -- from 566
-      current_node: function(Cursor): Node -- from 521
-      reset: function(Cursor, Node) -- from 544
-      goto_parent: function(Cursor): boolean -- from 552
+      match: function(Query, Node): function(): Match -- from 180
+      capture: function(Query, Node): function(): Node, string -- from 208
    end
 
    record Tree
-      copy: function(Tree): Tree -- from 387
-      root: function(Tree): Node -- from 368
-      edit: function(Tree, TreeEdit) -- from 437
+      copy: function(Tree): Tree -- from 392
+      edit: function(Tree, TreeEdit) -- from 442
+      root: function(Tree): Node -- from 373
    end
 
    record Node
-      is_named: function(Node): boolean -- from 660
-      named_child_count: function(Node): number -- from 721
-      next_sibling: function(Node): Node -- from 799
-      type: function(Node): string -- from 595
-      is_extra: function(Node): boolean -- from 674
-      end_point: function(Node): Point -- from 646
-      named_children: function(Node): function(): Node -- from 773
-      child_by_field_name: function(Node, string): Node -- from 835
-      start_byte: function(Node): number -- from 602
-      is_missing: function(Node): boolean -- from 667
-      child_count: function(Node): number -- from 698
-      prev_sibling: function(Node): Node -- from 808
-      range: function(Node): number, number -- from 616
-      name: function(Node): string -- from 825
-      children: function(Node): function(): Node -- from 765
-      end_byte: function(Node): number -- from 609
-      start_point: function(Node): Point -- from 631
-      create_cursor: function(Node): Cursor -- from 511
-      child: function(Node, number): Node -- from 681
-      named_child: function(Node, number): Node -- from 705
+      end_byte: function(Node): number -- from 614
+      start_byte: function(Node): number -- from 607
+      child: function(Node, number): Node -- from 686
+      children: function(Node): function(): Node -- from 770
+      is_named: function(Node): boolean -- from 665
+      end_point: function(Node): Point -- from 651
+      child_count: function(Node): number -- from 703
+      next_sibling: function(Node): Node -- from 804
+      type: function(Node): string -- from 600
+      child_by_field_name: function(Node, string): Node -- from 840
+      name: function(Node): string -- from 830
+      is_extra: function(Node): boolean -- from 679
+      prev_sibling: function(Node): Node -- from 813
+      start_point: function(Node): Point -- from 636
+      named_children: function(Node): function(): Node -- from 778
+      named_child: function(Node, number): Node -- from 710
+      named_child_count: function(Node): number -- from 726
+      create_cursor: function(Node): Cursor -- from 516
+      is_missing: function(Node): boolean -- from 672
+      range: function(Node): number, number -- from 621
    end
 
-   load: function(string, string): Parser, string -- from 271
+   record Cursor
+      goto_next_sibling: function(Cursor): boolean -- from 564
+      reset: function(Cursor, Node) -- from 549
+      current_node: function(Cursor): Node -- from 526
+      current_field_name: function(Cursor): string -- from 537
+      goto_first_child: function(Cursor): boolean -- from 571
+      goto_parent: function(Cursor): boolean -- from 557
+   end
+
+   record Parser
+      query: function(Parser, string): Query -- from 104
+      parse_string: function(Parser, string): Tree -- from 324
+      set_timeout: function(Parser, number) -- from 341
+   end
+
+   load: function(string, string): Parser, string -- from 276
 
 
    record TreeEdit
@@ -67,12 +68,12 @@ local record ltreesitter
       start_point: Point
       old_point_byte: Point
       new_point_byte: Point
-   end -- from 426
+   end -- from 431
 
    record Point
       row: number
       column: number
-   end -- from 623
+   end -- from 628
 end
 
 return ltreesitter
