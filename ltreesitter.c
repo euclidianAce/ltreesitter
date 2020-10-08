@@ -22,6 +22,7 @@
 #define LUA_TSNODE_METATABLE           "ltreesitter.TSNode"
 #define LUA_TSQUERY_METATABLE          "ltreesitter.TSQuery"
 #define LUA_TSQUERYCURSOR_METATABLE    "ltreesitter.TSQueryCursor"
+static const char registry_index[] = "ltreesitter_registry";
 
 struct LuaTSParser {
 	const TSLanguage *lang;
@@ -54,14 +55,45 @@ struct LuaTSQueryCursor {
 
 /* {{{ Utility */
 
+/* @teal-export _get_registry_entry: function(): table [[
+   ltreesitter uses a table in the Lua registry to keep references alive and prevent Lua's garbage collection from collecting things that the library needs internally.
+   The behavior nor existence of this function should not be relied upon and is included strictly for memory debugging purposes
+
+   Though, if you are looking to debug a segfault/garbage collection bug, this is a useful tool in addition to the lua inspect module
+]]*/
+int push_registry_table(lua_State *L) {
+	lua_getfield(L, LUA_REGISTRYINDEX, registry_index);
+	return 1;
+}
+
 TSNode get_node(lua_State *L, int idx) { return ((struct LuaTSNode *)luaL_checkudata(L, (idx), LUA_TSNODE_METATABLE))->n; }
 struct LuaTSNode *const get_lua_node(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSNODE_METATABLE); }
-struct LuaTSNode *const push_lua_node(lua_State *L, const TSLanguage *lang, TSNode node) {
+
+void set_parent(lua_State *L, int child_idx, int parent_idx) {
+	push_registry_table(L); // { <ltreesitter_registry> }
+	lua_pushvalue(L, child_idx);
+	lua_pushvalue(L, parent_idx); // { <ltreesitter_registry> }, <Child>, <Parent>
+	lua_settable(L, -3); // {<ltreesitter_registry> [<Child>] = <Parent>}
+	lua_pop(L, 1);
+}
+
+// parent_idx is the *absolute* index of the lua object that needs to stay alive for the node to be valid
+// this is usually the tree itself
+struct LuaTSNode *const push_lua_node(lua_State *L, int parent_idx, TSNode node, const TSLanguage *lang) {
 	struct LuaTSNode *const ln = lua_newuserdata(L, sizeof(struct LuaTSNode));
-	ln->lang = lang;
 	ln->n = node;
+	ln->lang = lang;
 	luaL_setmetatable(L, LUA_TSNODE_METATABLE);
+	set_parent(L, lua_gettop(L), parent_idx);
 	return ln;
+}
+
+void push_parent(lua_State *L, int obj_idx) {
+	push_registry_table(L); // { <ltreesitter_registry> }
+	lua_pushvalue(L, obj_idx); // { <ltreesitter_registry> }, <obj>
+	lua_gettable(L, -2); // { <ltreesitter_registry> }, <parent>
+	lua_rotate(L, -2, 1); // <parent>, { <ltreesitter_registry> }
+	lua_pop(L, 1); // <parent>
 }
 
 TSTree *const get_tree(lua_State *L, int idx) { return ((struct LuaTSTree *)luaL_checkudata(L, (idx), LUA_TSTREE_METATABLE))->t; }
@@ -75,6 +107,7 @@ struct LuaTSTreeCursor *const push_lua_tree_cursor(lua_State *L, const TSLanguag
 	lc->lang = lang;
 	lc->c = c;
 	luaL_setmetatable(L, LUA_TSTREECURSOR_METATABLE);
+
 	return lc;
 }
 
@@ -101,7 +134,9 @@ void create_metatable(
 }
 /* }}}*/
 /* {{{ Query Object */
-/// @teal Parser.query: function(Parser, string): Query
+/* @teal-export Parser.query: function(Parser, string): Query [[
+   Create a query out of the given string for the language of the given parser
+]] */
 int lua_make_query(lua_State *L) {
 	struct LuaTSParser *p = get_lua_parser(L, 1);
 	const char *query_src = luaL_checkstring(L, 2);
@@ -115,7 +150,7 @@ int lua_make_query(lua_State *L) {
 		&err_type
 	);
 	if (!q) {
-		char *slice = malloc(sizeof(char) * 16);
+		char slice[16] = { 0 };
 		strncpy(slice, &query_src[
 			err_offset >= 10 ? err_offset - 10 : err_offset
 		], 15);
@@ -127,10 +162,9 @@ int lua_make_query(lua_State *L) {
 		case TSQueryErrorField:     lua_pushfstring(L, "Query field error: around '%s' (at offset %d)",     slice, (int)err_offset); break;
 		case TSQueryErrorCapture:   lua_pushfstring(L, "Query capture error: around '%s' (at offset %d)",   slice, (int)err_offset); break;
 		case TSQueryErrorStructure: lua_pushfstring(L, "Query structure error: around '%s' (at offset %d)", slice, (int)err_offset); break;
-		default: free(slice); return luaL_error(L, "unreachable, this is a bug");
+		default: return luaL_error(L, "unreachable, this is a bug");
 		}
 
-		free(slice);
 		return lua_error(L);
 	}
 
@@ -142,8 +176,11 @@ int lua_make_query(lua_State *L) {
 }
 
 int lua_query_gc(lua_State *L) {
-	TSQuery *q = get_query(L, 1);
-	ts_query_delete(q);
+	struct LuaTSQuery *q = get_lua_query(L, 1);
+#ifdef LOG_GC
+	printf("Query %p is being garbage collected\n", q);
+#endif
+	ts_query_delete(q->q);
 	return 1;
 }
 
@@ -164,55 +201,94 @@ int lua_query_string_count(lua_State *L) {
 }
 
 int lua_query_cursor_gc(lua_State *L) {
-	TSQueryCursor *c = get_query_cursor(L, 1);
-	ts_query_cursor_delete(c);
+	struct LuaTSQueryCursor *c = get_lua_query_cursor(L, 1);
+#ifdef LOG_GC
+	printf("Query Cursor %p is being garbage collected\n", c);
+#endif
+	ts_query_cursor_delete(c->c);
 	return 0;
 }
 
 
-// TODO: find a better way to do this
-/// @teal Query.Match.id: number
-/// @teal Query.Match.pattern_index: number
-/// @teal Query.Match.capture_count: number
-/// @teal Query.Match.captures: {Node}
-/// @teal Query.Match.map: {string:Node}
+// TODO: find a better way to do this, @teal-inline wont work since it needs to be nested
+/* @teal-export Query.Match.id : number */
+/* @teal-export Query.Match.pattern_index : number */
+/* @teal-export Query.Match.capture_count : number */
+/* @teal-export Query.Match.captures : {string|number:Node} */
 
-/// @teal Query.match: function(Query, Node): function(): Match
+/* @teal-export Query.match: function(Query, Node): function(): Match [[
+   Iterate over the matches of a given query
+
+   <pre>
+   local q = parser:query[[ (comment) @my_match ]]
+   for match in q:match(node) do
+      print(match.my_match)
+   end
+   </pre>
+
+   The match object is a record populated with all the information given by treesitter
+   <pre>
+   type Query.Match = record
+      id: number
+      pattern_index: number
+      capture_count: number
+      captures: {string|number:Node}
+   end
+   </pre>
+ ]] */
 int lua_query_match(lua_State *L) {
 	struct LuaTSQueryCursor *c = get_lua_query_cursor(L, lua_upvalueindex(3));
 	TSQueryMatch m;
+	push_parent(L, lua_upvalueindex(2));
+	const int parent_idx = lua_gettop(L);
 	if (ts_query_cursor_next_match(c->c, &m)) {
-		lua_createtable(L, 0, 5);
-		lua_pushnumber(L, m.id); lua_setfield(L, -2, "id");
-		lua_pushnumber(L, m.pattern_index); lua_setfield(L, -2, "pattern_index");
-		lua_pushnumber(L, m.capture_count); lua_setfield(L, -2, "capture_count");
-		lua_createtable(L, m.capture_count, 0);
+		lua_createtable(L, 0, 5); // { <match> }
+		lua_pushnumber(L, m.id); lua_setfield(L, -2, "id"); // { <match> }
+		lua_pushnumber(L, m.pattern_index); lua_setfield(L, -2, "pattern_index"); // { <match> }
+		lua_pushnumber(L, m.capture_count); lua_setfield(L, -2, "capture_count"); // { <match> }
+		lua_createtable(L, m.capture_count, m.capture_count); // { <match> }, { <arraymap> }
+		lua_createtable(L, 0, m.capture_count); // { <match> }, { <arraymap> }
 		for (uint16_t i = 0; i < m.capture_count; ++i) {
-			push_lua_node(L, c->q->lang, m.captures[i].node);
-			lua_seti(L, -2, i+1);
-		}
-		lua_setfield(L, -2, "captures");
-		lua_createtable(L, 0, m.capture_count);
-		for (uint16_t i = 0; i < m.capture_count; ++i) {
-			push_lua_node(L, c->q->lang, m.captures[i].node);
+			push_lua_node(
+				L, parent_idx,
+				m.captures[i].node,
+				c->q->lang
+			); // {<match>}, {<arraymap>}, <Node>
+			lua_pushvalue(L, -1); // {<match>}, {<arraymap>}, <Node>, <Node>
+			lua_seti(L, -3, i+1); // {<match>}, {<arraymap> <Node>}, <Node>
 			uint32_t len;
 			const char *name = ts_query_capture_name_for_id(c->q->q, i, &len);
-			lua_setfield(L, -2, name);
+			lua_setfield(L, -2, name); // {<match>}, {<arraymap> <Node>, [name]=<Node>}
 		}
-		lua_setfield(L, -2, "map");
+		lua_setfield(L, -3, "captures"); // {<match> captures=<arraymap>}
 		return 1;
 	}
 	return 0;
 }
 
-/// @teal Query.capture: function(Query, Node): function(): Node, string
+/* @teal-export Query.capture: function(Query, Node): function(): Node, string [[
+   Iterate over the captures of a given query
+
+   <pre>
+   local q = parser:query[[ (comment) @my_match ]]
+   for capture, name in q:capture(node) do
+      print(capture, name) -- => (comment), "my_match"
+   end
+   </pre>
+]] */
 int lua_query_capture(lua_State *L) {
 	struct LuaTSQuery *const q = get_lua_query(L, lua_upvalueindex(1));
 	TSQueryCursor *c = get_query_cursor(L, lua_upvalueindex(3));
+	push_parent(L, lua_upvalueindex(2));
+	const int parent_idx = lua_gettop(L);
 	TSQueryMatch m;
 	uint32_t capture_index;
 	if (ts_query_cursor_next_capture(c, &m, &capture_index)) {
-		push_lua_node(L, q->lang, m.captures[capture_index].node);
+		push_lua_node(
+			L, parent_idx,
+			m.captures[capture_index].node,
+			q->lang
+		);
 		uint32_t len;
 		const char *name = ts_query_capture_name_for_id(q->q, capture_index, &len);
 		lua_pushlstring(L, name, len);
@@ -273,7 +349,18 @@ static const luaL_Reg query_cursor_metamethods[] = {
 };
 /* }}}*/
 /* {{{ Parser Object */
-/// @teal load: function(string, string): Parser, string
+/* @teal-export load: function(file_name: string, language_name: string): Parser, string [[
+   Load a parser from a given file
+
+   On unix this uses dlopen, so if a path without a path separator is given, dlopen has its own path's that it will search for your file in.
+   So if in doubt use a file path like
+   <pre>
+   local my_parser = ltreesitter.load("./my_parser.so", "my_language")
+   </pre>
+
+   Currently this does not work on Windows
+   (The entire library doesn't work on Windows since this is the entry point to any of the functionality)
+]] */
 int lua_load_parser(lua_State *L) {
 	lua_settop(L, 2);
 	const char *parser_file = luaL_checkstring(L, 1);
@@ -314,14 +401,19 @@ int lua_load_parser(lua_State *L) {
 	return 1;
 }
 
-int lua_close_parser(lua_State *L) {
+int lua_parser_gc(lua_State *L) {
 	struct LuaTSParser *lp = luaL_checkudata(L, 1, LUA_TSPARSER_METATABLE);
+#ifdef LOG_GC
+	printf("Parser %p is being garbage collected\n", lp);
+#endif
 	ts_parser_delete(lp->parser);
 	dlclose(lp->dlhandle);
 	return 0;
 }
 
-/// @teal Parser.parse_string: function(Parser, string): Tree
+/* @teal-export Parser.parse_string: function(Parser, string): Tree [[
+   Uses the given parser to parse the string
+]] */
 int lua_parser_parse_string(lua_State *L) {
 	struct LuaTSParser *p = get_lua_parser(L, 1);
 	const char *str = luaL_checkstring(L, 2);
@@ -338,7 +430,9 @@ int lua_parser_parse_string(lua_State *L) {
 	return 1;
 }
 
-/// @teal Parser.set_timeout: function(Parser, number)
+/* @teal-export Parser.set_timeout: function(Parser, number) [[
+   Sets how long the parser is allowed to take in microseconds
+]] */
 int lua_parser_set_timeout(lua_State *L) {
 	TSParser *const p = get_parser(L, 1);
 	const lua_Number n = luaL_checknumber(L, 2);
@@ -347,36 +441,25 @@ int lua_parser_set_timeout(lua_State *L) {
 	return 0;
 }
 
-/// @teal Node.name: function(Node): name
-int lua_parser_node_name(lua_State *L) {
-	struct LuaTSParser *const p = get_lua_parser(L, 1);
-	TSNode n = get_node(L, 2);
-	TSSymbol sym = ts_node_symbol(n);
-	const char *name = ts_language_symbol_name((const TSLanguage *)p->lang, sym);
-	lua_pushstring(L, name);
-	return 1;
-}
-
 static const luaL_Reg parser_methods[] = {
 	{"parse_string", lua_parser_parse_string},
 	{"set_timeout", lua_parser_set_timeout},
-	{"node_name", lua_parser_node_name},
 	{"query", lua_make_query},
 	{NULL, NULL}
 };
 static const luaL_Reg parser_metamethods[] = {
-	{"__gc", lua_close_parser},
+	{"__gc", lua_parser_gc},
 	{NULL, NULL}
 };
 /* }}}*/
 /* {{{ Tree Object */
-/// @teal Tree.root: function(Tree): Node
+/* @teal-export Tree.root: function(Tree): Node [[
+   Returns the root node of the given parse tree
+]] */
 int lua_tree_root(lua_State *L) {
 	struct LuaTSTree *const t = get_lua_tree(L, 1);
 	struct LuaTSNode *const n = lua_newuserdata(L, sizeof(struct LuaTSNode));
-	n->n = ts_tree_root_node(t->t);
-	n->lang = t->lang;
-	luaL_setmetatable(L, LUA_TSNODE_METATABLE);
+	push_lua_node(L, 1, ts_tree_root_node(t->t), t->lang);
 	return 1;
 }
 
@@ -389,7 +472,9 @@ int lua_tree_to_string(lua_State *L) {
 	return 1;
 }
 
-/// @teal Tree.copy: function(Tree): Tree
+/* @teal-export Tree.copy: function(Tree): Tree [[
+   Creates a copy of the tree. Tree-sitter recommends to create copies if you are going to use multithreading since tree accesses are not thread-safe, but copying them is cheap and quick
+]] */
 int lua_tree_copy(lua_State *L) {
 	TSTree *t = get_tree(L, 1);
 	struct LuaTSTree *const t_copy = lua_newuserdata(L, sizeof(struct LuaTSTree));
@@ -398,9 +483,7 @@ int lua_tree_copy(lua_State *L) {
 	return 1;
 }
 
-bool is_non_negative(lua_State *L, int i) {
-	return lua_tonumber(L, i) >= 0;
-}
+bool is_non_negative(lua_State *L, int i) { return lua_tonumber(L, i) >= 0; }
 
 void expect_arg_field(lua_State *L, int idx, const char *field_name, int expected_type) {
 	const int actual_type = lua_getfield(L, idx, field_name);
@@ -439,9 +522,12 @@ void expect_nested_arg_field(lua_State *L, int idx, const char *parent_name, con
       new_point_byte: Point
    end
 ]]*/
-/// @teal Tree.edit: function(Tree, TreeEdit)
+/* @teal-export Tree.edit: function(Tree, TreeEdit) [[
+   Create an edit to the given tree
+]] */
 int lua_tree_edit(lua_State *L) {
 	lua_settop(L, 2);
+	lua_checkstack(L, 15);
 	TSTree *t = get_tree(L, 1);
 
 	// get the edit struct from table
@@ -492,8 +578,11 @@ int lua_tree_edit(lua_State *L) {
 }
 
 int lua_tree_gc(lua_State *L) {
-	TSTree *t = get_tree(L, 1);
-	ts_tree_delete(t);
+	struct LuaTSTree *t = get_lua_tree(L, 1);
+#ifdef LOG_GC
+	printf("Tree %p is being garbage collected\n", t);
+#endif
+	ts_tree_delete(t->t);
 	return 0;
 }
 
@@ -513,28 +602,42 @@ static const luaL_Reg tree_metamethods[] = {
 // TODO: should this be exposed, or only used internally
 // Porque no los dos?
 
-/// @teal Node.create_cursor: function(Node): Cursor
-int lua_tree_cursor_create(lua_State *L) {
-	struct LuaTSNode *const n = get_lua_node(L, 1);
+void push_tree_cursor(lua_State *L, int parent_idx, const TSLanguage *lang, TSNode n) {
 	struct LuaTSTreeCursor *c = lua_newuserdata(L, sizeof(struct LuaTSTreeCursor));
-	c->c = ts_tree_cursor_new(n->n);
-	c->lang = n->lang;
+	c->c = ts_tree_cursor_new(n);
+	c->lang = lang;
 	luaL_setmetatable(L, LUA_TSTREECURSOR_METATABLE);
+	set_parent(L, lua_gettop(L), parent_idx);
+}
+
+/* @teal-export Node.create_cursor: function(Node): Cursor [[
+   Create a new cursor at the given node
+]] */
+int lua_tree_cursor_create(lua_State *L) {
+	lua_settop(L, 1);
+	struct LuaTSNode *const n = get_lua_node(L, 1);
+	push_parent(L, 1);
+	push_tree_cursor(L, 2, n->lang, n->n);
 	return 1;
 }
 
-/// @teal Cursor.current_node: function(Cursor): Node
+/* @teal-export Cursor.current_node: function(Cursor): Node [[
+   Get the current node under the cursor
+]] */
 int lua_tree_cursor_current_node(lua_State *L) {
 	struct LuaTSTreeCursor *const c = get_lua_tree_cursor(L, 1);
+	push_parent(L, 1);
 	push_lua_node(
-		L,
-		c->lang,
-		ts_tree_cursor_current_node(&c->c)
+		L, 2,
+		ts_tree_cursor_current_node(&c->c),
+		c->lang
 	);
 	return 1;
 }
 
-/// @teal Cursor.current_field_name: function(Cursor): string
+/* @teal-export Cursor.current_field_name: function(Cursor): string [[
+   Get the field name of the current node under the cursor
+]] */
 int lua_tree_cursor_current_field_name(lua_State *L) {
 	TSTreeCursor c = get_tree_cursor(L, 1);
 	const char *field_name = ts_tree_cursor_current_field_name(&c);
@@ -546,7 +649,9 @@ int lua_tree_cursor_current_field_name(lua_State *L) {
 	return 1;
 }
 
-/// @teal Cursor.reset: function(Cursor, Node)
+/* @teal-export Cursor.reset: function(Cursor, Node) [[
+   Position the cursor at the given node
+]] */
 int lua_tree_cursor_reset(lua_State *L) {
 	struct LuaTSTreeCursor *const c = get_lua_tree_cursor(L, 1);
 	TSNode n = get_node(L, 2);
@@ -554,21 +659,27 @@ int lua_tree_cursor_reset(lua_State *L) {
 	return 0;
 }
 
-/// @teal Cursor.goto_parent: function(Cursor): boolean
+/* @teal-export Cursor.goto_parent: function(Cursor): boolean [[
+   Position the cursor at the parent of the current node
+]] */
 int lua_tree_cursor_goto_parent(lua_State *L) {
 	struct LuaTSTreeCursor *const c = get_lua_tree_cursor(L, 1);
 	lua_pushboolean(L, ts_tree_cursor_goto_parent(&c->c));
 	return 1;
 }
 
-/// @teal Cursor.goto_next_sibling: function(Cursor): boolean
+/* @teal-export Cursor.goto_next_sibling: function(Cursor): boolean [[
+   Position the cursor at the sibling of the current node
+]] */
 int lua_tree_cursor_goto_next_sibling(lua_State *L) {
 	struct LuaTSTreeCursor *const c = get_lua_tree_cursor(L, 1);
 	lua_pushboolean(L, ts_tree_cursor_goto_next_sibling(&c->c));
 	return 1;
 }
 
-/// @teal Cursor.goto_first_child: function(Cursor): boolean
+/* @teal-export Cursor.goto_first_child: function(Cursor): boolean [[
+   Position the cursor at the first child of the current node
+]] */
 int lua_tree_cursor_goto_first_child(lua_State *L) {
 	struct LuaTSTreeCursor *const c = get_lua_tree_cursor(L, 1);
 	lua_pushboolean(L, ts_tree_cursor_goto_first_child(&c->c));
@@ -577,6 +688,9 @@ int lua_tree_cursor_goto_first_child(lua_State *L) {
 
 int lua_tree_cursor_gc(lua_State *L) {
 	struct LuaTSTreeCursor *const c = get_lua_tree_cursor(L, 1);
+#ifdef LOG_GC
+	printf("Tree Cursor %p is being garbage collected\n", c);
+#endif
 	ts_tree_cursor_delete(&c->c);
 	return 0;
 }
@@ -597,28 +711,38 @@ static const luaL_Reg tree_cursor_metamethods[] = {
 
 /* }}}*/
 /* {{{ Node Object */
-/// @teal Node.type: function(Node): string
+/* @teal-export Node.type: function(Node): string [[
+   Get the type of the given node
+]] */
 int lua_node_type(lua_State *L) {
 	TSNode n = get_node(L, 1);
 	lua_pushstring(L, ts_node_type(n));
 	return 1;
 }
 
-/// @teal Node.start_byte: function(Node): number
+/* @teal-export Node.start_byte: function(Node): number [[
+   Get the byte of the source string that the given node starts at
+]] */
 int lua_node_start_byte(lua_State *L) {
 	TSNode n = get_node(L, 1);
 	lua_pushnumber(L, ts_node_start_byte(n));
 	return 1;
 }
 
-/// @teal Node.end_byte: function(Node): number
+/* @teal-export Node.end_byte: function(Node): number [[
+   Get the byte of the source string that the given node ends at
+]] */
 int lua_node_end_byte(lua_State *L) {
 	TSNode n = get_node(L, 1);
 	lua_pushnumber(L, ts_node_end_byte(n));
 	return 1;
 }
 
-/// @teal Node.range: function(Node): number, number
+/* @teal-export Node.range: function(Node): number, number [[
+   Get both the start and end bytes of the source string
+   for easy use with string.sub
+   <pre> print( source_string:sub( my_node:range() ) ) </pre>
+]] */
 int lua_node_byte_range(lua_State *L) {
 	TSNode n = get_node(L, 1);
 	lua_pushnumber(L, ts_node_start_byte(n));
@@ -633,7 +757,9 @@ int lua_node_byte_range(lua_State *L) {
    end
 ]]*/
 
-/// @teal Node.start_point: function(Node): Point
+/* @teal-export Node.start_point: function(Node): Point [[
+   Get the row and column of where the given node starts
+]] */
 int lua_node_start_point(lua_State *L) {
 	TSNode n = get_node(L, 1);
 	TSPoint p = ts_node_start_point(n);
@@ -648,7 +774,9 @@ int lua_node_start_point(lua_State *L) {
 	return 1;
 }
 
-/// @teal Node.end_point: function(Node): Point
+/* @teal-export Node.end_point: function(Node): Point [[
+   Get the row and column of where the given node ends
+]] */
 int lua_node_end_point(lua_State *L) {
 	TSNode n = get_node(L, 1);
 	TSPoint p = ts_node_end_point(n);
@@ -662,68 +790,83 @@ int lua_node_end_point(lua_State *L) {
 	return 1;
 }
 
-/// @teal Node.is_named: function(Node): boolean
+/* @teal-export Node.is_named: function(Node): boolean [[
+   Get whether or not the current node is named
+]] */
 int lua_node_is_named(lua_State *L) {
 	TSNode n = get_node(L, 1);
 	lua_pushboolean(L, ts_node_is_named(n));
 	return 1;
 }
 
-/// @teal Node.is_missing: function(Node): boolean
+/* @teal-export Node.is_missing: function(Node): boolean [[
+   Get whether or not the current node is missing
+]] */
 int lua_node_is_missing(lua_State *L) {
 	TSNode n = get_node(L, 1);
 	lua_pushboolean(L, ts_node_is_missing(n));
 	return 1;
 }
 
-/// @teal Node.is_extra: function(Node): boolean
+/* @teal-export Node.is_extra: function(Node): boolean [[
+   Get whether or not the current node is missing
+]] */
 int lua_node_is_extra(lua_State *L) {
 	TSNode n = get_node(L, 1);
 	lua_pushboolean(L, ts_node_is_extra(n));
 	return 1;
 }
 
-/// @teal Node.child: function(Node, number): Node
+/* @teal-export Node.child: function(Node, idx: number): Node [[
+   Get the node's idx'th child (0-indexed)
+]] */
 int lua_node_child(lua_State *L) {
 	struct LuaTSNode *const parent = get_lua_node(L, 1);
 	const uint32_t idx = luaL_checknumber(L, 2);
 	if (idx >= ts_node_child_count(parent->n)) {
 		lua_pushnil(L);
 	} else {
-		/* const TSLanguage *lang = parent->lang;*/
+		push_parent(L, 1);
 		push_lua_node(
-			L,
-			parent->lang,
-			ts_node_child(parent->n, (uint32_t)luaL_checknumber(L, 2))
+			L, lua_gettop(L),
+			ts_node_child(parent->n, (uint32_t)luaL_checknumber(L, 2)),
+			parent->lang
 		);
 	}
 	return 1;
 }
 
-/// @teal Node.child_count: function(Node): number
+/* @teal-export Node.child_count: function(Node): number [[
+   Get the number of children a node has
+]] */
 int lua_node_child_count(lua_State *L) {
 	TSNode n = get_node(L, 1);
 	lua_pushnumber(L, ts_node_child_count(n));
 	return 1;
 }
 
-/// @teal Node.named_child: function(Node, number): Node
+/* @teal-export Node.named_child: function(Node, idx: number): Node [[
+   Get the node's idx'th named child (0-indexed)
+]] */
 int lua_node_named_child(lua_State *L) {
 	struct LuaTSNode *const parent = get_lua_node(L, 1);
 	const uint32_t idx = luaL_checknumber(L, 2);
 	if (idx >= ts_node_child_count(parent->n)) {
 		lua_pushnil(L);
 	} else {
+		push_parent(L, 1);
 		push_lua_node(
-			L,
-			parent->lang,
-			ts_node_named_child(parent->n, idx)
+			L, 3,
+			ts_node_named_child(parent->n, idx),
+			parent->lang
 		);
 	}
 	return 1;
 }
 
-/// @teal Node.named_child_count: function(Node): number
+/* @teal-export Node.named_child_count: function(Node): number [[
+   Get the number of named children a node has
+]] */
 int lua_node_named_child_count(lua_State *L) {
 	TSNode n = get_node(L, 1);
 	lua_pushnumber(L, ts_node_named_child_count(n));
@@ -740,9 +883,9 @@ int lua_node_children_iterator(lua_State *L) {
 
 	if (idx < ts_node_child_count(n->n)) {
 		push_lua_node(
-			L,
-			n->lang,
-			ts_node_child(n->n, idx)
+			L, 1,
+			ts_node_child(n->n, idx),
+			n->lang
 		);
 	} else {
 		lua_pushnil(L);
@@ -754,20 +897,26 @@ int lua_node_children_iterator(lua_State *L) {
 int lua_node_named_children_iterator(lua_State *L) {
 	struct LuaTSNode *const n = get_lua_node(L, lua_upvalueindex(1));
 
-	const uint32_t idx = lua_tonumber(L, lua_upvalueindex(2));
+	const uint32_t idx = lua_tonumber(L, lua_upvalueindex(3));
 	lua_pushnumber(L, idx + 1);
-	lua_replace(L, lua_upvalueindex(2));
+	lua_replace(L, lua_upvalueindex(3));
 
 	if (idx >= ts_node_named_child_count(n->n)) {
 		lua_pushnil(L);
 	} else {
-		push_lua_node(L, n->lang, ts_node_named_child(n->n, idx));
+		push_lua_node(
+			L, lua_upvalueindex(2),
+			ts_node_named_child(n->n, idx),
+			n->lang
+		);
 	}
 
 	return 1;
 }
 
-/// @teal Node.children: function(Node): function(): Node
+/* @teal-export Node.children: function(Node): function(): Node [[
+   Iterate over a node's children
+]] */
 int lua_node_children(lua_State *L) {
 	struct LuaTSNode *const n = get_lua_node(L, 1);
 	push_lua_tree_cursor(L, n->lang, n->n);
@@ -775,47 +924,79 @@ int lua_node_children(lua_State *L) {
 	return 1;
 }
 
-/// @teal Node.named_children: function(Node): function(): Node
+/* @teal-export Node.named_children: function(Node): function(): Node [[
+   Iterate over a node's named children
+]] */
 int lua_node_named_children(lua_State *L) {
 	TSNode n = get_node(L, 1);
+	push_parent(L, 1);
 	lua_pushnumber(L, 0);
-	lua_pushcclosure(L, lua_node_named_children_iterator, 2);
+	
+	lua_pushcclosure(L, lua_node_named_children_iterator, 3);
 	return 1;
 }
 
-/// @teal Node.next_sibling: function(Node): Node
+/* @teal-export Node.next_sibling: function(Node): Node [[
+   Get a node's next sibling
+]] */
 int lua_node_next_sibling(lua_State *L) {
 	struct LuaTSNode *const n = get_lua_node(L, 1);
+	push_parent(L, 1);
 	TSNode sibling = ts_node_next_sibling(n->n);
 	if (ts_node_is_null(sibling)) { lua_pushnil(L); return 1; }
-	push_lua_node(L, n->lang, sibling);
+	push_lua_node(
+		L, 2,
+		sibling,
+		n->lang
+	);
 	return 1;
 }
 
-/// @teal Node.prev_sibling: function(Node): Node
+/* @teal-export Node.prev_sibling: function(Node): Node [[
+   Get a node's previous sibling
+]] */
 int lua_node_prev_sibling(lua_State *L) {
 	struct LuaTSNode *const n = get_lua_node(L, 1);
+	push_parent(L, 1);
 	TSNode sibling = ts_node_prev_sibling(n->n);
 	if (ts_node_is_null(sibling)) { lua_pushnil(L); return 1; }
-	push_lua_node(L, n->lang, sibling);
+	push_lua_node(
+		L, 2,
+		sibling,
+		n->lang
+	);
 	return 1;
 }
 
-/// @teal Node.next_sibling: function(Node): Node
+/* @teal-export Node.next_named_sibling: function(Node): Node [[
+   Get a node's next named sibling
+]] */
 int lua_node_next_named_sibling(lua_State *L) {
 	struct LuaTSNode *const n = get_lua_node(L, 1);
+	push_parent(L, 1);
 	TSNode sibling = ts_node_next_named_sibling(n->n);
 	if (ts_node_is_null(sibling)) { lua_pushnil(L); return 1; }
-	push_lua_node(L, n->lang, sibling);
+	push_lua_node(
+		L, 2,
+		sibling,
+		n->lang
+	);
 	return 1;
 }
 
-/// @teal Node.prev_sibling: function(Node): Node
+/* @teal-export Node.prev_named_sibling: function(Node): Node [[
+   Get a node's previous named sibling
+]] */
 int lua_node_prev_named_sibling(lua_State *L) {
 	struct LuaTSNode *const n = get_lua_node(L, 1);
+	push_parent(L, 1);
 	TSNode sibling = ts_node_prev_named_sibling(n->n);
 	if (ts_node_is_null(sibling)) { lua_pushnil(L); return 1; }
-	push_lua_node(L, n->lang, sibling);
+	push_lua_node(
+		L, 2,
+		sibling,
+		n->lang
+	);
 	return 1;
 }
 
@@ -827,7 +1008,14 @@ int lua_node_string(lua_State *L) {
 	return 1;
 }
 
-/// @teal Node.name: function(Node): string
+/* @teal-export Node.name: function(Node): string [[
+   Returns the name of a given node
+   <pre>
+   print(node) -- => (comment)
+   print(node:name()) -- => comment
+   </pre>
+]] */
+
 int lua_node_name(lua_State *L) {
 	struct LuaTSNode *const n = get_lua_node(L, 1);
 	if (ts_node_is_null(n->n) || !ts_node_is_named(n->n)) { lua_pushnil(L); return 1; }
@@ -837,15 +1025,24 @@ int lua_node_name(lua_State *L) {
 	return 1;
 }
 
-/// @teal Node.child_by_field_name: function(Node, string): Node
+/* @teal-export Node.child_by_field_name: function(Node, string): Node [[
+   Get a node's child given a field name
+]] */
 int lua_node_child_by_field_name(lua_State *L) {
+	lua_settop(L, 2);
 	struct LuaTSNode *const n = get_lua_node(L, 1);
 	const char *name = luaL_checkstring(L, 2);
+
 	TSNode child = ts_node_child_by_field_name(n->n, name, strlen(name));
 	if (ts_node_is_null(child)) {
 		lua_pushnil(L);
 	} else {
-		push_lua_node(L, n->lang, child);
+		push_parent(L, 1);
+		push_lua_node(
+			L, 3,
+			child,
+			n->lang
+		);
 	}
 	return 1;
 }
@@ -889,6 +1086,7 @@ static const luaL_Reg node_metamethods[] = {
 
 static const luaL_Reg lib_funcs[] = {
 	{"load", lua_load_parser},
+	{"_get_registry_entry", push_registry_table},
 	{NULL, NULL}
 };
 
@@ -899,6 +1097,15 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 	create_metatable(L, LUA_TSNODE_METATABLE, node_metamethods, node_methods);
 	create_metatable(L, LUA_TSQUERY_METATABLE, query_metamethods, query_methods);
 	create_metatable(L, LUA_TSQUERYCURSOR_METATABLE, query_cursor_metamethods, query_cursor_methods);
+
+	lua_newtable(L); // {}
+
+	lua_newtable(L); // {}, {}
+	lua_pushstring(L, "k"); // {}, {}, "v"
+	lua_setfield(L, -2, "__mode"); // {}, { __mode = "k" }
+	lua_setmetatable(L, -2); // { <metatable { __mode = "k" }> }
+
+	lua_setfield(L, LUA_REGISTRYINDEX, registry_index);
 
 	luaL_newlib(L, lib_funcs);
 	return 1;
