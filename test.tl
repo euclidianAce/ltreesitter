@@ -1,7 +1,9 @@
 
 local r = require
 local ts      = require "ltreesitter"
-local inspect = r "inspect" as function(any, table): string -- TODO: is this .d.tl really not written yet???
+local inspect = r "inspect" as function(any, table): string
+
+local parser_path <const> = os.getenv("HOME") .. "/dev/parsers/teal.so"
 
 print("Testing expected errors...")
 do
@@ -11,14 +13,14 @@ do
 	end
 end
 do
-	local p, err = ts.load("./teal_parser.so", "lua")
+	local p, err = ts.load(parser_path, "lua")
 	if not p then
 		print(err)
 	end
 end
 print("Done with expected errors\n")
 
-local teal_parser = assert(ts.load("./teal_parser.so", "teal"))
+local teal_parser = assert(ts.load(parser_path, "teal"))
 
 print("Teal parser: ", inspect(teal_parser))
 -- for some reason inspect doesn't print the metatable of userdata...
@@ -47,11 +49,11 @@ print("node named_child_count:", root:named_child_count())
 print("node first child:",        root:child(0))
 print("node first named_child:",  root:named_child(0))
 
-print("node start point:",   inspect(root:start_point()))
-print("node end point:",     inspect(root:end_point()))
+print("node start point:",     inspect(root:start_point()))
+print("node end point:",       inspect(root:end_point()))
 
-print("node start byte:",    inspect(root:start_byte()))
-print("node end byte:",      inspect(root:end_byte()))
+print("node start byte:",      inspect(root:start_byte()))
+print("node end byte:",        inspect(root:end_byte()))
 
 print("node next sibling:",    inspect(root:next_sibling()))
 
