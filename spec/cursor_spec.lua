@@ -1,0 +1,16 @@
+local assert = require("luassert")
+local ts = require("ltreesitter")
+local util = require("spec.util")
+
+describe("Cursor", function()
+	local p
+	setup(function()
+		p = assert(ts.require("c"))
+	end)
+	pending("current_field_name", function() end)
+	pending("current_node", function() end)
+	pending("goto_first_child", function() end)
+	pending("goto_next_sibling", function() end)
+	pending("goto_parent", function() end)
+	pending("reset", function() end)
+end)
