@@ -6,8 +6,10 @@
 
 #ifdef _WIN32
 #error To be implemented :D
+#define PATH_SEP "\\"
 #else
 #include <dlfcn.h>
+#define PATH_SEP "/"
 #endif
 
 #include <lua.h>
@@ -67,7 +69,7 @@ int push_registry_table(lua_State *L) {
 }
 
 TSNode get_node(lua_State *L, int idx) { return ((struct LuaTSNode *)luaL_checkudata(L, (idx), LUA_TSNODE_METATABLE))->n; }
-struct LuaTSNode *const get_lua_node(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSNODE_METATABLE); }
+struct LuaTSNode *get_lua_node(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSNODE_METATABLE); }
 
 void set_parent(lua_State *L, int child_idx, int parent_idx) {
 	push_registry_table(L); // { <ltreesitter_registry> }
@@ -79,7 +81,7 @@ void set_parent(lua_State *L, int child_idx, int parent_idx) {
 
 // parent_idx is the *absolute* index of the lua object that needs to stay alive for the node to be valid
 // this is usually the tree itself
-struct LuaTSNode *const push_lua_node(lua_State *L, int parent_idx, TSNode node, const TSLanguage *lang) {
+struct LuaTSNode *push_lua_node(lua_State *L, int parent_idx, TSNode node, const TSLanguage *lang) {
 	struct LuaTSNode *const ln = lua_newuserdata(L, sizeof(struct LuaTSNode));
 	ln->n = node;
 	ln->lang = lang;
@@ -96,29 +98,20 @@ void push_parent(lua_State *L, int obj_idx) {
 	lua_pop(L, 1); // <parent>
 }
 
-TSTree *const get_tree(lua_State *L, int idx) { return ((struct LuaTSTree *)luaL_checkudata(L, (idx), LUA_TSTREE_METATABLE))->t; }
-struct LuaTSTree *const get_lua_tree(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSTREE_METATABLE); }
+TSTree *get_tree(lua_State *L, int idx) { return ((struct LuaTSTree *)luaL_checkudata(L, (idx), LUA_TSTREE_METATABLE))->t; }
+struct LuaTSTree *get_lua_tree(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSTREE_METATABLE); }
 
 TSTreeCursor get_tree_cursor(lua_State *L, int idx) { return ((struct LuaTSTreeCursor *)luaL_checkudata(L, (idx), LUA_TSTREECURSOR_METATABLE))->c; }
-struct LuaTSTreeCursor *const get_lua_tree_cursor(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSTREECURSOR_METATABLE); }
-/* struct LuaTSTreeCursor *const push_lua_tree_cursor(lua_State *L, const TSLanguage *lang, TSNode n) {*/
-	/* TSTreeCursor c = ts_tree_cursor_new(n);*/
-	/* struct LuaTSTreeCursor *const lc = lua_newuserdata(L, sizeof(struct LuaTSTreeCursor));*/
-	/* lc->lang = lang;*/
-	/* lc->c = c;*/
-	/* luaL_setmetatable(L, LUA_TSTREECURSOR_METATABLE);*/
+struct LuaTSTreeCursor *get_lua_tree_cursor(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSTREECURSOR_METATABLE); }
 
-	/* return lc;*/
-/* }*/
+TSParser *get_parser(lua_State *L, int idx) { return ((struct LuaTSParser *)luaL_checkudata(L, (idx), LUA_TSPARSER_METATABLE))->parser; }
+struct LuaTSParser *get_lua_parser(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSPARSER_METATABLE); }
 
-TSParser *const get_parser(lua_State *L, int idx) { return ((struct LuaTSParser *)luaL_checkudata(L, (idx), LUA_TSPARSER_METATABLE))->parser; }
-struct LuaTSParser *const get_lua_parser(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSPARSER_METATABLE); }
+TSQuery *get_query(lua_State *L, int idx) { return ((struct LuaTSQuery *)luaL_checkudata(L, (idx), LUA_TSQUERY_METATABLE))->q; }
+struct LuaTSQuery *get_lua_query(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSQUERY_METATABLE); }
 
-TSQuery *const get_query(lua_State *L, int idx) { return ((struct LuaTSQuery *)luaL_checkudata(L, (idx), LUA_TSQUERY_METATABLE))->q; }
-struct LuaTSQuery *const get_lua_query(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSQUERY_METATABLE); }
-
-TSQueryCursor *const get_query_cursor(lua_State *L, int idx) { return ((struct LuaTSQueryCursor *)luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE))->c; }
-struct LuaTSQueryCursor *const get_lua_query_cursor(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE); }
+TSQueryCursor *get_query_cursor(lua_State *L, int idx) { return ((struct LuaTSQueryCursor *)luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE))->c; }
+struct LuaTSQueryCursor *get_lua_query_cursor(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE); }
 
 void create_metatable(
 	lua_State *L,
@@ -267,7 +260,8 @@ int lua_query_match(lua_State *L) {
 }
 
 /* @teal-export Query.capture: function(Query, Node): function(): Node, string [[
-   Iterate over the captures of a given query
+   Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs
+   Since queries can capture unnamed nodes, the name is given second to prevent Lua from thinking the iteration is over
 
    <pre>
    local q = parser:query[[ (comment) @my_match ]]
@@ -349,6 +343,43 @@ static const luaL_Reg query_cursor_metamethods[] = {
 };
 /* }}}*/
 /* {{{ Parser Object */
+
+enum dl_open_error {
+	DLERR_NONE,
+	DLERR_DLOPEN,
+	DLERR_BUFLEN,
+	DLERR_DLSYM,
+};
+
+static enum dl_open_error try_dlopen(struct LuaTSParser *p, const char *parser_file, const char *lang_name) {
+	void *handle = dlopen(parser_file, RTLD_NOW | RTLD_LOCAL); // TODO: are these the necessary flags?
+	if (!handle) {
+		return DLERR_DLOPEN;
+	}
+	char buf[128];
+	if (snprintf(buf, sizeof(buf) - sizeof(TREE_SITTER_SYM), TREE_SITTER_SYM "%s", lang_name) == 0) {
+		dlclose(handle);
+		return DLERR_BUFLEN;
+	}
+
+	TSLanguage *(*tree_sitter_lang)(void);
+	// ISO C complains about casting void * to a function pointer
+	*(void **) (&tree_sitter_lang) = dlsym(handle, buf);
+
+	if (!tree_sitter_lang) {
+		dlclose(handle);
+		return DLERR_DLSYM;
+	}
+	TSParser *parser = ts_parser_new();
+	const TSLanguage *lang = tree_sitter_lang();
+	ts_parser_set_language(parser, lang);
+
+	p->dlhandle = handle;
+	p->lang = lang;
+	p->parser = parser;
+	return DLERR_NONE;
+}
+
 /* @teal-export load: function(file_name: string, language_name: string): Parser, string [[
    Load a parser from a given file
 
@@ -358,47 +389,123 @@ static const luaL_Reg query_cursor_metamethods[] = {
    local my_parser = ltreesitter.load("./my_parser.so", "my_language")
    </pre>
 
-   Currently this does not work on Windows
-   (The entire library doesn't work on Windows since this is the entry point to any of the functionality)
+   * Currently this does not work on Windows
+   (The entire library doesn't work on Windows since this is one of the entry points to any of the functionality)
 ]] */
 int lua_load_parser(lua_State *L) {
 	lua_settop(L, 2);
 	const char *parser_file = luaL_checkstring(L, 1);
 	const char *lang_name = luaL_checkstring(L, 2);
 
-	void *handle = dlopen(parser_file, RTLD_NOW | RTLD_LOCAL); // TODO: are these the necessary flags?
-	if (!handle) {
-		lua_pushnil(L);
-		lua_pushfstring(L, "Unable to dlopen handle: %s", dlerror());
-		return 2;
-	}
-	char buf[128];
-	if (snprintf(buf, sizeof(buf) - sizeof(TREE_SITTER_SYM), TREE_SITTER_SYM "%s", lang_name) == 0) {
-		dlclose(handle);
-		lua_pushnil(L);
-		lua_pushstring(L, "Unable to copy language name into buffer");
-		return 2;
-	}
-	/* tree_sitter_lang = (TSLanguage *(*)(void)) dlsym(handle, buf)*/
-	TSLanguage *(*tree_sitter_lang)(void) = dlsym(handle, buf);
-	if (!tree_sitter_lang) {
-		dlclose(handle);
-		lua_pushnil(L);
-		lua_pushfstring(L, "Unable to find symbol %s in %s", buf, parser_file);
-		return 2;
-	}
-
-	TSParser *parser = ts_parser_new();
-	const TSLanguage *lang = tree_sitter_lang();
-	ts_parser_set_language(parser, lang);
-
 	struct LuaTSParser *const p = lua_newuserdata(L, sizeof(struct LuaTSParser));
-	p->dlhandle = handle;
-	p->lang = lang;
-	p->parser = parser;
+	const enum dl_open_error err = try_dlopen(p, parser_file, lang_name);
+
+	switch (err) {
+	case DLERR_NONE:
+		break;
+	case DLERR_DLSYM:
+		lua_pushnil(L);
+		lua_pushfstring(L, "Unable to find symbol " TREE_SITTER_SYM "%s", lang_name);
+		return 2;
+	case DLERR_DLOPEN:
+		lua_pushnil(L);
+		lua_pushstring(L, dlerror());
+		return 2;
+	case DLERR_BUFLEN:
+		lua_pushnil(L);
+		lua_pushfstring(L, "Unable to copy language name '%s' into buffer", lang_name);
+		return 2;
+	}
 
 	luaL_setmetatable(L, LUA_TSPARSER_METATABLE);
 	return 1;
+}
+
+/* @teal-export require: function(language_name: string): Parser [[
+   Search <code>package.cpath</code> for a parser with the filename <code>language_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_language_name</code>
+   Like the regular <code>require</code>, this will error if the parser is not found or the symbol couldn't be loaded. Use either <code>pcall</code> or <code>ltreesitter.load</code> to not error out on failure.
+
+   <pre>
+   local my_parser = ltreesitter.require("my_language")
+   my_parser:parse_string(...)
+   -- etc.
+   </pre>
+
+   * Currently this does not work on Windows
+   (The entire library doesn't work on Windows since this is one of the entry points to any of the functionality)
+]] */
+static inline void buf_add_str(luaL_Buffer *b, const char *s) { luaL_addlstring(b, s, strlen(s)); }
+int lua_require_parser(lua_State *L) {
+	lua_settop(L, 1);
+	const char *lang_name = luaL_checkstring(L, 1);
+	const size_t lang_len = strlen(lang_name);
+	lua_getglobal(L, "package"); // lang_name, package
+	lua_getfield(L, -1, "cpath"); // lang_name, package, package.cpath
+	const char *cpath = lua_tostring(L, -1);
+	const size_t buf_size = strlen(cpath);
+	char *buf = malloc(sizeof(char) * (buf_size + lang_len));
+
+	luaL_Buffer b;
+	luaL_buffinit(L, &b);
+	buf_add_str(&b, "Unable to load parser for ");
+	buf_add_str(&b, lang_name);
+
+	struct LuaTSParser *const p = lua_newuserdata(L, sizeof(struct LuaTSParser));
+
+	ssize_t j = 0;
+	for (size_t i = 0; i <= buf_size; ++i, ++j) {
+		// cpath doesn't necessarily end with a ; so lets pretend it does
+		char c = i == buf_size ? ';' : cpath[i];
+		switch (c) {
+		case '?':
+			for (size_t k = 0; k < lang_len; ++k, ++j) {
+				buf[j] = lang_name[k];
+			}
+			--j;
+			break;
+		case ';': {
+			buf[j] = '\0';
+
+			const enum dl_open_error err = try_dlopen(p, buf, lang_name);
+
+			switch (err) {
+			case DLERR_NONE:
+				luaL_pushresult(&b);
+				free(buf);
+				lua_pop(L, 1);
+				luaL_setmetatable(L, LUA_TSPARSER_METATABLE);
+				return 1;
+			case DLERR_DLSYM:
+				buf_add_str(&b, "\n\tFound ");
+				luaL_addlstring(&b, buf, j);
+				buf_add_str(&b, ":\n\t\tunable to find symbol" TREE_SITTER_SYM);
+				buf_add_str(&b, lang_name);
+				break;
+			case DLERR_DLOPEN:
+				buf_add_str(&b, "\n\tTried ");
+				luaL_addlstring(&b, buf, j);
+				buf_add_str(&b, ":\n\t\tdlopen error ");
+				buf_add_str(&b, dlerror());
+				break;
+			case DLERR_BUFLEN:
+				buf_add_str(&b, "\n\tUnable to copy langauge name '");
+				buf_add_str(&b, lang_name);
+				buf_add_str(&b, "' into buffer");
+				break;
+			}
+
+			j = -1;
+			break;
+		}
+		default:
+			buf[j] = cpath[i];
+			break;
+		}
+	}
+	free(buf);
+
+	luaL_pushresult(&b);
+	return lua_error(L);
 }
 
 int lua_parser_gc(lua_State *L) {
@@ -458,7 +565,7 @@ static const luaL_Reg parser_metamethods[] = {
 ]] */
 int lua_tree_root(lua_State *L) {
 	struct LuaTSTree *const t = get_lua_tree(L, 1);
-	struct LuaTSNode *const n = lua_newuserdata(L, sizeof(struct LuaTSNode));
+	lua_newuserdata(L, sizeof(struct LuaTSNode));
 	push_lua_node(L, 1, ts_tree_root_node(t->t), t->lang);
 	return 1;
 }
@@ -602,7 +709,7 @@ static const luaL_Reg tree_metamethods[] = {
 // TODO: should this be exposed, or only used internally
 // Porque no los dos?
 
-struct LuaTSTreeCursor *const push_lua_tree_cursor(lua_State *L, int parent_idx, const TSLanguage *lang, TSNode n) {
+struct LuaTSTreeCursor *push_lua_tree_cursor(lua_State *L, int parent_idx, const TSLanguage *lang, TSNode n) {
 	struct LuaTSTreeCursor *c = lua_newuserdata(L, sizeof(struct LuaTSTreeCursor));
 	c->c = ts_tree_cursor_new(n);
 	c->lang = lang;
@@ -932,7 +1039,7 @@ int lua_node_children(lua_State *L) {
    Iterate over a node's named children
 ]] */
 int lua_node_named_children(lua_State *L) {
-	TSNode n = get_node(L, 1);
+	get_node(L, 1);
 	push_parent(L, 1);
 	lua_pushnumber(L, 0);
 	
@@ -1090,6 +1197,7 @@ static const luaL_Reg node_metamethods[] = {
 
 static const luaL_Reg lib_funcs[] = {
 	{"load", lua_load_parser},
+	{"require", lua_require_parser},
 	{"_get_registry_entry", push_registry_table},
 	{NULL, NULL}
 };

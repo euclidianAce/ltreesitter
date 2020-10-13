@@ -5,3 +5,7 @@ lua_modules
 *.o
 *.so
 tl*
+/luarocks
+/lua
+/lua_modules
+/.luarocks
