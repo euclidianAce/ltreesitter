@@ -33,6 +33,6 @@ build = {
       },
    },
    copy_directories = {
-      "doc",
+      "docs",
    },
 }
