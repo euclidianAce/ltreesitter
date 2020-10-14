@@ -26,6 +26,9 @@
 #define LUA_TSQUERYCURSOR_METATABLE    "ltreesitter.TSQueryCursor"
 static const char registry_index[] = "ltreesitter_registry";
 
+// @teal-export version: number
+static const char version_str[] = "0.0.1";
+
 struct LuaTSParser {
 	const TSLanguage *lang;
 	void *dlhandle;
@@ -1219,6 +1222,9 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 
 	lua_setfield(L, LUA_REGISTRYINDEX, registry_index);
 
-	luaL_newlib(L, lib_funcs);
+	luaL_newlib(L, lib_funcs); // { <lib> }
+	lua_pushstring(L, version_str); // {}, version_str
+	lua_setfield(L, -2, "version"); // { <lib> version = version_str }
+
 	return 1;
 }

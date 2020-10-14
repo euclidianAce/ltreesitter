@@ -1,17 +1,22 @@
+rockspec_format = "3.0"
 package = "ltreesitter"
 version = "dev-1"
 source = {
-   url = "git://github.com/euclidianAce/ltreesitter"
+   url = "git+https://github.com/euclidianAce/ltreesitter.git"
 }
 description = {
    homepage = "https://github.com/euclidianAce/ltreesitter",
    license = "MIT",
+   summary = "Treesitter bindings to Lua",
+   detailed = [[Standalone Lua bindings to the Treesitter api.]],
+   issues_url = "https://github.com/euclidianAce/ltreesitter/issues"
 }
 external_dependencies = {
    TREE_SITTER = {
       header = "tree_sitter/api.h"
    },
 }
+supported_platforms = {"unix"}
 build = {
    type = "builtin",
    modules = {
@@ -26,5 +31,8 @@ build = {
       lua = {
          ["ltreesitter"] = "ltreesitter.d.tl",
       },
+   },
+   copy_directories = {
+      "doc",
    },
 }
