@@ -243,7 +243,6 @@ int lua_query_match(lua_State *L) {
 		lua_pushnumber(L, m.pattern_index); lua_setfield(L, -2, "pattern_index"); // { <match> }
 		lua_pushnumber(L, m.capture_count); lua_setfield(L, -2, "capture_count"); // { <match> }
 		lua_createtable(L, m.capture_count, m.capture_count); // { <match> }, { <arraymap> }
-		lua_createtable(L, 0, m.capture_count); // { <match> }, { <arraymap> }
 		for (uint16_t i = 0; i < m.capture_count; ++i) {
 			push_lua_node(
 				L, parent_idx,
@@ -256,7 +255,7 @@ int lua_query_match(lua_State *L) {
 			const char *name = ts_query_capture_name_for_id(c->q->q, i, &len);
 			lua_setfield(L, -2, name); // {<match>}, {<arraymap> <Node>, [name]=<Node>}
 		}
-		lua_setfield(L, -3, "captures"); // {<match> captures=<arraymap>}
+		lua_setfield(L, -2, "captures"); // {<match> captures=<arraymap>}
 		return 1;
 	}
 	return 0;
