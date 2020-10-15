@@ -855,8 +855,8 @@ int lua_node_end_byte(lua_State *L) {
 ]] */
 int lua_node_byte_range(lua_State *L) {
 	TSNode n = get_node(L, 1);
-	lua_pushnumber(L, ts_node_start_byte(n));
-	lua_pushnumber(L, ts_node_end_byte(n) + 1);
+	lua_pushnumber(L, ts_node_start_byte(n) + 1);
+	lua_pushnumber(L, ts_node_end_byte(n));
 	return 2;
 }
 
