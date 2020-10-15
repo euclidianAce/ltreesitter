@@ -27,7 +27,7 @@
 static const char registry_index[] = "ltreesitter_registry";
 
 // @teal-export version: number
-static const char version_str[] = "0.0.1";
+static const char version_str[] = "0.0.1+dev";
 
 struct LuaTSParser {
 	const TSLanguage *lang;
@@ -37,6 +37,8 @@ struct LuaTSParser {
 struct LuaTSTree {
 	const TSLanguage *lang;
 	TSTree *t;
+	const char *src;
+	size_t src_len;
 };
 struct LuaTSTreeCursor {
 	const TSLanguage *lang;
@@ -520,21 +522,42 @@ int lua_parser_gc(lua_State *L) {
 	return 0;
 }
 
-/* @teal-export Parser.parse_string: function(Parser, string): Tree [[
+/* @teal-export Parser.parse_string: function(Parser, string, Tree): Tree [[
    Uses the given parser to parse the string
+
+   If Tree is provided then it will be used to create a new updated tree
+   (but it is the responsibility of the programmer to make the correct <code>Tree:edit</code> calls)
+
+   Could return nil if the parser has a timeout
 ]] */
 int lua_parser_parse_string(lua_State *L) {
+	lua_settop(L, 3);
 	struct LuaTSParser *p = get_lua_parser(L, 1);
-	const char *str = luaL_checkstring(L, 2);
+	size_t len;
+	const char *str = luaL_checklstring(L, 2, &len);
+	struct LuaTSTree *old_lua_tree;
+	TSTree *old_tree;
+	if (lua_type(L, 3) == LUA_TNIL) {
+		old_tree = NULL;
+	} else {
+		old_lua_tree = get_lua_tree(L, 3);
+		old_tree = old_lua_tree->t;
+	}
 	TSTree *tree = ts_parser_parse_string(
 		p->parser,
-		NULL,
+		old_tree,
 		str,
-		strlen(str)
+		len
 	);
+	if (!tree) {
+		lua_pushnil(L);
+		return 1;
+	}
 	struct LuaTSTree *t = lua_newuserdata(L, sizeof(struct LuaTSTree));
 	t->t = tree;
 	t->lang = p->lang;
+	t->src = str;
+	t->src_len = len;
 	luaL_setmetatable(L, LUA_TSTREE_METATABLE);
 	return 1;
 }
@@ -708,8 +731,6 @@ static const luaL_Reg tree_metamethods[] = {
 };
 /* }}}*/
 /* {{{ Tree Cursor Object */
-// TODO: should this be exposed, or only used internally
-// Porque no los dos?
 
 struct LuaTSTreeCursor *push_lua_tree_cursor(lua_State *L, int parent_idx, const TSLanguage *lang, TSNode n) {
 	struct LuaTSTreeCursor *c = lua_newuserdata(L, sizeof(struct LuaTSTreeCursor));
@@ -848,10 +869,10 @@ int lua_node_end_byte(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.range: function(Node): number, number [[
+/* @teal-export Node.byte_range: function(Node): number, number [[
    Get both the start and end bytes of the source string
    for easy use with string.sub
-   <pre> print( source_string:sub( my_node:range() ) ) </pre>
+   <pre> print( source_string:sub( my_node:byte_range() ) ) </pre>
 ]] */
 int lua_node_byte_range(lua_State *L) {
 	TSNode n = get_node(L, 1);
@@ -1160,10 +1181,25 @@ int lua_node_child_by_field_name(lua_State *L) {
 	return 1;
 }
 
+/* @teal-export Node.source: function(Node): string [[
+   Get the substring of the source that was parsed to create <code>Node</code>
+]]*/
+int lua_node_get_source_str(lua_State *L) {
+	lua_settop(L, 1);
+	TSNode n = get_node(L, 1);
+	uint32_t start = ts_node_start_byte(n);
+	uint32_t end = ts_node_end_byte(n);
+	push_parent(L, 1);
+	struct LuaTSTree *const t = get_lua_tree(L, 2);
+	lua_pushlstring(L, t->src + start, end - start);
+	return 1;
+}
+
 static const luaL_Reg node_methods[] = {
 	{"type", lua_node_type},
 	{"name", lua_node_name},
-	{"range", lua_node_byte_range},
+	{"byte_range", lua_node_byte_range},
+	{"source", lua_node_get_source_str},
 
 	{"child", lua_node_child},
 	{"child_count", lua_node_child_count},

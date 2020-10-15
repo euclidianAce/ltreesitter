@@ -15,7 +15,7 @@ end
 print("hi")
 ]]
 
-for match in p:query[[ (comment) @a ]]:match(tree:root()) do
-	print(require"inspect"(match))
+for capture in p:query[[ (comment) @a ]]:capture(tree:root()) do
+	print(capture:source())
 end
 
