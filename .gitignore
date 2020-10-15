@@ -9,3 +9,4 @@ tl*
 /lua
 /lua_modules
 /.luarocks
+scratch.tl

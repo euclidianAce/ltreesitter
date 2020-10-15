@@ -265,7 +265,6 @@ int lua_query_match(lua_State *L) {
 
 /* @teal-export Query.capture: function(Query, Node): function(): Node, string [[
    Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs
-   Since queries can capture unnamed nodes, the name is given second to prevent Lua from thinking the iteration is over
 
    <pre>
    local q = parser:query[[ (comment) @my_match ]]
