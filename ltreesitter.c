@@ -24,10 +24,13 @@
 #define LUA_TSNODE_METATABLE           "ltreesitter.TSNode"
 #define LUA_TSQUERY_METATABLE          "ltreesitter.TSQuery"
 #define LUA_TSQUERYCURSOR_METATABLE    "ltreesitter.TSQueryCursor"
-static const char registry_index[] = "ltreesitter_registry";
+static const char registry_index = 'k';
+static const char objects_index[] = "objects";
+static const char default_predicates_index[] = "default_predicates";
+static const char query_predicates_index[] = "query_predicates";
 
-// @teal-export version: number
-static const char version_str[] = "0.0.1+dev";
+// @teal-export version: string
+static const char version_str[] = "0.0.2";
 
 struct LuaTSParser {
 	const TSLanguage *lang;
@@ -51,6 +54,8 @@ struct LuaTSNode {
 struct LuaTSInputEdit { TSInputEdit *e; };
 struct LuaTSQuery {
 	const TSLanguage *lang;
+	const char *src;
+	size_t src_len;
 	TSQuery *q;
 };
 struct LuaTSQueryCursor {
@@ -68,38 +73,77 @@ struct LuaTSQueryCursor {
 
    Though, if you are looking to debug a segfault/garbage collection bug, this is a useful tool in addition to the lua inspect module
 ]]*/
-int push_registry_table(lua_State *L) {
-	lua_getfield(L, LUA_REGISTRYINDEX, registry_index);
+static int push_registry_table(lua_State *L) {
+	lua_pushvalue(L, LUA_REGISTRYINDEX); // { <Registry> }
+	lua_pushlightuserdata(L, (void *)&registry_index); // { <Registry> }, <void *>
+	lua_rawget(L, -2); //  { <Registry> }, { <ltreesitter Registry> }
+	lua_remove(L, -2); // { <ltreesitter Registry> }
+	return 1;
+}
+
+static int push_registry_object_table(lua_State *L) {
+	push_registry_table(L);
+	luaL_getsubtable(L, -1, objects_index);
+	lua_remove(L, -2);
+	return 1;
+}
+
+static int push_default_predicate_table(lua_State *L) {
+	push_registry_table(L);
+	luaL_getsubtable(L, -1, default_predicates_index);
+	lua_remove(L, -2);
+	return 1;
+}
+
+static int push_registry_query_predicate_table(lua_State *L) {
+	push_registry_table(L);
+	luaL_getsubtable(L, -1, query_predicates_index);
+	lua_remove(L, -2);
 	return 1;
 }
 
 TSNode get_node(lua_State *L, int idx) { return ((struct LuaTSNode *)luaL_checkudata(L, (idx), LUA_TSNODE_METATABLE))->n; }
 struct LuaTSNode *get_lua_node(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSNODE_METATABLE); }
 
+// This should only be used for only true indexes, i.e. no lua_upvalueindex, registry stuff, etc.
+static inline int make_non_relative(lua_State *L, int idx) {
+	if (idx < 0) {
+		return lua_gettop(L) + idx + 1;
+	} else {
+		return idx;
+	}
+}
+
 void set_parent(lua_State *L, int child_idx, int parent_idx) {
-	push_registry_table(L); // { <ltreesitter_registry> }
-	lua_pushvalue(L, child_idx);
-	lua_pushvalue(L, parent_idx); // { <ltreesitter_registry> }, <Child>, <Parent>
-	lua_settable(L, -3); // {<ltreesitter_registry> [<Child>] = <Parent>}
+	const int abs_child_idx = make_non_relative(L, child_idx);
+	const int abs_parent_idx = make_non_relative(L, parent_idx);
+	push_registry_object_table(L); // { <objects> }
+	lua_pushvalue(L, abs_child_idx);
+	lua_pushvalue(L, abs_parent_idx); // { <objects> }, <Child>, <Parent>
+	lua_settable(L, -3); // {<objects> [<Child>] = <Parent>}
 	lua_pop(L, 1);
 }
 
-// parent_idx is the *absolute* index of the lua object that needs to stay alive for the node to be valid
+// parent_idx is the index of the lua object that needs to stay alive for the node to be valid
 // this is usually the tree itself
 struct LuaTSNode *push_lua_node(lua_State *L, int parent_idx, TSNode node, const TSLanguage *lang) {
 	struct LuaTSNode *const ln = lua_newuserdata(L, sizeof(struct LuaTSNode));
 	ln->n = node;
 	ln->lang = lang;
 	luaL_setmetatable(L, LUA_TSNODE_METATABLE);
-	set_parent(L, lua_gettop(L), parent_idx);
+	set_parent(L, -1, parent_idx);
 	return ln;
 }
 
 void push_parent(lua_State *L, int obj_idx) {
-	push_registry_table(L); // { <ltreesitter_registry> }
-	lua_pushvalue(L, obj_idx); // { <ltreesitter_registry> }, <obj>
+	lua_pushvalue(L, obj_idx); // <obj>
+	push_registry_object_table(L); // <obj>, { <ltreesitter_registry> }
+	lua_insert(L, -2); // { <ltreesitter_registry> }, <obj>
 	lua_gettable(L, -2); // { <ltreesitter_registry> }, <parent>
-	lua_rotate(L, -2, 1); // <parent>, { <ltreesitter_registry> }
+#ifdef DEBUG_ASSERTIONS
+	if (!lua_toboolean(L, -1)) { luaL_error(L, "Object has no parent"); }
+#endif
+	lua_insert(L, -2); // <parent>, { <ltreesitter_registry> }
 	lua_pop(L, 1); // <parent>
 }
 
@@ -136,14 +180,16 @@ void create_metatable(
    Create a query out of the given string for the language of the given parser
 ]] */
 int lua_make_query(lua_State *L) {
+	lua_settop(L, 2);
 	struct LuaTSParser *p = get_lua_parser(L, 1);
-	const char *query_src = luaL_checkstring(L, 2);
+	size_t len;
+	const char *query_src = luaL_checklstring(L, 2, &len);
 	uint32_t err_offset;
 	TSQueryError err_type;
 	TSQuery *q = ts_query_new(
 		p->lang,
 		query_src,
-		strlen(query_src),
+		len,
 		&err_offset,
 		&err_type
 	);
@@ -167,10 +213,59 @@ int lua_make_query(lua_State *L) {
 	}
 
 	struct LuaTSQuery *lq = lua_newuserdata(L, sizeof(struct LuaTSQuery));
+	set_parent(L, 3, 1);
 	luaL_setmetatable(L, LUA_TSQUERY_METATABLE);
 	lq->lang = p->lang;
+	lq->src = query_src;
+	lq->src_len = len;
 	lq->q = q;
+
 	return 1;
+}
+
+void push_query_copy(lua_State *L, int query_idx) {
+	struct LuaTSQuery *orig = get_lua_query(L, query_idx);
+	push_parent(L, query_idx); // <parent>
+
+	uint32_t err_offset;
+	TSQueryError err_type;
+	TSQuery *q = ts_query_new(
+		orig->lang,
+		orig->src,
+		orig->src_len,
+		&err_offset,
+		&err_type
+	);
+
+	if (!q) {
+		// TODO: this is literally copy pasted from the constructor
+		// maybe separate this out
+		char slice[16] = { 0 };
+		strncpy(slice, &orig->src[
+			err_offset >= 10 ? err_offset - 10 : err_offset
+		], 15);
+		slice[15] = 0;
+
+		switch (err_type) {
+		case TSQueryErrorSyntax:    lua_pushfstring(L, "Query syntax error: around '%s' (at offset %d)",    slice, (int)err_offset); break;
+		case TSQueryErrorNodeType:  lua_pushfstring(L, "Query node type error: around '%s' (at offset %d)", slice, (int)err_offset); break;
+		case TSQueryErrorField:     lua_pushfstring(L, "Query field error: around '%s' (at offset %d)",     slice, (int)err_offset); break;
+		case TSQueryErrorCapture:   lua_pushfstring(L, "Query capture error: around '%s' (at offset %d)",   slice, (int)err_offset); break;
+		case TSQueryErrorStructure: lua_pushfstring(L, "Query structure error: around '%s' (at offset %d)", slice, (int)err_offset); break;
+		default: luaL_error(L, "unreachable, this is a bug");
+		}
+
+		lua_error(L);
+	}
+
+	struct LuaTSQuery *new = lua_newuserdata(L, sizeof(struct LuaTSQuery)); // <Parent>, <Query>
+	set_parent(L, -1, -2);
+	luaL_setmetatable(L, LUA_TSQUERY_METATABLE);
+	new->lang = orig->lang;
+	new->src = orig->src;
+	new->src_len = orig->src_len;
+	new->q = q;
+	lua_remove(L, -2); // <Query>
 }
 
 int lua_query_gc(lua_State *L) {
@@ -207,6 +302,89 @@ int lua_query_cursor_gc(lua_State *L) {
 	return 0;
 }
 
+static void push_query_predicates(lua_State *L, int query_idx) {
+	lua_pushvalue(L, query_idx); // <Query>
+	push_registry_query_predicate_table(L); // <Query>, { <Predicates> }
+	lua_insert(L, -2); // { <Predicates> }, <Query>
+	lua_gettable(L, -2); // { <Predicates> }, <Predicate>
+	lua_remove(L, -2); // <Predicate>
+	if (lua_type(L, -1) == LUA_TNIL) {
+		lua_pop(L, 1); // (nothing)
+		push_default_predicate_table(L); // <Default Predicate>
+	}
+}
+
+static bool do_predicates(
+	lua_State *L,
+	const int query_idx,
+	const TSQuery *const q,
+	const struct LuaTSTree *const t,
+	const TSQueryMatch *const m
+) {
+	const uint32_t num_patterns = ts_query_pattern_count(q);
+	for (uint32_t i = 0; i < num_patterns; ++i) {
+		uint32_t num_steps;
+		const TSQueryPredicateStep *const s = ts_query_predicates_for_pattern(q, i, &num_steps);
+		bool need_func_name = true;
+		bool is_question = false;
+		const char *func_name;
+		size_t num_args = 0;
+		for (uint32_t j = 0; j < num_steps; ++j) {
+			uint32_t len;
+			switch (s[j].type) {
+			case TSQueryPredicateStepTypeString: {
+				// literal strings
+
+				const char *pred_name = ts_query_string_value_for_id(q, s[j].value_id, &len);
+				if (need_func_name) {
+					push_query_predicates(L, query_idx);
+					lua_getfield(L, -1, pred_name);
+					if (lua_isnoneornil(L, -1)) {
+						return luaL_error(L, "Query doesn't have predicate '%s'", pred_name);
+					}
+					need_func_name = false;
+					func_name = pred_name;
+					if (func_name[len-1] == '?') {
+						is_question = true;
+					}
+				} else {
+					lua_pushlstring(L, pred_name, len);
+					++num_args;
+				}
+				break;
+			}
+			case TSQueryPredicateStepTypeCapture: {
+				// The name of a capture
+
+				const TSNode n = m->captures[s[j].value_id].node;
+				const uint32_t start = ts_node_start_byte(n);
+				const uint32_t end = ts_node_end_byte(n);
+				lua_pushlstring(L, t->src + start, end - start);
+
+				++num_args;
+				break;
+			}
+			case TSQueryPredicateStepTypeDone:
+				if (lua_pcall(L, num_args, 1, 0) != LUA_OK) {
+					lua_pushfstring(L, "Error calling predicate '%s': ", func_name);
+					lua_insert(L, -2);
+					lua_concat(L, 2);
+					lua_error(L);
+				}
+
+				if (is_question && !lua_toboolean(L, -1)) {
+					return false;
+				}
+
+				num_args = 0;
+				need_func_name = true;
+				is_question = false;
+				break;
+			}
+		}
+	}
+	return true;
+}
 
 // TODO: find a better way to do this, @teal-inline wont work since it needs to be nested
 /* @teal-export Query.Match.id : number */
@@ -214,32 +392,26 @@ int lua_query_cursor_gc(lua_State *L) {
 /* @teal-export Query.Match.capture_count : number */
 /* @teal-export Query.Match.captures : {string|number:Node} */
 
-/* @teal-export Query.match: function(Query, Node): function(): Match [[
-   Iterate over the matches of a given query
-
-   <pre>
-   local q = parser:query[[ (comment) @my_match ]]
-   for match in q:match(node) do
-      print(match.my_match)
-   end
-   </pre>
-
-   The match object is a record populated with all the information given by treesitter
-   <pre>
-   type Query.Match = record
-      id: number
-      pattern_index: number
-      capture_count: number
-      captures: {string|number:Node}
-   end
-   </pre>
- ]] */
 int lua_query_match(lua_State *L) {
+	struct LuaTSQuery *const q = get_lua_query(L, lua_upvalueindex(1));
 	struct LuaTSQueryCursor *c = get_lua_query_cursor(L, lua_upvalueindex(3));
 	TSQueryMatch m;
 	push_parent(L, lua_upvalueindex(2));
 	const int parent_idx = lua_gettop(L);
+	struct LuaTSTree *const t = get_lua_tree(L, -1);
+
+try_again:
 	if (ts_query_cursor_next_match(c->c, &m)) {
+		if (!do_predicates(
+			L,
+			lua_upvalueindex(1),
+			q->q,
+			t,
+			&m
+		)) {
+			goto try_again;
+		}
+
 		lua_createtable(L, 0, 5); // { <match> }
 		lua_pushnumber(L, m.id); lua_setfield(L, -2, "id"); // { <match> }
 		lua_pushnumber(L, m.pattern_index); lua_setfield(L, -2, "pattern_index"); // { <match> }
@@ -263,24 +435,27 @@ int lua_query_match(lua_State *L) {
 	return 0;
 }
 
-/* @teal-export Query.capture: function(Query, Node): function(): Node, string [[
-   Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs
-
-   <pre>
-   local q = parser:query[[ (comment) @my_match ]]
-   for capture, name in q:capture(node) do
-      print(capture, name) -- => (comment), "my_match"
-   end
-   </pre>
-]] */
 int lua_query_capture(lua_State *L) {
+	// stack: Query, Node, Cursor
 	struct LuaTSQuery *const q = get_lua_query(L, lua_upvalueindex(1));
 	TSQueryCursor *c = get_query_cursor(L, lua_upvalueindex(3));
 	push_parent(L, lua_upvalueindex(2));
 	const int parent_idx = lua_gettop(L);
+	struct LuaTSTree *const t = get_lua_tree(L, -1);
 	TSQueryMatch m;
 	uint32_t capture_index;
+
+try_again:
 	if (ts_query_cursor_next_capture(c, &m, &capture_index)) {
+		if (!do_predicates(
+			L,
+			lua_upvalueindex(1),
+			q->q,
+			t,
+			&m
+		)) {
+			goto try_again;
+		}
 		push_lua_node(
 			L, parent_idx,
 			m.captures[capture_index].node,
@@ -294,6 +469,27 @@ int lua_query_capture(lua_State *L) {
 	return 0;
 }
 
+/* @teal-export Query.match: function(Query, Node): function(): Match [[
+   Iterate over the matches of a given query
+
+   The match object is a record populated with all the information given by treesitter
+   <pre>
+   type Query.Match = record
+      id: number
+      pattern_index: number
+      capture_count: number
+      captures: {string|number:Node}
+   end
+   </pre>
+
+   Example:
+   <pre>
+   local q = parser:query[[ (comment) @my_match ]]
+   for match in q:match(node) do
+      print(match.captures.my_match)
+   end
+   </pre>
+]]*/
 int lua_query_match_factory(lua_State *L) {
 	lua_settop(L, 2);
 	struct LuaTSQuery *const q = get_lua_query(L, 1);
@@ -304,10 +500,20 @@ int lua_query_match_factory(lua_State *L) {
 	lc->c = c;
 	lc->q = q;
 	ts_query_cursor_exec(c, q->q, n);
-	lua_pushcclosure(L, lua_query_match, 3); // prevent the node + query from being gc'ed
+	lua_pushcclosure(L, lua_query_match, 3);
 	return 1;
 }
 
+/* @teal-export Query.capture: function(Query, Node): function(): Node, string [[
+   Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs
+
+   <pre>
+   local q = parser:query[[ (comment) @my_match ]]
+   for capture, name in q:capture(node) do
+      print(capture, name) -- => (comment), "my_match"
+   end
+   </pre>
+]] */
 int lua_query_capture_factory(lua_State *L) {
 	lua_settop(L, 2);
 	struct LuaTSQuery *const q = get_lua_query(L, 1);
@@ -322,12 +528,173 @@ int lua_query_capture_factory(lua_State *L) {
 	return 1;
 }
 
+static int eq_predicate(lua_State *L) {
+	const int num_args = lua_gettop(L);
+	if (num_args < 2) {
+		luaL_error(L, "predicate eq? expects 2 or more arguments, got %d", num_args);
+	}
+	const char *a = luaL_checkstring(L, 1);
+	const char *b;
+
+	for (int i = 2; i <= num_args; ++i) {
+		b = luaL_checkstring(L, i);
+		if (strcmp(a, b) != 0) {
+			lua_pushboolean(L, false);
+			return 1;
+		};
+		a = b;
+	}
+
+	lua_pushboolean(L, true);
+	return 1;
+}
+
+static int match_predicate(lua_State *L) {
+	const int num_args = lua_gettop(L);
+	if (num_args != 2) {
+		luaL_error(L, "predicate match? expects exactly 2 arguments, got %d", num_args);
+	}
+	luaopen_string(L);
+	lua_getfield(L, -1, "match");
+	lua_remove(L, -2);
+
+	lua_insert(L, -3);
+	lua_call(L, 2, 1);
+
+	return 1;
+}
+
+static void set_query_predicades(lua_State *L, int query_idx, int pred_idx) {
+	const int abs_query_idx = make_non_relative(L, query_idx);
+	const int abs_pred_idx = make_non_relative(L, pred_idx);
+
+	push_registry_query_predicate_table(L);
+	lua_pushvalue(L, abs_query_idx);
+	lua_pushvalue(L, abs_pred_idx);
+	lua_settable(L, -3);
+}
+
+/* @teal-export Query.with: function(Query, {string:function(...: string): any...}) [[
+   Creates a new query equipped with predicates defined in the <code>{string:function}</code> map given
+
+   Predicates that end in a <code>'?'</code> character will be seen as conditions that must be met for the pattern to be matched.
+   Predicates that don't will be seen just as functions to be executed given the matches provided.
+
+   Additionally, you will not have access to the return values of these functions, if you'd like to keep the results of a computation, make your functions have side-effects to write somewhere you can access.
+
+   By default the following predicates are provided.
+      <code> (#eq? ...) </code> will match if all arguments provided are equal
+      <code> (#match? text pattern) </code> will match the provided <code>text</code> matches the given <code>pattern</code>. Matches are determined by Lua's standard <code>string.match</code> function.
+
+   Example:
+   The following snippet will match lua functions that have an LDoc/EmmyLua style comment above them
+   <pre>
+   local parser = ltreesitter.require("lua")
+
+   -- grab a node to query against
+   local root_node = parser:parse_string[[
+      ---@Doc this does stuff
+      local function stuff_doer()
+         do_stuff()
+      end
+   ]]:root()
+
+   for match in parser
+      :query[[(
+         (comment) @the-comment
+         .
+         (function_definition
+            (function_name) @the-function-name)
+         (#is_doc_comment? @the-comment)
+      )]]
+      :with{
+         ["is_doc_comment?"] = function(str)
+            return str:sub(1, 4) == "---@"
+         end
+      }
+      :match(root_node)
+   do
+      print("Function: " .. match.captures["the-function-name"] .. " has documentation")
+      print("   " .. match.captures["the-comment"])
+   end
+   </pre>
+]]*/
+
+int lua_query_copy_with_predicates(lua_State *L) {
+	lua_settop(L, 2); // <Orig>, <Predicates>
+	push_registry_query_predicate_table(L); // <Orig>, <Predicates>, { <RegistryPredicates> }
+	push_query_copy(L, 1); // <Orig>, <Predicates>, { <RegistryPredicates> }, <Copy>
+	lua_pushvalue(L, -1); // <Orig>, <Predicates>, { <RegistryPredicates> }, <Copy>, <Copy>
+	lua_insert(L, -3); // <Orig>, <Predicates>, <Copy>, { <RegistryPredicates> }, <Copy>
+	lua_pushvalue(L, 2); // <Orig>, <Predicates>, <Copy>, { <RegistryPredicates> }, <Copy>, <Predicates>
+	lua_settable(L, -3); // <Orig>, <Predicates>, <Copy>, { <RegistryPredicates> }
+	lua_pop(L, 1); // <Orig>, <Predicates>, <Copy>
+	return 1;
+}
+
+/* @teal-export Query.exec: function(Query, Node) [[
+   Runs a query. That's it. Nothing more, nothing less.
+   This is intended to be used with the <code>Query.with</code> method and predicates that have side effects,
+   i.e. for when you would use Query.match or Query.capture, but do nothing in the for loop.
+
+   <pre>
+   local parser = ltreesitter.require("teal")
+
+   -- grab a node to query against
+   local root_node = parser:parse_string[[
+   local x: string = "foo"
+   local y: string = "bar"
+   ]]:root()
+
+   parser
+      :query[[(
+         (var_declaration
+            (var) @var-name
+            (string) @value)
+         (#set! @var-name @value)
+      )]]
+      :with{["set!"] = function(a, b) _G[a] = b:sub(2, -2) end}
+      :exec(root_node)
+
+   print(x) -- => foo
+   print(y) -- => bar
+
+   </pre>
+
+   If you'd like to interact with the matches/captures of a query, see the Query.match and Query.capture iterators
+]]*/
+int lua_query_exec(lua_State *L) {
+	TSQuery *const q = get_query(L, 1);
+	TSNode n = get_node(L, 2);
+
+	TSQueryCursor *c = ts_query_cursor_new();
+
+	push_parent(L, 2);
+	struct LuaTSTree *const t = get_lua_tree(L, -1);
+
+	TSQueryMatch m;
+	ts_query_cursor_exec(c, q, n);
+	while (ts_query_cursor_next_match(c, &m)) {
+		do_predicates(L, 1, q, t, &m);
+	}
+
+	return 0;
+}
+
+static const luaL_Reg default_query_predicates[] = {
+	{"eq?", eq_predicate},
+	{"match?", match_predicate},
+	{NULL, NULL}
+};
+
 static const luaL_Reg query_methods[] = {
 	{"pattern_count", lua_query_pattern_count},
 	{"capture_count", lua_query_capture_count},
 	{"string_count", lua_query_string_count},
 	{"match", lua_query_match_factory},
 	{"capture", lua_query_capture_factory},
+	{"with", lua_query_copy_with_predicates},
+	{"exec", lua_query_exec},
 	{NULL, NULL}
 };
 
@@ -408,7 +775,7 @@ int lua_load_parser(lua_State *L) {
 		break;
 	case DLERR_DLSYM:
 		lua_pushnil(L);
-		lua_pushfstring(L, "Unable to find symbol " TREE_SITTER_SYM "%s", lang_name);
+		lua_pushfstring(L, "Unable to find symbol %s%s", TREE_SITTER_SYM, lang_name);
 		return 2;
 	case DLERR_DLOPEN:
 		lua_pushnil(L);
@@ -424,8 +791,13 @@ int lua_load_parser(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export require: function(language_name: string): Parser [[
-   Search <code>package.cpath</code> for a parser with the filename <code>language_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_language_name</code>
+/* @teal-export require: function(library_file_name: string, language_name: string): Parser [[
+   Search <code>package.cpath</code> for a parser with the filename <code>library_file_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_'language_name'</code>
+   <code>language_name</code> is optional and will be set to <code>library_file_name</code> if not provided.
+
+   So if you want to load a Lua parser from a file named <code>lua.so</code> then use <code>ltreesitter.require("lua")</code>
+   But if you want to load a Lua parser from a file named <code>parser.so</code> then use <code>ltreesitter.require("parser", "lua")</code>
+
    Like the regular <code>require</code>, this will error if the parser is not found or the symbol couldn't be loaded. Use either <code>pcall</code> or <code>ltreesitter.load</code> to not error out on failure.
 
    <pre>
@@ -439,8 +811,10 @@ int lua_load_parser(lua_State *L) {
 ]] */
 static inline void buf_add_str(luaL_Buffer *b, const char *s) { luaL_addlstring(b, s, strlen(s)); }
 int lua_require_parser(lua_State *L) {
-	lua_settop(L, 1);
-	const char *lang_name = luaL_checkstring(L, 1);
+	lua_settop(L, 2);
+	const char *so_name = luaL_checkstring(L, 1);
+	const size_t so_len = strlen(so_name);
+	const char *lang_name = luaL_optstring(L, 2, so_name);
 	const size_t lang_len = strlen(lang_name);
 	lua_getglobal(L, "package"); // lang_name, package
 	lua_getfield(L, -1, "cpath"); // lang_name, package, package.cpath
@@ -461,8 +835,8 @@ int lua_require_parser(lua_State *L) {
 		char c = i == buf_size ? ';' : cpath[i];
 		switch (c) {
 		case '?':
-			for (size_t k = 0; k < lang_len; ++k, ++j) {
-				buf[j] = lang_name[k];
+			for (size_t k = 0; k < so_len; ++k, ++j) {
+				buf[j] = so_name[k];
 			}
 			--j;
 			break;
@@ -481,7 +855,8 @@ int lua_require_parser(lua_State *L) {
 			case DLERR_DLSYM:
 				buf_add_str(&b, "\n\tFound ");
 				luaL_addlstring(&b, buf, j);
-				buf_add_str(&b, ":\n\t\tunable to find symbol" TREE_SITTER_SYM);
+				buf_add_str(&b, ":\n\t\tunable to find symbol " TREE_SITTER_SYM);
+				buf_add_str(&b, TREE_SITTER_SYM);
 				buf_add_str(&b, lang_name);
 				break;
 			case DLERR_DLOPEN:
@@ -1248,13 +1623,27 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 	create_metatable(L, LUA_TSQUERYCURSOR_METATABLE, query_cursor_metamethods, query_cursor_methods);
 
 	lua_newtable(L); // {}
-
 	lua_newtable(L); // {}, {}
-	lua_pushstring(L, "k"); // {}, {}, "k"
-	lua_setfield(L, -2, "__mode"); // {}, { __mode = "k" }
-	lua_setmetatable(L, -2); // { <metatable { __mode = "k" }> }
+	lua_newtable(L); // {}, {}, {}
+	lua_pushstring(L, "k"); // {}, {}, {}, "k"
+	lua_setfield(L, -2, "__mode"); // {}, {}, { __mode = "k" }
+	lua_setmetatable(L, -2); // {}, { <metatable { __mode = "k" }> }
+	lua_setfield(L, -2, "objects"); // { objects = { <metatable { __mode = "k" }> } }
 
-	lua_setfield(L, LUA_REGISTRYINDEX, registry_index);
+	lua_newtable(L); // { objects = {...} }, {}
+	luaL_setfuncs(L, default_query_predicates, 0); // { objects = {...} }, { ["eq?"] = <function>, ... }
+	lua_setfield(L, -2, default_predicates_index); // { objects = {...}, predicates = {...} }
+
+	lua_newtable(L); // { objects, predicates }, {}
+	lua_newtable(L); // { objects, predicates }, {}, {}
+
+	lua_pushstring(L, "v"); // { obj, pred }, {}, {}, "v"
+	lua_setfield(L, -2, "__mode"); // { obj, pred }, {}, { __mode = "v" }
+
+	lua_setmetatable(L, -2); // { obj, pred }, { <metatable { __mode = "v" }> }
+	lua_setfield(L, -2, query_predicates_index); // { obj, pred, query_predicates = { <__mode = "v"> }}
+
+	lua_rawsetp(L, LUA_REGISTRYINDEX, (void *)&registry_index);
 
 	luaL_newlib(L, lib_funcs); // { <lib> }
 	lua_pushstring(L, version_str); // {}, version_str
