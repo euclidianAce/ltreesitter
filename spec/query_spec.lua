@@ -208,6 +208,33 @@ describe("Query", function()
 				assert.are.same(res, {"// bar", "// baz", "// bang", "// blah"})
 			end)
 		end)
+		describe("find?", function()
+			local root_node
+			setup(function()
+				root_node = assert(p:parse_string[[
+					// foo
+					// bar
+					// baz
+					// bang
+					// blah
+					// hoop
+				]]):root()
+			end)
+			it("matches when a substring is found", function()
+				local res = {}
+				for c in p:query[[ ((comment) @a (#find? @a "oo")) ]]:capture(root_node) do
+					table.insert(res, c:source())
+				end
+				assert.are.same(res, {"// foo", "// hoop"})
+			end)
+			it("doesn't match patterns", function()
+				local res = {}
+				for c in p:query[[ ((comment) @a (#find? @a "....")) ]]:capture(root_node) do
+					table.insert(res, c:source())
+				end
+				assert.are.same(res, {})
+			end)
+		end)
 		describe("user-defined", function()
 			local root_node
 			setup(function()

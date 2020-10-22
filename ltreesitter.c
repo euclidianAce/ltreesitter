@@ -524,42 +524,6 @@ int lua_query_capture_factory(lua_State *L) {
 	return 1;
 }
 
-static int eq_predicate(lua_State *L) {
-	const int num_args = lua_gettop(L);
-	if (num_args < 2) {
-		luaL_error(L, "predicate eq? expects 2 or more arguments, got %d", num_args);
-	}
-	const char *a = luaL_checkstring(L, 1);
-	const char *b;
-
-	for (int i = 2; i <= num_args; ++i) {
-		b = luaL_checkstring(L, i);
-		if (strcmp(a, b) != 0) {
-			lua_pushboolean(L, false);
-			return 1;
-		};
-		a = b;
-	}
-
-	lua_pushboolean(L, true);
-	return 1;
-}
-
-static int match_predicate(lua_State *L) {
-	const int num_args = lua_gettop(L);
-	if (num_args != 2) {
-		luaL_error(L, "predicate match? expects exactly 2 arguments, got %d", num_args);
-	}
-	luaopen_string(L);
-	lua_getfield(L, -1, "match");
-	lua_remove(L, -2);
-
-	lua_insert(L, -3);
-	lua_call(L, 2, 1);
-
-	return 1;
-}
-
 static void set_query_predicades(lua_State *L, int query_idx, int pred_idx) {
 	const int abs_query_idx = make_non_relative(L, query_idx);
 	const int abs_pred_idx = make_non_relative(L, pred_idx);
@@ -581,9 +545,10 @@ static void set_query_predicades(lua_State *L, int query_idx, int pred_idx) {
    By default the following predicates are provided.
       <code> (#eq? ...) </code> will match if all arguments provided are equal
       <code> (#match? text pattern) </code> will match the provided <code>text</code> matches the given <code>pattern</code>. Matches are determined by Lua's standard <code>string.match</code> function.
+      <code> (#find? text substring) </code> will match if <code>text</code> contains <code>substring</code>. The substring is found with Lua's standard <code>string.find</code>, but the search always starts from the beginning, and pattern matching is disabled. This is equivalent to <code>string.find(text, substring, 0, true)</code>
 
    Example:
-   The following snippet will match lua functions that have an LDoc/EmmyLua style comment above them
+   The following snippet will match lua functions that have a single LDoc/EmmyLua style comment above them
    <pre>
    local parser = ltreesitter.require("lua")
 
@@ -677,11 +642,68 @@ int lua_query_exec(lua_State *L) {
 	return 0;
 }
 
+/* {{{ Default Predicates */
+
+static int eq_predicate(lua_State *L) {
+	const int num_args = lua_gettop(L);
+	if (num_args < 2) {
+		luaL_error(L, "predicate eq? expects 2 or more arguments, got %d", num_args);
+	}
+	const char *a = luaL_checkstring(L, 1);
+	const char *b;
+
+	for (int i = 2; i <= num_args; ++i) {
+		b = luaL_checkstring(L, i);
+		if (strcmp(a, b) != 0) {
+			lua_pushboolean(L, false);
+			return 1;
+		};
+		a = b;
+	}
+
+	lua_pushboolean(L, true);
+	return 1;
+}
+
+static int match_predicate(lua_State *L) {
+	const int num_args = lua_gettop(L);
+	if (num_args != 2) {
+		luaL_error(L, "predicate match? expects exactly 2 arguments, got %d", num_args);
+	}
+	luaopen_string(L);
+	lua_getfield(L, -1, "match");
+	lua_remove(L, -2);
+
+	lua_insert(L, -3);
+	lua_call(L, 2, 1);
+
+	return 1;
+}
+
+static int find_predicate(lua_State *L) {
+	const int num_args = lua_gettop(L);
+	if (num_args != 2) {
+		luaL_error(L, "predicate find? expects exactly 2 arguments, got %d", num_args);
+	}
+	luaopen_string(L);
+	lua_getfield(L, -1, "find");
+	lua_remove(L, -2);
+
+	lua_insert(L, -3);
+	lua_pushnumber(L, 0);
+	lua_pushboolean(L, true);
+	lua_call(L, 4, 1);
+
+	return 1;
+}
+
 static const luaL_Reg default_query_predicates[] = {
 	{"eq?", eq_predicate},
 	{"match?", match_predicate},
+	{"find?", find_predicate},
 	{NULL, NULL}
 };
+/* }}}*/
 
 static const luaL_Reg query_methods[] = {
 	{"pattern_count", lua_query_pattern_count},
