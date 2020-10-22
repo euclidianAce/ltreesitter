@@ -30,7 +30,7 @@ static const char default_predicates_index[] = "default_predicates";
 static const char query_predicates_index[] = "query_predicates";
 
 // @teal-export version: string
-static const char version_str[] = "0.0.2";
+static const char version_str[] = "0.0.2+dev";
 
 struct LuaTSParser {
 	const TSLanguage *lang;
@@ -574,7 +574,7 @@ static void set_query_predicades(lua_State *L, int query_idx, int pred_idx) {
 	lua_settable(L, -3);
 }
 
-/* @teal-export Query.with: function(Query, {string:function(...: string): any...}) [[
+/* @teal-export Query.with: function(Query, {string:function(...: string): any...}): Query [[
    Creates a new query equipped with predicates defined in the <code>{string:function}</code> map given
 
    Predicates that end in a <code>'?'</code> character will be seen as conditions that must be met for the pattern to be matched.
@@ -832,7 +832,10 @@ int lua_require_parser(lua_State *L) {
 	ssize_t j = 0;
 	for (size_t i = 0; i <= buf_size; ++i, ++j) {
 		// cpath doesn't necessarily end with a ; so lets pretend it does
-		char c = i == buf_size ? ';' : cpath[i];
+		char c;
+		if (i == buf_size) c = ';';
+		else c = cpath[i];
+
 		switch (c) {
 		case '?':
 			for (size_t k = 0; k < so_len; ++k, ++j) {
@@ -1023,9 +1026,10 @@ void expect_nested_arg_field(lua_State *L, int idx, const char *parent_name, con
       start_byte: number
       old_end_byte: number
       new_end_byte: number
+
       start_point: Point
-      old_point_byte: Point
-      new_point_byte: Point
+      old_end_point: Point
+      new_end_point: Point
    end
 ]]*/
 /* @teal-export Tree.edit: function(Tree, TreeEdit) [[
@@ -1399,6 +1403,7 @@ int lua_node_children_iterator(lua_State *L) {
 }
 
 int lua_node_named_children_iterator(lua_State *L) {
+	lua_settop(L, 0);
 	struct LuaTSNode *const n = get_lua_node(L, lua_upvalueindex(1));
 
 	const uint32_t idx = lua_tonumber(L, lua_upvalueindex(3));
@@ -1408,11 +1413,14 @@ int lua_node_named_children_iterator(lua_State *L) {
 	if (idx >= ts_node_named_child_count(n->n)) {
 		lua_pushnil(L);
 	} else {
+		// TODO: make this less odd
+		lua_pushvalue(L, lua_upvalueindex(2));
 		push_lua_node(
-			L, lua_upvalueindex(2),
+			L, 1,
 			ts_node_named_child(n->n, idx),
 			n->lang
 		);
+		lua_remove(L, -2);
 	}
 
 	return 1;
@@ -1570,34 +1578,29 @@ int lua_node_get_source_str(lua_State *L) {
 }
 
 static const luaL_Reg node_methods[] = {
-	{"type", lua_node_type},
-	{"name", lua_node_name},
 	{"byte_range", lua_node_byte_range},
-	{"source", lua_node_get_source_str},
-
 	{"child", lua_node_child},
+	{"child_by_field_name", lua_node_child_by_field_name},
 	{"child_count", lua_node_child_count},
-
+	{"children", lua_node_children},
+	{"create_cursor", lua_tree_cursor_create},
+	{"end_byte", lua_node_end_byte},
+	{"end_point", lua_node_end_point},
+	{"is_extra", lua_node_is_extra},
+	{"is_missing", lua_node_is_missing},
+	{"is_named", lua_node_is_named},
+	{"name", lua_node_name},
 	{"named_child", lua_node_named_child},
 	{"named_child_count", lua_node_named_child_count},
-	{"child_by_field_name", lua_node_child_by_field_name},
-
-	{"start_byte", lua_node_start_byte},
-	{"end_byte", lua_node_end_byte},
-
-	{"start_point", lua_node_start_point},
-	{"end_point", lua_node_end_point},
-
-	{"next_sibling", lua_node_next_sibling},
-	{"prev_sibling", lua_node_prev_sibling},
-
-	{"next_named_sibling", lua_node_next_named_sibling},
-	{"prev_named_sibling", lua_node_prev_named_sibling},
-
-	{"children", lua_node_children},
 	{"named_children", lua_node_named_children},
-
-	{"create_cursor", lua_tree_cursor_create},
+	{"next_named_sibling", lua_node_next_named_sibling},
+	{"next_sibling", lua_node_next_sibling},
+	{"prev_named_sibling", lua_node_prev_named_sibling},
+	{"prev_sibling", lua_node_prev_sibling},
+	{"source", lua_node_get_source_str},
+	{"start_byte", lua_node_start_byte},
+	{"start_point", lua_node_start_point},
+	{"type", lua_node_type},
 	{NULL, NULL}
 };
 static const luaL_Reg node_metamethods[] = {
