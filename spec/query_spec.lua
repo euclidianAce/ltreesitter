@@ -208,7 +208,7 @@ describe("Query", function()
 				assert.are.same(res, {"// bar", "// baz", "// bang", "// blah"})
 			end)
 		end)
-		pending("[user-defined]", function()
+		describe("user-defined", function()
 			local root_node
 			setup(function()
 				root_node = assert(p:parse_string[[
@@ -219,6 +219,47 @@ describe("Query", function()
 					// blah
 					// hoop
 				]]):root()
+			end)
+			it("should consider predicates that end in '?' as functions that need to return truthy values to match", function()
+				local captures = {}
+				for m in p
+					:query[[((comment) @the-comment
+						(#starts_with? @the-comment "b"))]]
+					:with{
+						["starts_with?"] = function(a, b)
+							return a:match("^//%s*" .. b)
+						end
+					}
+					:match(root_node)
+				do
+					assert(m.captures["the-comment"]:source():match("^//%s*b"))
+					table.insert(captures, m.captures["the-comment"]:source())
+				end
+				assert.are.same(captures, {
+					"// bar",
+					"// baz",
+					"// bang",
+					"// blah",
+				})
+			end)
+			it("should not remove default predicates", function()
+				local captures = {}
+				for m in p
+					:query[[((comment) @the-comment
+						(#eq? @the-comment "// bar")
+						(#starts_with? @the-comment "b"))]]
+					:with{
+						["starts_with?"] = function(a, b)
+							return a:match("^//%s*" .. b)
+						end
+					}
+					:match(root_node)
+				do
+					assert.are.equal(m.captures["the-comment"]:source(), "// bar")
+					assert(m.captures["the-comment"]:source():match("^//%s*b"))
+					table.insert(captures, m.captures["the-comment"]:source())
+				end
+				assert.are.same(captures, { "// bar" })
 			end)
 		end)
 	end)

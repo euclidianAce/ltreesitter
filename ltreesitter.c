@@ -176,6 +176,33 @@ void create_metatable(
 }
 /* }}}*/
 /* {{{ Query Object */
+
+static void handle_query_error(
+	lua_State *L,
+	TSQuery *q,
+	uint32_t err_offset,
+	TSQueryError err_type,
+	const char *query_src
+) {
+	if (q) return;
+	char slice[16] = { 0 };
+	strncpy(slice, &query_src[
+			err_offset >= 10 ? err_offset - 10 : err_offset
+	], 15);
+	slice[15] = 0;
+
+	switch (err_type) {
+	case TSQueryErrorSyntax:    lua_pushfstring(L, "Query syntax error: around '%s' (at offset %d)",    slice, (int)err_offset); break;
+	case TSQueryErrorNodeType:  lua_pushfstring(L, "Query node type error: around '%s' (at offset %d)", slice, (int)err_offset); break;
+	case TSQueryErrorField:     lua_pushfstring(L, "Query field error: around '%s' (at offset %d)",     slice, (int)err_offset); break;
+	case TSQueryErrorCapture:   lua_pushfstring(L, "Query capture error: around '%s' (at offset %d)",   slice, (int)err_offset); break;
+	case TSQueryErrorStructure: lua_pushfstring(L, "Query structure error: around '%s' (at offset %d)", slice, (int)err_offset); break;
+	default: luaL_error(L, "unreachable, this is a bug");
+	}
+
+	lua_error(L);
+}
+
 /* @teal-export Parser.query: function(Parser, string): Query [[
    Create a query out of the given string for the language of the given parser
 ]] */
@@ -193,24 +220,7 @@ int lua_make_query(lua_State *L) {
 		&err_offset,
 		&err_type
 	);
-	if (!q) {
-		char slice[16] = { 0 };
-		strncpy(slice, &query_src[
-			err_offset >= 10 ? err_offset - 10 : err_offset
-		], 15);
-		slice[15] = 0;
-
-		switch (err_type) {
-		case TSQueryErrorSyntax:    lua_pushfstring(L, "Query syntax error: around '%s' (at offset %d)",    slice, (int)err_offset); break;
-		case TSQueryErrorNodeType:  lua_pushfstring(L, "Query node type error: around '%s' (at offset %d)", slice, (int)err_offset); break;
-		case TSQueryErrorField:     lua_pushfstring(L, "Query field error: around '%s' (at offset %d)",     slice, (int)err_offset); break;
-		case TSQueryErrorCapture:   lua_pushfstring(L, "Query capture error: around '%s' (at offset %d)",   slice, (int)err_offset); break;
-		case TSQueryErrorStructure: lua_pushfstring(L, "Query structure error: around '%s' (at offset %d)", slice, (int)err_offset); break;
-		default: return luaL_error(L, "unreachable, this is a bug");
-		}
-
-		return lua_error(L);
-	}
+	handle_query_error(L, q, err_offset, err_type, query_src);
 
 	struct LuaTSQuery *lq = lua_newuserdata(L, sizeof(struct LuaTSQuery));
 	set_parent(L, 3, 1);
@@ -237,26 +247,7 @@ void push_query_copy(lua_State *L, int query_idx) {
 		&err_type
 	);
 
-	if (!q) {
-		// TODO: this is literally copy pasted from the constructor
-		// maybe separate this out
-		char slice[16] = { 0 };
-		strncpy(slice, &orig->src[
-			err_offset >= 10 ? err_offset - 10 : err_offset
-		], 15);
-		slice[15] = 0;
-
-		switch (err_type) {
-		case TSQueryErrorSyntax:    lua_pushfstring(L, "Query syntax error: around '%s' (at offset %d)",    slice, (int)err_offset); break;
-		case TSQueryErrorNodeType:  lua_pushfstring(L, "Query node type error: around '%s' (at offset %d)", slice, (int)err_offset); break;
-		case TSQueryErrorField:     lua_pushfstring(L, "Query field error: around '%s' (at offset %d)",     slice, (int)err_offset); break;
-		case TSQueryErrorCapture:   lua_pushfstring(L, "Query capture error: around '%s' (at offset %d)",   slice, (int)err_offset); break;
-		case TSQueryErrorStructure: lua_pushfstring(L, "Query structure error: around '%s' (at offset %d)", slice, (int)err_offset); break;
-		default: luaL_error(L, "unreachable, this is a bug");
-		}
-
-		lua_error(L);
-	}
+	handle_query_error(L, q, err_offset, err_type, orig->src);
 
 	struct LuaTSQuery *new = lua_newuserdata(L, sizeof(struct LuaTSQuery)); // <Parent>, <Query>
 	set_parent(L, -1, -2);
@@ -325,8 +316,8 @@ static bool do_predicates(
 	for (uint32_t i = 0; i < num_patterns; ++i) {
 		uint32_t num_steps;
 		const TSQueryPredicateStep *const s = ts_query_predicates_for_pattern(q, i, &num_steps);
+		bool is_question = false; // if a predicate is a question then the query should only match if it results in a truthy value
 		bool need_func_name = true;
-		bool is_question = false;
 		const char *func_name;
 		size_t num_args = 0;
 		for (uint32_t j = 0; j < num_steps; ++j) {
@@ -337,10 +328,18 @@ static bool do_predicates(
 
 				const char *pred_name = ts_query_string_value_for_id(q, s[j].value_id, &len);
 				if (need_func_name) {
+					// Find predicate
 					push_query_predicates(L, query_idx);
 					lua_getfield(L, -1, pred_name);
-					if (lua_isnoneornil(L, -1)) {
-						return luaL_error(L, "Query doesn't have predicate '%s'", pred_name);
+					if (lua_isnil(L, -1)) {
+						lua_pop(L, 1);
+						// try to grab default value
+						push_default_predicate_table(L);
+						lua_getfield(L, -1, pred_name);
+						lua_remove(L, -2);
+						if (lua_isnil(L, -1)) {
+							return luaL_error(L, "Query doesn't have predicate '%s'", pred_name);
+						}
 					}
 					need_func_name = false;
 					func_name = pred_name;
@@ -408,9 +407,7 @@ try_again:
 			q->q,
 			t,
 			&m
-		)) {
-			goto try_again;
-		}
+		)) { goto try_again; }
 
 		lua_createtable(L, 0, 5); // { <match> }
 		lua_pushnumber(L, m.id); lua_setfield(L, -2, "id"); // { <match> }
@@ -453,9 +450,8 @@ try_again:
 			q->q,
 			t,
 			&m
-		)) {
-			goto try_again;
-		}
+		)) { goto try_again; }
+
 		push_lua_node(
 			L, parent_idx,
 			m.captures[capture_index].node,
@@ -1618,12 +1614,12 @@ static const luaL_Reg lib_funcs[] = {
 };
 
 LUA_API int luaopen_ltreesitter(lua_State *L) {
-	create_metatable(L, LUA_TSPARSER_METATABLE, parser_metamethods, parser_methods);
-	create_metatable(L, LUA_TSTREE_METATABLE, tree_metamethods, tree_methods);
-	create_metatable(L, LUA_TSTREECURSOR_METATABLE, tree_cursor_metamethods, tree_cursor_methods);
 	create_metatable(L, LUA_TSNODE_METATABLE, node_metamethods, node_methods);
-	create_metatable(L, LUA_TSQUERY_METATABLE, query_metamethods, query_methods);
+	create_metatable(L, LUA_TSPARSER_METATABLE, parser_metamethods, parser_methods);
 	create_metatable(L, LUA_TSQUERYCURSOR_METATABLE, query_cursor_metamethods, query_cursor_methods);
+	create_metatable(L, LUA_TSQUERY_METATABLE, query_metamethods, query_methods);
+	create_metatable(L, LUA_TSTREECURSOR_METATABLE, tree_cursor_metamethods, tree_cursor_methods);
+	create_metatable(L, LUA_TSTREE_METATABLE, tree_metamethods, tree_methods);
 
 	lua_newtable(L); // {}
 	lua_newtable(L); // {}, {}
