@@ -751,6 +751,7 @@ static enum dl_open_error try_dlopen(struct LuaTSParser *p, const char *parser_f
 	}
 
 	TSLanguage *(*tree_sitter_lang)(void);
+
 	// ISO C complains about casting void * to a function pointer
 	*(void **) (&tree_sitter_lang) = dlsym(handle, buf);
 
@@ -847,6 +848,7 @@ int lua_require_parser(lua_State *L) {
 
 	struct LuaTSParser *const p = lua_newuserdata(L, sizeof(struct LuaTSParser));
 
+	// TODO: should probably just use the builtin package.searchpath stuffs
 	ssize_t j = 0;
 	for (size_t i = 0; i <= buf_size; ++i, ++j) {
 		// cpath doesn't necessarily end with a ; so lets pretend it does
@@ -1265,18 +1267,6 @@ int lua_node_end_byte(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.byte_range: function(Node): number, number [[
-   Get both the start and end bytes of the source string
-   for easy use with string.sub
-   <pre> print( source_string:sub( my_node:byte_range() ) ) </pre>
-]] */
-int lua_node_byte_range(lua_State *L) {
-	TSNode n = get_node(L, 1);
-	lua_pushnumber(L, ts_node_start_byte(n) + 1);
-	lua_pushnumber(L, ts_node_end_byte(n));
-	return 2;
-}
-
 /* @teal-inline [[
    record Point
       row: number
@@ -1596,7 +1586,6 @@ int lua_node_get_source_str(lua_State *L) {
 }
 
 static const luaL_Reg node_methods[] = {
-	{"byte_range", lua_node_byte_range},
 	{"child", lua_node_child},
 	{"child_by_field_name", lua_node_child_by_field_name},
 	{"child_count", lua_node_child_count},
