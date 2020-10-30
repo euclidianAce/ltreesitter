@@ -7,14 +7,15 @@ describe("Node", function()
 	local str = {
 		[[ /* hello world */ ]],
 		[[ /* hello world */ int main(void) { return 0; } ]],
+		[[ const int x = 1; int main(void) { return 1; } ]],
 	}
 	local tree = {}
 	local root = {}
 	setup(function()
 		p = assert(ts.require("c"))
 		for i, v in ipairs(str) do
-			tree[i] = assert(p:parse_string(v))
-			root[i] = assert(tree[i]:root())
+			tree[i] = assert(p:parse_string(v), "Failed parsing string: " .. v)
+			root[i] = assert(tree[i]:root(), "Failed getting root of tree " .. tostring(i))
 		end
 	end)
 	it("name should return the name of the node", function()
@@ -33,7 +34,18 @@ describe("Node", function()
 		assert.are.equal(type(n), "number")
 		assert.are.equal(n, 2, "incorrect number of children")
 	end)
-	pending("child_by_field_name", function() end)
+
+	describe("child_by_field_name", function()
+		it("should return an ltreesitter.TSNode", function()
+			local n = assert(root[3]:child(0))
+			util.assert_userdata_type(n:child_by_field_name("type"), "ltreesitter.TSNode")
+		end)
+		it("should return the correct node", function()
+			local n = assert(root[3]:child(0))
+			assert.are.equal(n:child_by_field_name("type"):type(), "primitive_type")
+		end)
+	end)
+
 	it("children should iterate over all the children of a node", function()
 		-- TODO: find a case where children and named_children differ
 		local actual_child_names = {}
@@ -117,11 +129,32 @@ describe("Node", function()
 		end)
 	end)
 
-	pending("is_extra", function() end)
-	pending("is_missing", function() end)
-	pending("is_named", function() end)
-	pending("named_child", function() end)
-	pending("named_child_count", function() end)
+	-- TODO: assert the correct values for these
+	it("is_extra should return a boolean", function()
+		assert.is.boolean(root[1]:is_extra())
+	end)
+	it("is_missing should return a boolean", function()
+		assert.is.boolean(root[1]:is_missing())
+	end)
+	it("is_named should return a boolean", function()
+		assert.is.boolean(root[1]:is_named())
+	end)
+
+	describe("named_child", function()
+		it("should return an ltreesitter.TSNode", function()
+			util.assert_userdata_type(root[1]:named_child(0), "ltreesitter.TSNode")
+		end)
+		pending("should return the correct node", function()
+
+		end)
+	end)
+
+	describe("named_child_count", function()
+		it("should return a number", function()
+			-- TODO: assert the correct number
+			assert.is.number(root[1]:named_child_count())
+		end)
+	end)
 
 	describe("next_named_sibling", function()
 		it("should return an ltreesitter.TSNode", function()
