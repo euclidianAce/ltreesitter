@@ -1532,6 +1532,13 @@ int lua_node_string(lua_State *L) {
 	return 1;
 }
 
+int lua_node_eq(lua_State *L) {
+	TSNode n1 = get_node(L, 1);
+	TSNode n2 = get_node(L, 2);
+	lua_pushboolean(L, ts_node_eq(n1, n2));
+	return 1;
+}
+
 /* @teal-export Node.name: function(Node): string [[
    Returns the name of a given node
    <pre>
@@ -1611,6 +1618,7 @@ static const luaL_Reg node_methods[] = {
 	{NULL, NULL}
 };
 static const luaL_Reg node_metamethods[] = {
+	{"__eq", lua_node_eq},
 	{"__tostring", lua_node_string},
 	{NULL, NULL}
 };
