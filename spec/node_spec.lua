@@ -144,8 +144,9 @@ describe("Node", function()
 		it("should return an ltreesitter.TSNode", function()
 			util.assert_userdata_type(root[1]:named_child(0), "ltreesitter.TSNode")
 		end)
-		pending("should return the correct node", function()
-
+		it("should return the correct node", function()
+			local n = assert(root[1]:named_child(0))
+			assert.are.equal(n:type(), "comment")
 		end)
 	end)
 
