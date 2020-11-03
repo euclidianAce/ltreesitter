@@ -5,11 +5,9 @@
 #include <string.h>
 
 #ifdef _WIN32
-#error To be implemented :D
-#define PATH_SEP "\\"
+#include <windows.h>
 #else
 #include <dlfcn.h>
-#define PATH_SEP "/"
 #endif
 
 #include <lua.h>
@@ -30,7 +28,7 @@ static const char default_predicates_index[] = "default_predicates";
 static const char query_predicates_index[] = "query_predicates";
 
 // @teal-export version: string
-static const char version_str[] = "0.0.3";
+static const char version_str[] = "0.0.3+dev";
 
 struct LuaTSParser {
 	const TSLanguage *lang;
@@ -740,23 +738,40 @@ enum dl_open_error {
 };
 
 static enum dl_open_error try_dlopen(struct LuaTSParser *p, const char *parser_file, const char *lang_name) {
-	void *handle = dlopen(parser_file, RTLD_NOW | RTLD_LOCAL); // TODO: are these the necessary flags?
+	void *handle;
+#ifdef _WIN32
+	handle = LoadLibrary(parser_file);
+#else
+	handle = dlopen(parser_file, RTLD_NOW | RTLD_LOCAL); // TODO: are these the necessary flags?
+#endif
 	if (!handle) {
 		return DLERR_DLOPEN;
 	}
 	char buf[128];
 	if (snprintf(buf, sizeof(buf) - sizeof(TREE_SITTER_SYM), TREE_SITTER_SYM "%s", lang_name) == 0) {
+#ifdef _WIN32
+		FreeLibrary(handle);
+#else
 		dlclose(handle);
+#endif
 		return DLERR_BUFLEN;
 	}
 
 	TSLanguage *(*tree_sitter_lang)(void);
 
+#ifdef _WIN32
+	tree_sitter_lang = (__cdecl TSLanguage *(*)(void))GetProcAddress(handle, buf);
+#else
 	// ISO C complains about casting void * to a function pointer
 	*(void **) (&tree_sitter_lang) = dlsym(handle, buf);
+#endif
 
 	if (!tree_sitter_lang) {
+#ifdef _WIN32
+		FreeLibrary(handle);
+#else
 		dlclose(handle);
+#endif
 		return DLERR_DLSYM;
 	}
 	TSParser *parser = ts_parser_new();
@@ -772,14 +787,13 @@ static enum dl_open_error try_dlopen(struct LuaTSParser *p, const char *parser_f
 /* @teal-export load: function(file_name: string, language_name: string): Parser, string [[
    Load a parser from a given file
 
-   On unix this uses dlopen, so if a path without a path separator is given, dlopen has its own path's that it will search for your file in.
+   Keep in mind that this includes the <code>.so</code> or <code>.dll</code> extension
+
+   On Unix this uses dlopen, on Windows this uses LoadLibrary so if a path without a path separator is given, these functions have their own path's that they will search for your file in.
    So if in doubt use a file path like
    <pre>
    local my_parser = ltreesitter.load("./my_parser.so", "my_language")
    </pre>
-
-   * Currently this does not work on Windows
-   (The entire library doesn't work on Windows since this is one of the entry points to any of the functionality)
 ]] */
 int lua_load_parser(lua_State *L) {
 	lua_settop(L, 2);
@@ -824,9 +838,6 @@ int lua_load_parser(lua_State *L) {
    my_parser:parse_string(...)
    -- etc.
    </pre>
-
-   * Currently this does not work on Windows
-   (The entire library doesn't work on Windows since this is one of the entry points to any of the functionality)
 ]] */
 static inline void buf_add_str(luaL_Buffer *b, const char *s) { luaL_addlstring(b, s, strlen(s)); }
 int lua_require_parser(lua_State *L) {
@@ -885,7 +896,11 @@ int lua_require_parser(lua_State *L) {
 			case DLERR_DLOPEN:
 				buf_add_str(&b, "\n\tTried ");
 				luaL_addlstring(&b, buf, j);
+#ifdef _WIN32
+				buf_add_str(&b, ":\n\t\tLoadLibrary error ");
+#else
 				buf_add_str(&b, ":\n\t\tdlopen error ");
+#endif
 				buf_add_str(&b, dlerror());
 				break;
 			case DLERR_BUFLEN:
@@ -915,7 +930,12 @@ int lua_parser_gc(lua_State *L) {
 	printf("Parser %p is being garbage collected\n", lp);
 #endif
 	ts_parser_delete(lp->parser);
+
+#ifdef _WIN32
+	FreeLibrary(lp->dlhandle);
+#else
 	dlclose(lp->dlhandle);
+#endif
 	return 0;
 }
 
