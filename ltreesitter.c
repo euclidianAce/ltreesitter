@@ -81,21 +81,21 @@ static int push_registry_table(lua_State *L) {
 
 static int push_registry_object_table(lua_State *L) {
 	push_registry_table(L);
-	luaL_getsubtable(L, -1, objects_index);
+	lua_getfield(L, -1, objects_index);
 	lua_remove(L, -2);
 	return 1;
 }
 
 static int push_default_predicate_table(lua_State *L) {
 	push_registry_table(L);
-	luaL_getsubtable(L, -1, default_predicates_index);
+	lua_getfield(L, -1, default_predicates_index);
 	lua_remove(L, -2);
 	return 1;
 }
 
 static int push_registry_query_predicate_table(lua_State *L) {
 	push_registry_table(L);
-	luaL_getsubtable(L, -1, query_predicates_index);
+	lua_getfield(L, -1, query_predicates_index);
 	lua_remove(L, -2);
 	return 1;
 }
@@ -110,6 +110,11 @@ static inline int make_non_relative(lua_State *L, int idx) {
 	} else {
 		return idx;
 	}
+}
+
+void setmetatable(lua_State *L, const char *mt_name) {
+	luaL_getmetatable(L, mt_name);
+	lua_setmetatable(L, -2);
 }
 
 void set_parent(lua_State *L, int child_idx, int parent_idx) {
@@ -128,7 +133,7 @@ struct LuaTSNode *push_lua_node(lua_State *L, int parent_idx, TSNode node, const
 	struct LuaTSNode *const ln = lua_newuserdata(L, sizeof(struct LuaTSNode));
 	ln->n = node;
 	ln->lang = lang;
-	luaL_setmetatable(L, LUA_TSNODE_METATABLE);
+	setmetatable(L, LUA_TSNODE_METATABLE);
 	set_parent(L, -1, parent_idx);
 	return ln;
 }
@@ -160,7 +165,28 @@ struct LuaTSQuery *get_lua_query(lua_State *L, int idx) { return luaL_checkudata
 TSQueryCursor *get_query_cursor(lua_State *L, int idx) { return ((struct LuaTSQueryCursor *)luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE))->c; }
 struct LuaTSQueryCursor *get_lua_query_cursor(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE); }
 
-void create_metatable(
+#if LUA_VERSION_NUM < 502
+// Literally copied from 5.4
+LUALIB_API void luaL_setfuncs(lua_State *L, const luaL_Reg *l, int nup) {
+	luaL_checkstack(L, nup, "too many upvalues");
+	for (; l->name != NULL; l++) {  /* fill the table with given functions */
+		if (l->func == NULL)  /* place holder? */
+			lua_pushboolean(L, 0);
+		else {
+			int i;
+			for (i = 0; i < nup; i++)  /* copy upvalues to the top */
+				lua_pushvalue(L, -nup);
+			lua_pushcclosure(L, l->func, nup);  /* closure with those upvalues */
+		}
+		lua_setfield(L, -(nup + 2), l->name);
+	}
+	lua_pop(L, nup);  /* remove upvalues */
+}
+#define luaL_newlibtable(L,l) lua_createtable(L, 0, sizeof(l)/sizeof((l)[0]) - 1)
+#define luaL_newlib(L,l) (luaL_newlibtable(L,l), luaL_setfuncs(L,l,0))
+#endif
+
+static void create_metatable(
 	lua_State *L,
 	const char *name,
 	const luaL_Reg metamethods[],
@@ -222,7 +248,7 @@ int lua_make_query(lua_State *L) {
 
 	struct LuaTSQuery *lq = lua_newuserdata(L, sizeof(struct LuaTSQuery));
 	set_parent(L, 3, 1);
-	luaL_setmetatable(L, LUA_TSQUERY_METATABLE);
+	setmetatable(L, LUA_TSQUERY_METATABLE);
 	lq->lang = p->lang;
 	lq->src = query_src;
 	lq->src_len = len;
@@ -249,7 +275,7 @@ void push_query_copy(lua_State *L, int query_idx) {
 
 	struct LuaTSQuery *new = lua_newuserdata(L, sizeof(struct LuaTSQuery)); // <Parent>, <Query>
 	set_parent(L, -1, -2);
-	luaL_setmetatable(L, LUA_TSQUERY_METATABLE);
+	setmetatable(L, LUA_TSQUERY_METATABLE);
 	new->lang = orig->lang;
 	new->src = orig->src;
 	new->src_len = orig->src_len;
@@ -362,7 +388,7 @@ static bool do_predicates(
 				break;
 			}
 			case TSQueryPredicateStepTypeDone:
-				if (lua_pcall(L, num_args, 1, 0) != LUA_OK) {
+				if (lua_pcall(L, num_args, 1, 0) != 0) {
 					lua_pushfstring(L, "Error calling predicate '%s': ", func_name);
 					lua_insert(L, -2);
 					lua_concat(L, 2);
@@ -419,7 +445,7 @@ try_again:
 				c->q->lang
 			); // {<match>}, {<arraymap>}, <Node>
 			lua_pushvalue(L, -1); // {<match>}, {<arraymap>}, <Node>, <Node>
-			lua_seti(L, -3, i+1); // {<match>}, {<arraymap> <Node>}, <Node>
+			lua_rawseti(L, -3, i+1); // {<match>}, {<arraymap> <Node>}, <Node>
 			uint32_t len;
 			const char *name = ts_query_capture_name_for_id(c->q->q, i, &len);
 			lua_setfield(L, -2, name); // {<match>}, {<arraymap> <Node>, [name]=<Node>}
@@ -490,7 +516,7 @@ int lua_query_match_factory(lua_State *L) {
 	TSNode n = get_node(L, 2);
 	TSQueryCursor *c = ts_query_cursor_new();
 	struct LuaTSQueryCursor *lc = lua_newuserdata(L, sizeof(struct LuaTSQueryCursor));
-	luaL_setmetatable(L, LUA_TSQUERYCURSOR_METATABLE);
+	setmetatable(L, LUA_TSQUERYCURSOR_METATABLE);
 	lc->c = c;
 	lc->q = q;
 	ts_query_cursor_exec(c, q->q, n);
@@ -514,7 +540,7 @@ int lua_query_capture_factory(lua_State *L) {
 	TSNode n = get_node(L, 2);
 	TSQueryCursor *c = ts_query_cursor_new();
 	struct LuaTSQueryCursor *lc = lua_newuserdata(L, sizeof(struct LuaTSQueryCursor));
-	luaL_setmetatable(L, LUA_TSQUERYCURSOR_METATABLE);
+	setmetatable(L, LUA_TSQUERYCURSOR_METATABLE);
 	lc->c = c;
 	lc->q = q;
 	ts_query_cursor_exec(c, q->q, n);
@@ -824,7 +850,7 @@ int lua_load_parser(lua_State *L) {
 		return 2;
 	}
 
-	luaL_setmetatable(L, LUA_TSPARSER_METATABLE);
+	setmetatable(L, LUA_TSPARSER_METATABLE);
 	return 1;
 }
 
@@ -888,7 +914,7 @@ int lua_require_parser(lua_State *L) {
 				luaL_pushresult(&b);
 				free(buf);
 				lua_pop(L, 1);
-				luaL_setmetatable(L, LUA_TSPARSER_METATABLE);
+				setmetatable(L, LUA_TSPARSER_METATABLE);
 				return 1;
 			case DLERR_DLSYM:
 				buf_add_str(&b, "\n\tFound ");
@@ -979,7 +1005,7 @@ int lua_parser_parse_string(lua_State *L) {
 	t->lang = p->lang;
 	t->src = str;
 	t->src_len = len;
-	luaL_setmetatable(L, LUA_TSTREE_METATABLE);
+	setmetatable(L, LUA_TSTREE_METATABLE);
 	return 1;
 }
 
@@ -1028,18 +1054,24 @@ int lua_tree_to_string(lua_State *L) {
 /* @teal-export Tree.copy: function(Tree): Tree [[
    Creates a copy of the tree. Tree-sitter recommends to create copies if you are going to use multithreading since tree accesses are not thread-safe, but copying them is cheap and quick
 ]] */
-int lua_tree_copy(lua_State *L) {
+static int lua_tree_copy(lua_State *L) {
 	TSTree *t = get_tree(L, 1);
 	struct LuaTSTree *const t_copy = lua_newuserdata(L, sizeof(struct LuaTSTree));
 	t_copy->t = ts_tree_copy(t);
-	luaL_setmetatable(L, LUA_TSTREE_METATABLE);
+	setmetatable(L, LUA_TSTREE_METATABLE);
 	return 1;
 }
 
-bool is_non_negative(lua_State *L, int i) { return lua_tonumber(L, i) >= 0; }
+static inline bool is_non_negative(lua_State *L, int i) { return lua_tonumber(L, i) >= 0; }
 
-void expect_arg_field(lua_State *L, int idx, const char *field_name, int expected_type) {
-	const int actual_type = lua_getfield(L, idx, field_name);
+static inline int getfield_type(lua_State *L, int idx, const char *field_name) {
+	// TODO: make a macro or something for this for different lua versions
+	/*int actual_type = */lua_getfield(L, idx, field_name);
+	return lua_type(L, -1);
+}
+
+static void expect_arg_field(lua_State *L, int idx, const char *field_name, int expected_type) {
+	const int actual_type = getfield_type(L, idx, field_name);
 	if (actual_type != expected_type) {
 		luaL_error(
 			L,
@@ -1051,8 +1083,8 @@ void expect_arg_field(lua_State *L, int idx, const char *field_name, int expecte
 	}
 }
 
-void expect_nested_arg_field(lua_State *L, int idx, const char *parent_name, const char *field_name, int expected_type) {
-	const int actual_type = lua_getfield(L, idx, field_name);
+static void expect_nested_arg_field(lua_State *L, int idx, const char *parent_name, const char *field_name, int expected_type) {
+	const int actual_type = getfield_type(L, idx, field_name);
 	if (actual_type != expected_type) {
 		luaL_error(
 			L,
@@ -1158,7 +1190,7 @@ struct LuaTSTreeCursor *push_lua_tree_cursor(lua_State *L, int parent_idx, const
 	struct LuaTSTreeCursor *c = lua_newuserdata(L, sizeof(struct LuaTSTreeCursor));
 	c->c = ts_tree_cursor_new(n);
 	c->lang = lang;
-	luaL_setmetatable(L, LUA_TSTREECURSOR_METATABLE);
+	setmetatable(L, LUA_TSTREECURSOR_METATABLE);
 	set_parent(L, lua_gettop(L), parent_idx);
 	return c;
 }
@@ -1664,6 +1696,8 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 	create_metatable(L, LUA_TSTREECURSOR_METATABLE, tree_cursor_metamethods, tree_cursor_methods);
 	create_metatable(L, LUA_TSTREE_METATABLE, tree_metamethods, tree_methods);
 
+	lua_pushlightuserdata(L, (void *)&registry_index); // void *
+	// Do the registry dance
 	lua_newtable(L); // {}
 	lua_newtable(L); // {}, {}
 	lua_newtable(L); // {}, {}, {}
@@ -1685,7 +1719,7 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 	lua_setmetatable(L, -2); // { obj, pred }, { <metatable { __mode = "v" }> }
 	lua_setfield(L, -2, query_predicates_index); // { obj, pred, query_predicates = { <__mode = "v"> }}
 
-	lua_rawsetp(L, LUA_REGISTRYINDEX, (void *)&registry_index);
+	lua_settable(L, LUA_REGISTRYINDEX);
 
 	luaL_newlib(L, lib_funcs); // { <lib> }
 	lua_pushstring(L, version_str); // {}, version_str
