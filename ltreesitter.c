@@ -812,7 +812,11 @@ int lua_load_parser(lua_State *L) {
 		return 2;
 	case DLERR_DLOPEN:
 		lua_pushnil(L);
+#ifdef _WIN32
+		lua_pushstring(L, "Error in LoadLibrary");
+#else
 		lua_pushstring(L, dlerror());
+#endif
 		return 2;
 	case DLERR_BUFLEN:
 		lua_pushnil(L);
@@ -897,11 +901,11 @@ int lua_require_parser(lua_State *L) {
 				buf_add_str(&b, "\n\tTried ");
 				luaL_addlstring(&b, buf, j);
 #ifdef _WIN32
-				buf_add_str(&b, ":\n\t\tLoadLibrary error ");
+				buf_add_str(&b, ":\n\t\tLoadLibrary error");
 #else
 				buf_add_str(&b, ":\n\t\tdlopen error ");
-#endif
 				buf_add_str(&b, dlerror());
+#endif
 				break;
 			case DLERR_BUFLEN:
 				buf_add_str(&b, "\n\tUnable to copy langauge name '");
