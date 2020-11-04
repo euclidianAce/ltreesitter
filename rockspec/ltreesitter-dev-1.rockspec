@@ -16,7 +16,6 @@ external_dependencies = {
       header = "tree_sitter/api.h"
    },
 }
-supported_platforms = {"unix"}
 build = {
    type = "builtin",
    modules = {

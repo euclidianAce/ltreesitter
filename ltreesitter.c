@@ -28,7 +28,7 @@ static const char default_predicates_index[] = "default_predicates";
 static const char query_predicates_index[] = "query_predicates";
 
 // @teal-export version: string
-static const char version_str[] = "0.0.3+dev";
+static const char version_str[] = "0.0.4";
 
 struct LuaTSParser {
 	const TSLanguage *lang;
