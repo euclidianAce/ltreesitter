@@ -6,8 +6,10 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#define DL_EXT "dll"
 #else
 #include <dlfcn.h>
+#define DL_EXT "so"
 #endif
 
 #include <lua.h>
@@ -28,7 +30,7 @@ static const char default_predicates_index[] = "default_predicates";
 static const char query_predicates_index[] = "query_predicates";
 
 // @teal-export version: string
-static const char version_str[] = "0.0.4";
+static const char version_str[] = "0.0.4+dev";
 
 struct LuaTSParser {
 	const TSLanguage *lang;
@@ -38,6 +40,7 @@ struct LuaTSParser {
 struct LuaTSTree {
 	const TSLanguage *lang;
 	TSTree *t;
+	bool own_str; // whether or not the 
 	const char *src;
 	size_t src_len;
 };
@@ -150,20 +153,37 @@ void push_parent(lua_State *L, int obj_idx) {
 	lua_pop(L, 1); // <parent>
 }
 
-TSTree *get_tree(lua_State *L, int idx) { return ((struct LuaTSTree *)luaL_checkudata(L, (idx), LUA_TSTREE_METATABLE))->t; }
-struct LuaTSTree *get_lua_tree(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSTREE_METATABLE); }
+static void push_lua_tree(
+	lua_State *L,
+	struct TSTree *const tree,
+	const struct TSLanguage *lang,
+	const char *str,
+	const size_t str_len,
+	const bool own_str // Does this tree own the string? i.e. should it be free'd when this tree is gc'ed?
+) {
+	struct LuaTSTree *const t = lua_newuserdata(L, sizeof(struct LuaTSTree));
+	t->t = tree;
+	t->lang = lang;
+	t->src = str;
+	t->src_len = str_len;
+	t->own_str = own_str;
+	setmetatable(L, LUA_TSTREE_METATABLE);
+}
 
-TSTreeCursor get_tree_cursor(lua_State *L, int idx) { return ((struct LuaTSTreeCursor *)luaL_checkudata(L, (idx), LUA_TSTREECURSOR_METATABLE))->c; }
-struct LuaTSTreeCursor *get_lua_tree_cursor(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSTREECURSOR_METATABLE); }
+static inline TSTree *get_tree(lua_State *L, int idx) { return ((struct LuaTSTree *)luaL_checkudata(L, (idx), LUA_TSTREE_METATABLE))->t; }
+static inline struct LuaTSTree *get_lua_tree(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSTREE_METATABLE); }
 
-TSParser *get_parser(lua_State *L, int idx) { return ((struct LuaTSParser *)luaL_checkudata(L, (idx), LUA_TSPARSER_METATABLE))->parser; }
-struct LuaTSParser *get_lua_parser(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSPARSER_METATABLE); }
+static inline TSTreeCursor get_tree_cursor(lua_State *L, int idx) { return ((struct LuaTSTreeCursor *)luaL_checkudata(L, (idx), LUA_TSTREECURSOR_METATABLE))->c; }
+static inline struct LuaTSTreeCursor *get_lua_tree_cursor(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSTREECURSOR_METATABLE); }
 
-TSQuery *get_query(lua_State *L, int idx) { return ((struct LuaTSQuery *)luaL_checkudata(L, (idx), LUA_TSQUERY_METATABLE))->q; }
-struct LuaTSQuery *get_lua_query(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSQUERY_METATABLE); }
+static inline TSParser *get_parser(lua_State *L, int idx) { return ((struct LuaTSParser *)luaL_checkudata(L, (idx), LUA_TSPARSER_METATABLE))->parser; }
+static inline struct LuaTSParser *get_lua_parser(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSPARSER_METATABLE); }
 
-TSQueryCursor *get_query_cursor(lua_State *L, int idx) { return ((struct LuaTSQueryCursor *)luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE))->c; }
-struct LuaTSQueryCursor *get_lua_query_cursor(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE); }
+static inline TSQuery *get_query(lua_State *L, int idx) { return ((struct LuaTSQuery *)luaL_checkudata(L, (idx), LUA_TSQUERY_METATABLE))->q; }
+static inline struct LuaTSQuery *get_lua_query(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSQUERY_METATABLE); }
+
+static inline TSQueryCursor *get_query_cursor(lua_State *L, int idx) { return ((struct LuaTSQueryCursor *)luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE))->c; }
+static inline struct LuaTSQueryCursor *get_lua_query_cursor(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE); }
 
 #if LUA_VERSION_NUM < 502
 // Literally copied from 5.4
@@ -756,14 +776,14 @@ static const luaL_Reg query_cursor_metamethods[] = {
 /* }}}*/
 /* {{{ Parser Object */
 
-enum dl_open_error {
+enum DLOpenError {
 	DLERR_NONE,
 	DLERR_DLOPEN,
 	DLERR_BUFLEN,
 	DLERR_DLSYM,
 };
 
-static enum dl_open_error try_dlopen(struct LuaTSParser *p, const char *parser_file, const char *lang_name) {
+static enum DLOpenError try_dlopen(struct LuaTSParser *p, const char *parser_file, const char *lang_name) {
 	void *handle;
 #ifdef _WIN32
 	handle = LoadLibrary(parser_file);
@@ -827,7 +847,7 @@ int lua_load_parser(lua_State *L) {
 	const char *lang_name = luaL_checkstring(L, 2);
 
 	struct LuaTSParser *const p = lua_newuserdata(L, sizeof(struct LuaTSParser));
-	const enum dl_open_error err = try_dlopen(p, parser_file, lang_name);
+	const enum DLOpenError err = try_dlopen(p, parser_file, lang_name);
 
 	switch (err) {
 	case DLERR_NONE:
@@ -855,7 +875,7 @@ int lua_load_parser(lua_State *L) {
 }
 
 /* @teal-export require: function(library_file_name: string, language_name: string): Parser [[
-   Search <code>package.cpath</code> for a parser with the filename <code>library_file_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_'language_name'</code>
+   Search <code>~/.tree-sitter/bin</code> and <code>package.cpath</code> for a parser with the filename <code>library_file_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_'language_name'</code>
    <code>language_name</code> is optional and will be set to <code>library_file_name</code> if not provided.
 
    So if you want to load a Lua parser from a file named <code>lua.so</code> then use <code>ltreesitter.require("lua")</code>
@@ -871,25 +891,44 @@ int lua_load_parser(lua_State *L) {
 ]] */
 static inline void buf_add_str(luaL_Buffer *b, const char *s) { luaL_addlstring(b, s, strlen(s)); }
 int lua_require_parser(lua_State *L) {
+
+	// grab args
 	lua_settop(L, 2);
 	const char *so_name = luaL_checkstring(L, 1);
 	const size_t so_len = strlen(so_name);
 	const char *lang_name = luaL_optstring(L, 2, so_name);
 	const size_t lang_len = strlen(lang_name);
-	lua_getglobal(L, "package"); // lang_name, package
-	lua_getfield(L, -1, "cpath"); // lang_name, package, package.cpath
+
+	const char *user_home = getenv("HOME");
+	if (user_home) {
+		lua_pushfstring(L, "%s/.tree-sitter/bin/?." DL_EXT ";", user_home);
+	}
+
+	// prepend ~/.tree-sitter/bin/?.so to package.cpath
+	lua_getglobal(L, "package"); // lang_name, <ts path>, package
+	lua_getfield(L, -1, "cpath"); // lang_name, <ts path>, package, package.cpath
+	lua_remove(L, -2); // lang_name, <ts path>, package.cpath
+
+	if (user_home) {
+		lua_concat(L, 2);
+	}
+
+	// lang_name, package.cpath
 	const char *cpath = lua_tostring(L, -1);
 	const size_t buf_size = strlen(cpath);
 	char *buf = malloc(sizeof(char) * (buf_size + lang_len));
 
+	// create parser, prepare strbuffer for error message if we can't load it
+	struct LuaTSParser *const p = lua_newuserdata(L, sizeof(struct LuaTSParser));
 	luaL_Buffer b;
+
 	luaL_buffinit(L, &b);
 	buf_add_str(&b, "Unable to load parser for ");
 	buf_add_str(&b, lang_name);
 
-	struct LuaTSParser *const p = lua_newuserdata(L, sizeof(struct LuaTSParser));
-
-	// TODO: should probably just use the builtin package.searchpath stuffs
+	// Do an imitation of a package.searchpath
+	//	Searchpath will just return the first path which we may be able to open,
+	//	but it may not have the symbol we want, so we should keep searching afterward
 	ssize_t j = 0;
 	for (size_t i = 0; i <= buf_size; ++i, ++j) {
 		// cpath doesn't necessarily end with a ; so lets pretend it does
@@ -907,9 +946,7 @@ int lua_require_parser(lua_State *L) {
 		case ';': {
 			buf[j] = '\0';
 
-			const enum dl_open_error err = try_dlopen(p, buf, lang_name);
-
-			switch (err) {
+			switch (try_dlopen(p, buf, lang_name)) {
 			case DLERR_NONE:
 				luaL_pushresult(&b);
 				free(buf);
@@ -972,10 +1009,10 @@ int lua_parser_gc(lua_State *L) {
 /* @teal-export Parser.parse_string: function(Parser, string, Tree): Tree [[
    Uses the given parser to parse the string
 
-   If Tree is provided then it will be used to create a new updated tree
+   If <code>Tree</code> is provided then it will be used to create a new updated tree
    (but it is the responsibility of the programmer to make the correct <code>Tree:edit</code> calls)
 
-   Could return nil if the parser has a timeout
+   Could return <code>nil</code> if the parser has a timeout
 ]] */
 int lua_parser_parse_string(lua_State *L) {
 	lua_settop(L, 3);
@@ -1000,12 +1037,129 @@ int lua_parser_parse_string(lua_State *L) {
 		lua_pushnil(L);
 		return 1;
 	}
-	struct LuaTSTree *t = lua_newuserdata(L, sizeof(struct LuaTSTree));
-	t->t = tree;
-	t->lang = p->lang;
-	t->src = str;
-	t->src_len = len;
-	setmetatable(L, LUA_TSTREE_METATABLE);
+	push_lua_tree(L, tree, p->lang, str, len, false);
+	return 1;
+}
+
+enum ReadError {
+	READERR_NONE,
+	READERR_PCALL,
+	READERR_TYPE,
+};
+struct CallInfo {
+	lua_State *L;
+	struct {
+		size_t len;
+		size_t real_len;
+		char *str;
+	} string_builder;
+	enum ReadError read_error;
+};
+const char *lua_parser_read(void *payload, uint32_t byte_index, TSPoint position, uint32_t *bytes_read) {
+	struct CallInfo *const i = payload;
+	lua_State *const L = i->L;
+	lua_pushvalue(L, -1); // grab a copy of the function
+	lua_pushnumber(L, byte_index);
+
+	lua_newtable(L); // byte_index, {}
+	lua_pushnumber(L, position.row); // byte_index, {}, row
+	lua_setfield(L, -2, "row"); // byte_index, { row = row }
+	lua_pushnumber(L, position.column); // byte_index, { row = row }, column
+	lua_setfield(L, -2, "column"); // byte_index, { row = row, column = column }
+
+	if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
+		i->read_error = READERR_PCALL;
+		*bytes_read = 0;
+		return NULL;
+	}
+
+	if (lua_isnil(L, -1)) {
+		*bytes_read = 0;
+		return NULL;
+	}
+
+	if (lua_type(L, -1) != LUA_TSTRING) {
+		i->read_error = READERR_TYPE;
+		*bytes_read = 0;
+		return NULL;
+	}
+
+	const char *read_str = lua_tolstring(L, -1, (size_t *)bytes_read);
+	while (i->string_builder.real_len < byte_index + *bytes_read) {
+		i->string_builder.real_len *= 2;
+		i->string_builder.str = realloc(i->string_builder.str, i->string_builder.real_len);
+		if (!i->string_builder.str) {
+			luaL_error(L, "Panic! realloc failed, you're probably having bigger problems than running some Lua right now...");
+			*bytes_read = 0;
+			return NULL;
+		}
+	}
+	memcpy(&i->string_builder.str[byte_index], read_str, *bytes_read);
+	if (byte_index + *bytes_read > i->string_builder.len) {
+		i->string_builder.len = byte_index + *bytes_read;
+	}
+
+	lua_pop(L, 1);
+
+	return read_str;
+}
+
+/* @teal-export Parser.parse_with: function(Parser, reader: function(number, Point): (string), old_tree: Tree) [[
+   <code>reader</code> should be a function that takes a byte index
+   and a <code>Point</code> and returns the text at that point. The
+   function should return either <code>nil</code> or an empty string
+   to signal that there is no more text.
+
+   A <code>Tree</code> can be provided to reuse parts of it for parsing,
+   provided the <code>Tree:edit</code> has been called previously
+]]*/
+int lua_parser_parse_with(lua_State *L) {
+	lua_settop(L, 3);
+	struct LuaTSParser *const p = get_lua_parser(L, 1);
+	TSTree *old_tree = NULL;
+	if (!lua_isnil(L, 3)) {
+		old_tree = get_tree(L, 3);
+	}
+	lua_pop(L, 1);
+	struct CallInfo payload = {
+		.L = L,
+		.read_error = READERR_NONE,
+		// The *TSTree structure is opaque so we don't have access to how it internally gets the source of the string that it parsed, so we manage it ourselves here.
+		.string_builder = {
+			.len = 0,
+			.real_len = 64,
+			.str = malloc(sizeof(char) * 64),
+		},
+	};
+	if (!payload.string_builder.str) {
+		return luaL_error(L, "Panic! malloc failed, you're probably having bigger problems than running some Lua right now...");
+	}
+
+	TSInput input = (TSInput){
+		.read = lua_parser_read,
+		.payload = &payload,
+		.encoding = TSInputEncodingUTF8,
+	};
+
+
+	// TODO: allow passing in the old tree
+	TSTree *t = ts_parser_parse(p->parser, old_tree, input);
+
+	switch (payload.read_error) {
+		case READERR_PCALL:
+			return luaL_error(L, "read error: Provided function errored: %s", lua_tostring(L, -1));
+		case READERR_TYPE:
+			return luaL_error(L, "read error: Provided function returned %s (expected string)", lua_typename(L, lua_type(L, -1)));
+
+		case READERR_NONE: default: break;
+	}
+
+	if (!t) {
+		lua_pushnil(L);
+		return 1;
+	}
+	push_lua_tree(L, t, p->lang, payload.string_builder.str, payload.string_builder.len, true);
+
 	return 1;
 }
 
@@ -1022,6 +1176,7 @@ int lua_parser_set_timeout(lua_State *L) {
 
 static const luaL_Reg parser_methods[] = {
 	{"parse_string", lua_parser_parse_string},
+	{"parse_with", lua_parser_parse_with},
 	{"set_timeout", lua_parser_set_timeout},
 	{"query", lua_make_query},
 	{NULL, NULL}
@@ -1055,9 +1210,22 @@ int lua_tree_to_string(lua_State *L) {
    Creates a copy of the tree. Tree-sitter recommends to create copies if you are going to use multithreading since tree accesses are not thread-safe, but copying them is cheap and quick
 ]] */
 static int lua_tree_copy(lua_State *L) {
-	TSTree *t = get_tree(L, 1);
+	struct LuaTSTree *t = get_lua_tree(L, 1);
 	struct LuaTSTree *const t_copy = lua_newuserdata(L, sizeof(struct LuaTSTree));
-	t_copy->t = ts_tree_copy(t);
+	t_copy->t = ts_tree_copy(t->t);
+	if (t->own_str) {
+		t_copy->src = malloc(sizeof(char) * t->src_len + 1);
+		if (!t_copy->src) {
+			luaL_error(L, "Panic! malloc failed, you're probably having bigger problems than running some Lua right now...");
+		}
+		printf("copying string since the tree owns it\n");
+		memcpy((char *)t_copy->src, t->src, t->src_len);
+		t_copy->own_str = true;
+	} else {
+		t_copy->src = t->src;
+		t_copy->src_len = t->src_len;
+		t_copy->own_str = false;
+	}
 	setmetatable(L, LUA_TSTREE_METATABLE);
 	return 1;
 }
@@ -1168,6 +1336,10 @@ int lua_tree_gc(lua_State *L) {
 #ifdef LOG_GC
 	printf("Tree %p is being garbage collected\n", t);
 #endif
+	if (t->own_str) {
+		printf("Freeing tree's string since it says it owns it (%p)\n", t->src);
+		free((char *)t->src);
+	}
 	ts_tree_delete(t->t);
 	return 0;
 }
@@ -1723,7 +1895,7 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 
 	luaL_newlib(L, lib_funcs); // { <lib> }
 	lua_pushstring(L, version_str); // {}, version_str
-	lua_setfield(L, -2, "version"); // { <lib> version = version_str }
+	lua_setfield(L, -2, "version"); // { <lib>, version = version_str }
 
 	return 1;
 }
