@@ -20,4 +20,15 @@ describe("Parser", function()
 			"ltreesitter.TSQuery"
 		)
 	end)
+	describe("parse_with", function()
+		pending("should error out gracefully when the provided function errors", function()
+
+		end)
+		pending("should error out gracefully when the provided function returns a non-string value", function()
+
+		end)
+		pending("should use the given function to parse chunks of text", function()
+
+		end)
+	end)
 end)
