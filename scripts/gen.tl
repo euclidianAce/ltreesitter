@@ -16,7 +16,7 @@ local file <const> = "ltreesitter.c"
 local mod_name <const> = file:match("([^%.%/%\\]+)%.c")
 
 local dtl_name <const> = "ltreesitter.d.tl"
-local html_name <const> = "docs/index.html"
+local html_name <const> = "index.html"
 
 local type RecordDef = {string:string|RecordDef}
 local records <const>: RecordDef = {}
@@ -271,8 +271,8 @@ h2 {
 </style>]==]
 
 do
-   io.write("Writing docs to ", html_name, "...")
-   local fh = io.open(html_name, "w")
+   io.write("Writing docs to docs/", html_name, "...")
+   local fh = io.open("docs/" .. html_name, "w")
    local w = function(...: string) fh:write(...) fh:write("\n") end
 
    w"<html>"
