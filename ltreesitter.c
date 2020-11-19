@@ -1337,7 +1337,9 @@ int lua_tree_gc(lua_State *L) {
 	printf("Tree %p is being garbage collected\n", t);
 #endif
 	if (t->own_str) {
-		printf("Freeing tree's string since it says it owns it (%p)\n", t->src);
+#ifdef LOG_GC
+		printf("Tree %p owns its string %p, collecting that too...\n", t, t->src);
+#endif
 		free((char *)t->src);
 	}
 	ts_tree_delete(t->t);
