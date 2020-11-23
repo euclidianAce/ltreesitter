@@ -1,4 +1,9 @@
 
+// Debugging macros
+// #define DEBUG_ASSERTIONS
+// #define LOG_GC
+// #define PREVENT_GC
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -40,7 +45,7 @@ struct LuaTSParser {
 struct LuaTSTree {
 	const TSLanguage *lang;
 	TSTree *t;
-	bool own_str; // whether or not the 
+	bool own_str;
 	const char *src;
 	size_t src_len;
 };
@@ -67,6 +72,8 @@ struct LuaTSQueryCursor {
 #define TREE_SITTER_SYM "tree_sitter_"
 
 /* {{{ Utility */
+
+#define UNREACHABLE(L) luaL_error(L, "%s line %d UNREACHABLE", __FILE__, __LINE__)
 
 /* @teal-export _get_registry_entry: function(): table [[
    ltreesitter uses a table in the Lua registry to keep references alive and prevent Lua's garbage collection from collecting things that the library needs internally.
@@ -241,7 +248,7 @@ static void handle_query_error(
 	case TSQueryErrorField:     lua_pushfstring(L, "Query field error: around '%s' (at offset %d)",     slice, (int)err_offset); break;
 	case TSQueryErrorCapture:   lua_pushfstring(L, "Query capture error: around '%s' (at offset %d)",   slice, (int)err_offset); break;
 	case TSQueryErrorStructure: lua_pushfstring(L, "Query structure error: around '%s' (at offset %d)", slice, (int)err_offset); break;
-	default: luaL_error(L, "unreachable, this is a bug");
+	default: UNREACHABLE(L);
 	}
 
 	lua_error(L);
@@ -361,6 +368,11 @@ static bool do_predicates(
 		uint32_t num_steps;
 		const TSQueryPredicateStep *const s = ts_query_predicates_for_pattern(q, i, &num_steps);
 		bool is_question = false; // if a predicate is a question then the query should only match if it results in a truthy value
+		/* TODO: Nov 20 02:00 2020
+			Currently queries are evaluated in order
+			So if a question comes after something with a side effect,
+			the side effect happens even if the query doesn't match
+			*/
 		bool need_func_name = true;
 		const char *func_name;
 		size_t num_args = 0;
@@ -553,7 +565,7 @@ static int lua_query_match_factory(lua_State *L) {
       print(capture, name) -- => (comment), "my_match"
    end
    </pre>
-]] */
+]]*/
 static int lua_query_capture_factory(lua_State *L) {
 	lua_settop(L, 2);
 	struct LuaTSQuery *const q = get_lua_query(L, 1);
@@ -1875,8 +1887,10 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 	lua_newtable(L); // {}
 	lua_newtable(L); // {}, {}
 	lua_newtable(L); // {}, {}, {}
+#ifndef PREVENT_GC
 	lua_pushstring(L, "k"); // {}, {}, {}, "k"
 	lua_setfield(L, -2, "__mode"); // {}, {}, { __mode = "k" }
+#endif
 	lua_setmetatable(L, -2); // {}, { <metatable { __mode = "k" }> }
 	lua_setfield(L, -2, "objects"); // { objects = { <metatable { __mode = "k" }> } }
 
@@ -1887,8 +1901,10 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 	lua_newtable(L); // { objects, predicates }, {}
 	lua_newtable(L); // { objects, predicates }, {}, {}
 
+#ifndef PREVENT_GC
 	lua_pushstring(L, "v"); // { obj, pred }, {}, {}, "v"
 	lua_setfield(L, -2, "__mode"); // { obj, pred }, {}, { __mode = "v" }
+#endif
 
 	lua_setmetatable(L, -2); // { obj, pred }, { <metatable { __mode = "v" }> }
 	lua_setfield(L, -2, query_predicates_index); // { obj, pred, query_predicates = { <__mode = "v"> }}
