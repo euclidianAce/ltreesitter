@@ -1230,7 +1230,6 @@ static int lua_tree_copy(lua_State *L) {
 		if (!t_copy->src) {
 			luaL_error(L, "Panic! malloc failed, you're probably having bigger problems than running some Lua right now...");
 		}
-		printf("copying string since the tree owns it\n");
 		memcpy((char *)t_copy->src, t->src, t->src_len);
 		t_copy->own_str = true;
 	} else {
@@ -1277,6 +1276,7 @@ static void expect_nested_arg_field(lua_State *L, int idx, const char *parent_na
 	}
 }
 
+// Maybe make this Tree.Edit?
 /* @teal-inline [[
    record TreeEdit
       start_byte: number

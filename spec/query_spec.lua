@@ -5,7 +5,7 @@ local util = require("spec.util")
 describe("Query", function()
 	local p
 	setup(function()
-		p = assert(ts.require("c"))
+		p = util.c_parser
 	end)
 	describe("match", function()
 		it("should return an iterator", function()

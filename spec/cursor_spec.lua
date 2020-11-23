@@ -10,7 +10,7 @@ describe("Cursor", function()
 	local tree = {}
 	local root = {}
 	setup(function()
-		p = assert(ts.require("c"))
+		p = util.c_parser
 		for i, v in ipairs(str) do
 			tree[i] = assert(p:parse_string(v))
 			root[i] = assert(tree[i]:root())
