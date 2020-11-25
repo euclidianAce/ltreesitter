@@ -238,7 +238,7 @@ static void handle_query_error(
 	if (q) return;
 	char slice[16] = { 0 };
 	strncpy(slice, &query_src[
-			err_offset >= 10 ? err_offset - 10 : err_offset
+		err_offset >= 10 ? err_offset - 10 : err_offset
 	], 15);
 	slice[15] = 0;
 
@@ -350,7 +350,7 @@ static void push_query_predicates(lua_State *L, int query_idx) {
 	lua_insert(L, -2); // { <Predicates> }, <Query>
 	lua_gettable(L, -2); // { <Predicates> }, <Predicate>
 	lua_remove(L, -2); // <Predicate>
-	if (lua_type(L, -1) == LUA_TNIL) {
+	if (lua_isnil(L, -1)) {
 		lua_pop(L, 1); // (nothing)
 		push_default_predicate_table(L); // <Default Predicate>
 	}
