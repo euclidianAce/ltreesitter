@@ -1,5 +1,7 @@
 # ltreesitter
 
+![test](https://github.com/euclidianAce/ltreesitter/workflows/test/badge.svg)
+
 Tree sitter bindings for Lua
 
 # Documentation
