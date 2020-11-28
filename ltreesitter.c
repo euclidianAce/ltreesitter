@@ -193,6 +193,7 @@ static inline TSQueryCursor *get_query_cursor(lua_State *L, int idx) { return ((
 static inline struct LuaTSQueryCursor *get_lua_query_cursor(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE); }
 
 #if LUA_VERSION_NUM < 502
+#define LUA_OK 0
 // Literally copied from 5.4
 LUALIB_API void luaL_setfuncs(lua_State *L, const luaL_Reg *l, int nup) {
 	luaL_checkstack(L, nup, "too many upvalues");
@@ -224,6 +225,11 @@ static void create_metatable(
 	lua_newtable(L); // metatable, table
 	luaL_setfuncs(L, index, 0); // metatable, table
 	lua_setfield(L, -2, "__index"); // metatable
+	// lua <=5.2 doesn't set the __name field which we rely upon for the tests to pass
+#if LUA_VERSION_NUM < 503
+	lua_pushstring(L, name);
+	lua_setfield(L, -2, "__name");
+#endif
 }
 /* }}}*/
 /* {{{ Query Object */
