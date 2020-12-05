@@ -380,7 +380,7 @@ static bool do_predicates(
 			the side effect happens even if the query doesn't match
 			*/
 		bool need_func_name = true;
-		const char *func_name;
+		const char *func_name = NULL;
 		size_t num_args = 0;
 		for (uint32_t j = 0; j < num_steps; ++j) {
 			uint32_t len;
@@ -584,16 +584,6 @@ static int lua_query_capture_factory(lua_State *L) {
 	ts_query_cursor_exec(c, q->q, n);
 	lua_pushcclosure(L, lua_query_capture, 3); // prevent the node + query from being gc'ed
 	return 1;
-}
-
-static void set_query_predicades(lua_State *L, int query_idx, int pred_idx) {
-	const int abs_query_idx = make_non_relative(L, query_idx);
-	const int abs_pred_idx = make_non_relative(L, pred_idx);
-
-	push_registry_query_predicate_table(L);
-	lua_pushvalue(L, abs_query_idx);
-	lua_pushvalue(L, abs_pred_idx);
-	lua_settable(L, -3);
 }
 
 /* @teal-export Query.with: function(Query, {string:function(...: string): any...}): Query [[
