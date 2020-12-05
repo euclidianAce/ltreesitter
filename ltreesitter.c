@@ -74,6 +74,7 @@ struct LuaTSQueryCursor {
 /* {{{ Utility */
 
 #define UNREACHABLE(L) luaL_error(L, "%s line %d UNREACHABLE", __FILE__, __LINE__)
+#define ALLOC_FAIL(L) luaL_error(L, "%s line %d Memory allocation failed!", __FILE__, __LINE__)
 
 /* @teal-export _get_registry_entry: function(): table [[
    ltreesitter uses a table in the Lua registry to keep references alive and prevent Lua's garbage collection from collecting things that the library needs internally.
@@ -855,9 +856,8 @@ static int lua_load_parser(lua_State *L) {
 	const char *lang_name = luaL_checkstring(L, 2);
 
 	struct LuaTSParser *const p = lua_newuserdata(L, sizeof(struct LuaTSParser));
-	const enum DLOpenError err = try_dlopen(p, parser_file, lang_name);
 
-	switch (err) {
+	switch (try_dlopen(p, parser_file, lang_name)) {
 	case DLERR_NONE:
 		break;
 	case DLERR_DLSYM:
@@ -982,7 +982,7 @@ static int lua_require_parser(lua_State *L) {
 				buf_add_str(&b, "\n\tUnable to copy langauge name '");
 				buf_add_str(&b, lang_name);
 				buf_add_str(&b, "' into buffer");
-				break;
+				goto err_cleanup;
 			}
 
 			j = -1;
@@ -993,6 +993,8 @@ static int lua_require_parser(lua_State *L) {
 			break;
 		}
 	}
+
+err_cleanup:
 	free(buf);
 
 	luaL_pushresult(&b);
@@ -1097,7 +1099,7 @@ static const char *lua_parser_read(void *payload, uint32_t byte_index, TSPoint p
 		i->string_builder.real_len *= 2;
 		i->string_builder.str = realloc(i->string_builder.str, i->string_builder.real_len);
 		if (!i->string_builder.str) {
-			luaL_error(L, "Panic! realloc failed, you're probably having bigger problems than running some Lua right now...");
+			ALLOC_FAIL(L);
 			*bytes_read = 0;
 			return NULL;
 		}
@@ -1140,7 +1142,7 @@ static int lua_parser_parse_with(lua_State *L) {
 		},
 	};
 	if (!payload.string_builder.str) {
-		return luaL_error(L, "Panic! malloc failed, you're probably having bigger problems than running some Lua right now...");
+		return ALLOC_FAIL(L);
 	}
 
 	TSInput input = (TSInput){
@@ -1224,7 +1226,9 @@ static int lua_tree_copy(lua_State *L) {
 	if (t->own_str) {
 		t_copy->src = malloc(sizeof(char) * t->src_len + 1);
 		if (!t_copy->src) {
-			luaL_error(L, "Panic! malloc failed, you're probably having bigger problems than running some Lua right now...");
+			ALLOC_FAIL(L);
+			ts_tree_delete(t_copy->t);
+			return 0;
 		}
 		memcpy((char *)t_copy->src, t->src, t->src_len);
 		t_copy->own_str = true;
