@@ -76,6 +76,37 @@ struct LuaTSQueryCursor {
 #define UNREACHABLE(L) luaL_error(L, "%s line %d UNREACHABLE", __FILE__, __LINE__)
 #define ALLOC_FAIL(L) luaL_error(L, "%s line %d Memory allocation failed!", __FILE__, __LINE__)
 
+// Some compatability shims
+#if LUA_VERSION_NUM < 502
+#define LUA_OK 0
+#endif
+
+static void libtable(lua_State *L, const luaL_Reg l[]) {
+	lua_createtable(L, 0, 0);
+	for (; l->name != NULL; ++l) {
+		lua_pushcfunction(L, l->func);
+		lua_setfield(L, -2, l->name);
+	}
+}
+
+static void create_metatable(
+	lua_State *L,
+	const char *name,
+	const luaL_Reg metamethods[],
+	const luaL_Reg index[]
+) {
+	luaL_newmetatable(L, name); // metatable
+	luaL_setfuncs(L, metamethods, 0); // metatable
+	lua_newtable(L); // metatable, table
+	luaL_setfuncs(L, index, 0); // metatable, table
+	lua_setfield(L, -2, "__index"); // metatable
+	// lua <=5.2 doesn't set the __name field which we rely upon for the tests to pass
+#if LUA_VERSION_NUM < 503
+	lua_pushstring(L, name);
+	lua_setfield(L, -2, "__name");
+#endif
+}
+
 /* @teal-export _get_registry_entry: function(): table [[
    ltreesitter uses a table in the Lua registry to keep references alive and prevent Lua's garbage collection from collecting things that the library needs internally.
    The behavior nor existence of this function should not be relied upon and is included strictly for memory debugging purposes
@@ -193,45 +224,6 @@ static inline struct LuaTSQuery *get_lua_query(lua_State *L, int idx) { return l
 static inline TSQueryCursor *get_query_cursor(lua_State *L, int idx) { return ((struct LuaTSQueryCursor *)luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE))->c; }
 static inline struct LuaTSQueryCursor *get_lua_query_cursor(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE); }
 
-#if LUA_VERSION_NUM < 502
-#define LUA_OK 0
-// Literally copied from 5.4
-LUALIB_API void luaL_setfuncs(lua_State *L, const luaL_Reg *l, int nup) {
-	luaL_checkstack(L, nup, "too many upvalues");
-	for (; l->name != NULL; l++) {  /* fill the table with given functions */
-		if (l->func == NULL)  /* place holder? */
-			lua_pushboolean(L, 0);
-		else {
-			int i;
-			for (i = 0; i < nup; i++)  /* copy upvalues to the top */
-				lua_pushvalue(L, -nup);
-			lua_pushcclosure(L, l->func, nup);  /* closure with those upvalues */
-		}
-		lua_setfield(L, -(nup + 2), l->name);
-	}
-	lua_pop(L, nup);  /* remove upvalues */
-}
-#define luaL_newlibtable(L,l) lua_createtable(L, 0, sizeof(l)/sizeof((l)[0]) - 1)
-#define luaL_newlib(L,l) (luaL_newlibtable(L,l), luaL_setfuncs(L,l,0))
-#endif
-
-static void create_metatable(
-	lua_State *L,
-	const char *name,
-	const luaL_Reg metamethods[],
-	const luaL_Reg index[]
-) {
-	luaL_newmetatable(L, name); // metatable
-	luaL_setfuncs(L, metamethods, 0); // metatable
-	lua_newtable(L); // metatable, table
-	luaL_setfuncs(L, index, 0); // metatable, table
-	lua_setfield(L, -2, "__index"); // metatable
-	// lua <=5.2 doesn't set the __name field which we rely upon for the tests to pass
-#if LUA_VERSION_NUM < 503
-	lua_pushstring(L, name);
-	lua_setfield(L, -2, "__name");
-#endif
-}
 /* }}}*/
 /* {{{ Query Object */
 
@@ -1911,7 +1903,7 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 
 	lua_settable(L, LUA_REGISTRYINDEX);
 
-	luaL_newlib(L, lib_funcs); // { <lib> }
+	libtable(L, lib_funcs); // { <lib> }
 	lua_pushstring(L, version_str); // {}, version_str
 	lua_setfield(L, -2, "version"); // { <lib>, version = version_str }
 
