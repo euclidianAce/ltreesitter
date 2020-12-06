@@ -73,6 +73,22 @@ struct LuaTSQueryCursor {
 
 /* {{{ Utility */
 
+static inline void *open_dynamic_lib(const char *name) {
+#ifdef _WIN32
+	return LoadLibrary(name);
+#else
+	return dlopen(name, RTLD_NOW | RTLD_LOCAL);
+#endif
+}
+
+static inline void close_dynamic_lib(void *handle) {
+#ifdef _WIN32
+	FreeLibrary(handle);
+#else
+	dlclose(handle);
+#endif
+}
+
 #define UNREACHABLE(L) luaL_error(L, "%s line %d UNREACHABLE", __FILE__, __LINE__)
 #define ALLOC_FAIL(L) luaL_error(L, "%s line %d Memory allocation failed!", __FILE__, __LINE__)
 
@@ -785,22 +801,13 @@ enum DLOpenError {
 };
 
 static enum DLOpenError try_dlopen(struct LuaTSParser *p, const char *parser_file, const char *lang_name) {
-	void *handle;
-#ifdef _WIN32
-	handle = LoadLibrary(parser_file);
-#else
-	handle = dlopen(parser_file, RTLD_NOW | RTLD_LOCAL); // TODO: are these the necessary flags?
-#endif
+	void *handle = open_dynamic_lib(parser_file);
 	if (!handle) {
 		return DLERR_DLOPEN;
 	}
 	char buf[128];
 	if (snprintf(buf, sizeof(buf) - sizeof(TREE_SITTER_SYM), TREE_SITTER_SYM "%s", lang_name) == 0) {
-#ifdef _WIN32
-		FreeLibrary(handle);
-#else
-		dlclose(handle);
-#endif
+		close_dynamic_lib(handle);
 		return DLERR_BUFLEN;
 	}
 
@@ -814,11 +821,7 @@ static enum DLOpenError try_dlopen(struct LuaTSParser *p, const char *parser_fil
 #endif
 
 	if (!tree_sitter_lang) {
-#ifdef _WIN32
-		FreeLibrary(handle);
-#else
-		dlclose(handle);
-#endif
+		close_dynamic_lib(handle);
 		return DLERR_DLSYM;
 	}
 	TSParser *parser = ts_parser_new();
@@ -1000,11 +1003,7 @@ static int lua_parser_gc(lua_State *L) {
 #endif
 	ts_parser_delete(lp->parser);
 
-#ifdef _WIN32
-	FreeLibrary(lp->dlhandle);
-#else
-	dlclose(lp->dlhandle);
-#endif
+	close_dynamic_lib(lp->dlhandle);
 	return 0;
 }
 
