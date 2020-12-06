@@ -97,12 +97,16 @@ static inline void close_dynamic_lib(void *handle) {
 #define LUA_OK 0
 #endif
 
-static void libtable(lua_State *L, const luaL_Reg l[]) {
-	lua_createtable(L, 0, 0);
+static void setfuncs(lua_State *L, const luaL_Reg l[]) {
 	for (; l->name != NULL; ++l) {
 		lua_pushcfunction(L, l->func);
 		lua_setfield(L, -2, l->name);
 	}
+}
+
+static void libtable(lua_State *L, const luaL_Reg l[]) {
+	lua_createtable(L, 0, 0);
+	setfuncs(L, l);
 }
 
 static void create_metatable(
@@ -112,9 +116,9 @@ static void create_metatable(
 	const luaL_Reg index[]
 ) {
 	luaL_newmetatable(L, name); // metatable
-	luaL_setfuncs(L, metamethods, 0); // metatable
+	setfuncs(L, metamethods); // metatable
 	lua_newtable(L); // metatable, table
-	luaL_setfuncs(L, index, 0); // metatable, table
+	setfuncs(L, index); // metatable, table
 	lua_setfield(L, -2, "__index"); // metatable
 	// lua <=5.2 doesn't set the __name field which we rely upon for the tests to pass
 #if LUA_VERSION_NUM < 503
@@ -435,7 +439,7 @@ static bool do_predicates(
 				break;
 			}
 			case TSQueryPredicateStepTypeDone:
-				if (lua_pcall(L, num_args, 1, 0) != 0) {
+				if (lua_pcall(L, num_args, 1, 0) != LUA_OK) {
 					lua_pushfstring(L, "Error calling predicate '%s': ", func_name);
 					lua_insert(L, -2);
 					lua_concat(L, 2);
@@ -1886,7 +1890,7 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 	lua_setfield(L, -2, "objects"); // { objects = { <metatable { __mode = "k" }> } }
 
 	lua_newtable(L); // { objects = {...} }, {}
-	luaL_setfuncs(L, default_query_predicates, 0); // { objects = {...} }, { ["eq?"] = <function>, ... }
+	setfuncs(L, default_query_predicates); // { objects = {...} }, { ["eq?"] = <function>, ... }
 	lua_setfield(L, -2, default_predicates_index); // { objects = {...}, predicates = {...} }
 
 	lua_newtable(L); // { objects, predicates }, {}
