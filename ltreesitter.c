@@ -1897,8 +1897,8 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 	lua_newtable(L); // { objects, predicates }, {}, {}
 
 #ifndef PREVENT_GC
-	lua_pushstring(L, "v"); // { obj, pred }, {}, {}, "v"
-	lua_setfield(L, -2, "__mode"); // { obj, pred }, {}, { __mode = "v" }
+	lua_pushstring(L, "k"); // { obj, pred }, {}, {}, "k"
+	lua_setfield(L, -2, "__mode"); // { obj, pred }, {}, { __mode = "k" }
 #endif
 
 	lua_setmetatable(L, -2); // { obj, pred }, { <metatable { __mode = "v" }> }

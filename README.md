@@ -19,7 +19,7 @@ luarocks install ltreesitter
 
 or the latest main branch
 ```
-luarocks install --server=https://luarocks.org/dev ltreesitter
+luarocks install --dev ltreesitter
 ```
 
 # Examples
