@@ -1,8 +1,8 @@
 
 // Debugging macros
-// #define DEBUG_ASSERTIONS
-// #define LOG_GC
-// #define PREVENT_GC
+/* #define DEBUG_ASSERTIONS */
+/* #define LOG_GC */
+/* #define PREVENT_GC */
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -35,7 +35,7 @@ static const char default_predicates_index[] = "default_predicates";
 static const char query_predicates_index[] = "query_predicates";
 
 // @teal-export version: string
-static const char version_str[] = "0.0.5";
+static const char version_str[] = "0.0.5+dev";
 
 struct LuaTSParser {
 	const TSLanguage *lang;
@@ -96,6 +96,14 @@ static inline void close_dynamic_lib(void *handle) {
 #if LUA_VERSION_NUM < 502
 #define LUA_OK 0
 #endif
+
+static char *str_ldup(const char *s, const size_t len) {
+	char *dup = malloc(sizeof(char) * len);
+	if (!dup) {
+		return NULL;
+	}
+	return strcpy(dup, s);
+}
 
 static void setfuncs(lua_State *L, const luaL_Reg l[]) {
 	for (; l->name != NULL; ++l) {
@@ -280,7 +288,9 @@ static int lua_make_query(lua_State *L) {
 	lua_settop(L, 2);
 	struct LuaTSParser *p = get_lua_parser(L, 1);
 	size_t len;
-	const char *query_src = luaL_checklstring(L, 2, &len);
+	// lua doesn't guarantee that this string stays alive after it is popped from the stack
+	const char *lua_query_src = luaL_checklstring(L, 2, &len);
+	const char *query_src = str_ldup(lua_query_src, len);
 	uint32_t err_offset;
 	TSQueryError err_type;
 	TSQuery *q = ts_query_new(
@@ -323,17 +333,18 @@ static void push_query_copy(lua_State *L, int query_idx) {
 	set_parent(L, -1, -2);
 	setmetatable(L, LUA_TSQUERY_METATABLE);
 	new->lang = orig->lang;
-	new->src = orig->src;
 	new->src_len = orig->src_len;
+	new->src = str_ldup(orig->src, orig->src_len);
 	new->q = q;
 	lua_remove(L, -2); // <Query>
 }
 
 static int lua_query_gc(lua_State *L) {
-	struct LuaTSQuery *q = get_lua_query(L, 1);
 #ifdef LOG_GC
 	printf("Query %p is being garbage collected\n", q);
 #endif
+	struct LuaTSQuery *q = get_lua_query(L, 1);
+	free((char *)q->src);
 	ts_query_delete(q->q);
 	return 1;
 }
@@ -1901,8 +1912,9 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 	lua_setfield(L, -2, "__mode"); // { obj, pred }, {}, { __mode = "k" }
 #endif
 
-	lua_setmetatable(L, -2); // { obj, pred }, { <metatable { __mode = "v" }> }
-	lua_setfield(L, -2, query_predicates_index); // { obj, pred, query_predicates = { <__mode = "v"> }}
+	lua_setmetatable(L, -2); // { obj, pred }, { <metatable { __mode = "k" }> }
+
+	lua_setfield(L, -2, query_predicates_index); // { obj, pred, query_predicates = { <__mode = "k"> }}
 
 	lua_settable(L, LUA_REGISTRYINDEX);
 
