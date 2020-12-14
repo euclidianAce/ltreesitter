@@ -45,6 +45,10 @@ struct LuaTSParser {
 struct LuaTSTree {
 	const TSLanguage *lang;
 	TSTree *t;
+
+	// The *TSTree structure is opaque so we don't have access to how it
+	// internally gets the source of the string that it parsed,
+	// so we just keep a copy for ourselves here.
 	bool own_str;
 	const char *src;
 	size_t src_len;
@@ -60,9 +64,10 @@ struct LuaTSNode {
 struct LuaTSInputEdit { TSInputEdit *e; };
 struct LuaTSQuery {
 	const TSLanguage *lang;
+	TSQuery *q;
+
 	const char *src;
 	size_t src_len;
-	TSQuery *q;
 };
 struct LuaTSQueryCursor {
 	struct LuaTSQuery *q;
@@ -73,6 +78,9 @@ struct LuaTSQueryCursor {
 
 /* {{{ Utility */
 
+// TODO: add a compile flag for using libuv to open the .so/.dll
+
+// Windows <-> *nix compat
 static inline void *open_dynamic_lib(const char *name) {
 #ifdef _WIN32
 	return LoadLibrary(name);
@@ -81,11 +89,28 @@ static inline void *open_dynamic_lib(const char *name) {
 #endif
 }
 
+static inline void *dynamic_sym(void *handle, const char *sym_name) {
+#ifdef _WIN32
+	return GetProcAddress(handle, sym_name);
+#else
+	return dlsym(handle, sym_name);
+#endif
+}
+
 static inline void close_dynamic_lib(void *handle) {
 #ifdef _WIN32
 	FreeLibrary(handle);
 #else
 	dlclose(handle);
+#endif
+}
+
+static inline const char *dynamic_lib_error() {
+#ifdef _WIN32
+	// Does windows have an equivalent dlerror?
+	return "Error in LoadLibrary";
+#else
+	return dlerror();
 #endif
 }
 
@@ -98,11 +123,11 @@ static inline void close_dynamic_lib(void *handle) {
 #endif
 
 static char *str_ldup(const char *s, const size_t len) {
-	char *dup = malloc(sizeof(char) * len);
-	if (!dup) {
-		return NULL;
-	}
-	return strcpy(dup, s);
+	char *dup = malloc(sizeof(char) * (len + 1));
+	if (!dup) { return NULL; }
+	memcpy(dup, s, len);
+	dup[len+1] = '\0';
+	return dup;
 }
 
 static void setfuncs(lua_State *L, const luaL_Reg l[]) {
@@ -171,7 +196,7 @@ static int push_registry_query_predicate_table(lua_State *L) {
 }
 
 // This should only be used for only true indexes, i.e. no lua_upvalueindex, registry stuff, etc.
-static inline int make_non_relative(lua_State *L, int idx) {
+static inline int absindex(lua_State *L, int idx) {
 	if (idx < 0) {
 		return lua_gettop(L) + idx + 1;
 	} else {
@@ -185,8 +210,8 @@ static inline void setmetatable(lua_State *L, const char *mt_name) {
 }
 
 static void set_parent(lua_State *L, int child_idx, int parent_idx) {
-	const int abs_child_idx = make_non_relative(L, child_idx);
-	const int abs_parent_idx = make_non_relative(L, parent_idx);
+	const int abs_child_idx = absindex(L, child_idx);
+	const int abs_parent_idx = absindex(L, parent_idx);
 	push_registry_object_table(L); // { <objects> }
 	lua_pushvalue(L, abs_child_idx);
 	lua_pushvalue(L, abs_parent_idx); // { <objects> }, <Child>, <Parent>
@@ -234,6 +259,7 @@ static void push_lua_tree(
 	setmetatable(L, LUA_TSTREE_METATABLE);
 }
 
+// Funcs for grabbing things off the stack
 static inline TSNode get_node(lua_State *L, int idx) { return ((struct LuaTSNode *)luaL_checkudata(L, (idx), LUA_TSNODE_METATABLE))->n; }
 static inline struct LuaTSNode *get_lua_node(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSNODE_METATABLE); }
 
@@ -291,6 +317,7 @@ static int lua_make_query(lua_State *L) {
 	// lua doesn't guarantee that this string stays alive after it is popped from the stack
 	const char *lua_query_src = luaL_checklstring(L, 2, &len);
 	const char *query_src = str_ldup(lua_query_src, len);
+	if (!query_src) { return ALLOC_FAIL(L); }
 	uint32_t err_offset;
 	TSQueryError err_type;
 	TSQuery *q = ts_query_new(
@@ -333,10 +360,11 @@ static void push_query_copy(lua_State *L, int query_idx) {
 	set_parent(L, -1, -2);
 	setmetatable(L, LUA_TSQUERY_METATABLE);
 	new->lang = orig->lang;
+	new->q = q;
 	new->src_len = orig->src_len;
 	new->src = str_ldup(orig->src, orig->src_len);
-	new->q = q;
 	lua_remove(L, -2); // <Query>
+	if (!new->src) { ALLOC_FAIL(L); }
 }
 
 static int lua_query_gc(lua_State *L) {
@@ -519,7 +547,7 @@ try_again:
 }
 
 static int lua_query_capture(lua_State *L) {
-	// stack: Query, Node, Cursor
+	// upvalues: Query, Node, Cursor
 	struct LuaTSQuery *const q = get_lua_query(L, lua_upvalueindex(1));
 	TSQueryCursor *c = get_query_cursor(L, lua_upvalueindex(3));
 	push_parent(L, lua_upvalueindex(2));
@@ -826,14 +854,8 @@ static enum DLOpenError try_dlopen(struct LuaTSParser *p, const char *parser_fil
 		return DLERR_BUFLEN;
 	}
 
-	TSLanguage *(*tree_sitter_lang)(void);
-
-#ifdef _WIN32
-	tree_sitter_lang = (__cdecl TSLanguage *(*)(void))GetProcAddress(handle, buf);
-#else
-	// ISO C complains about casting void * to a function pointer
-	*(void **) (&tree_sitter_lang) = dlsym(handle, buf);
-#endif
+	// ISO C is not a fan of void * -> function pointer
+	TSLanguage *(*tree_sitter_lang)(void) = (TSLanguage *(*)(void))dynamic_sym(handle, buf);
 
 	if (!tree_sitter_lang) {
 		close_dynamic_lib(handle);
@@ -876,11 +898,7 @@ static int lua_load_parser(lua_State *L) {
 		return 2;
 	case DLERR_DLOPEN:
 		lua_pushnil(L);
-#ifdef _WIN32
-		lua_pushstring(L, "Error in LoadLibrary");
-#else
-		lua_pushstring(L, dlerror());
-#endif
+		lua_pushstring(L, dynamic_lib_error());
 		return 2;
 	case DLERR_BUFLEN:
 		lua_pushnil(L);
@@ -975,18 +993,12 @@ static int lua_require_parser(lua_State *L) {
 				buf_add_str(&b, "\n\tFound ");
 				luaL_addlstring(&b, buf, j);
 				buf_add_str(&b, ":\n\t\tunable to find symbol " TREE_SITTER_SYM);
-				buf_add_str(&b, TREE_SITTER_SYM);
 				buf_add_str(&b, lang_name);
 				break;
 			case DLERR_DLOPEN:
 				buf_add_str(&b, "\n\tTried ");
 				luaL_addlstring(&b, buf, j);
-#ifdef _WIN32
-				buf_add_str(&b, ":\n\t\tLoadLibrary error");
-#else
-				buf_add_str(&b, ":\n\t\tdlopen error ");
-				buf_add_str(&b, dlerror());
-#endif
+				buf_add_str(&b, dynamic_lib_error());
 				break;
 			case DLERR_BUFLEN:
 				buf_add_str(&b, "\n\tUnable to copy langauge name '");
@@ -1128,7 +1140,7 @@ static const char *lua_parser_read(void *payload, uint32_t byte_index, TSPoint p
 
    A <code>Tree</code> can be provided to reuse parts of it for parsing,
    provided the <code>Tree:edit</code> has been called previously
-]]*/
+]] */
 static int lua_parser_parse_with(lua_State *L) {
 	lua_settop(L, 3);
 	struct LuaTSParser *const p = get_lua_parser(L, 1);
@@ -1140,7 +1152,6 @@ static int lua_parser_parse_with(lua_State *L) {
 	struct CallInfo payload = {
 		.L = L,
 		.read_error = READERR_NONE,
-		// The *TSTree structure is opaque so we don't have access to how it internally gets the source of the string that it parsed, so we manage it ourselves here.
 		.string_builder = {
 			.len = 0,
 			.real_len = 64,
@@ -1157,8 +1168,6 @@ static int lua_parser_parse_with(lua_State *L) {
 		.encoding = TSInputEncodingUTF8,
 	};
 
-
-	// TODO: allow passing in the old tree
 	TSTree *t = ts_parser_parse(p->parser, old_tree, input);
 
 	switch (payload.read_error) {
@@ -1166,7 +1175,6 @@ static int lua_parser_parse_with(lua_State *L) {
 			return luaL_error(L, "read error: Provided function errored: %s", lua_tostring(L, -1));
 		case READERR_TYPE:
 			return luaL_error(L, "read error: Provided function returned %s (expected string)", lua_typename(L, lua_type(L, -1)));
-
 		case READERR_NONE: default: break;
 	}
 
@@ -1260,7 +1268,7 @@ static void expect_arg_field(lua_State *L, int idx, const char *field_name, int 
 	if (actual_type != expected_type) {
 		luaL_error(
 			L,
-			"expected field `%s' to be a %s (got %s)",
+			"expected field `%s' to be of type %s (got %s)",
 			field_name,
 			lua_typename(L, expected_type),
 			lua_typename(L, actual_type)
@@ -1273,7 +1281,7 @@ static void expect_nested_arg_field(lua_State *L, int idx, const char *parent_na
 	if (actual_type != expected_type) {
 		luaL_error(
 			L,
-			"expected field `%s.%s' to be a %s (got %s)",
+			"expected field `%s.%s' to be of type %s (got %s)",
 			parent_name,
 			field_name,
 			lua_typename(L, expected_type),
@@ -1924,3 +1932,4 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 
 	return 1;
 }
+

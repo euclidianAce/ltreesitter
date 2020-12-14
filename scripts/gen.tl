@@ -32,12 +32,15 @@ end
 
 local function split(str: string, del: string, no_patt: boolean): function(): string
    local i = 0
+   local prev_i, s: number, number
    return function(): string
       if not i then return end
       i = i + 1
-      local prev_i = i
-      local s: number
+      prev_i = i
       s, i = str:find(del, i, no_patt)
+      if s and i and i < s then
+         error("Delimiter matched the empty string", 2)
+      end
       return str:sub(prev_i, (s or 0) - 1)
    end
 end

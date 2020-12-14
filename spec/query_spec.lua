@@ -1,5 +1,4 @@
 local assert = require("luassert")
-local ts = require("ltreesitter")
 local util = require("spec.util")
 
 describe("Query", function()
