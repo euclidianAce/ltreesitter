@@ -10,11 +10,23 @@
 #include <string.h>
 
 #ifdef _WIN32
-#include <windows.h>
 #define DL_EXT "dll"
 #else
-#include <dlfcn.h>
 #define DL_EXT "so"
+#endif
+
+#define LTREESITTER_USE_LIBUV 1
+#ifdef LTREESITTER_USE_LIBUV
+#include <uv.h>
+typedef uv_lib_t dl_handle;
+#else
+#ifdef _WIN32
+#include <windows.h>
+typedef void dl_handle;
+#else
+#include <dlfcn.h>
+typedef void dl_handle;
+#endif
 #endif
 
 #include <lua.h>
@@ -29,17 +41,19 @@
 #define LUA_TSNODE_METATABLE           "ltreesitter.TSNode"
 #define LUA_TSQUERY_METATABLE          "ltreesitter.TSQuery"
 #define LUA_TSQUERYCURSOR_METATABLE    "ltreesitter.TSQueryCursor"
+
 static const char registry_index = 'k';
-static const char objects_index[] = "objects";
-static const char default_predicates_index[] = "default_predicates";
-static const char query_predicates_index[] = "query_predicates";
+static const char object_index[] = "objects";
+static const char default_predicate_index[] = "default_predicates";
+static const char query_predicate_index[] = "query_predicates";
+static const char parser_cache_index[] = "parsers";
 
 // @teal-export version: string
 static const char version_str[] = "0.0.5+dev";
 
 struct LuaTSParser {
 	const TSLanguage *lang;
-	void *dlhandle;
+	dl_handle *dl;
 	TSParser *parser;
 };
 struct LuaTSTree {
@@ -49,6 +63,8 @@ struct LuaTSTree {
 	// The *TSTree structure is opaque so we don't have access to how it
 	// internally gets the source of the string that it parsed,
 	// so we just keep a copy for ourselves here.
+	// Not the most memory efficient, but I'd argue having Node:source()
+	// is worth it
 	bool own_str;
 	const char *src;
 	size_t src_len;
@@ -78,37 +94,51 @@ struct LuaTSQueryCursor {
 
 /* {{{ Utility */
 
-// TODO: add a compile flag for using libuv to open the .so/.dll
-
 // Windows <-> *nix compat
-static inline void *open_dynamic_lib(const char *name) {
+static inline bool open_dynamic_lib(const char *name, dl_handle **handle) {
 #ifdef _WIN32
-	return LoadLibrary(name);
+	*handle = LoadLibrary(name);
+	return handle != NULL;
+#elif LTREESITTER_USE_LIBUV
+	*handle = malloc(sizeof(dl_handle));
+	return uv_dlopen(name, *handle) == 0;
 #else
-	return dlopen(name, RTLD_NOW | RTLD_LOCAL);
+	*handle = dlopen(name, RTLD_NOW | RTLD_LOCAL);
+	return handle != NULL;
 #endif
 }
 
-static inline void *dynamic_sym(void *handle, const char *sym_name) {
+static inline void *dynamic_sym(dl_handle *handle, const char *sym_name) {
 #ifdef _WIN32
 	return GetProcAddress(handle, sym_name);
+#elif LTREESITTER_USE_LIBUV
+	void *sym = NULL;
+	if (uv_dlsym(handle, sym_name, &sym) == 0) {
+		return sym;
+	}
+	return NULL;
 #else
 	return dlsym(handle, sym_name);
 #endif
 }
 
-static inline void close_dynamic_lib(void *handle) {
+static inline void close_dynamic_lib(dl_handle *handle) {
 #ifdef _WIN32
 	FreeLibrary(handle);
+#elif LTREESITTER_USE_LIBUV
+	uv_dlclose(handle);
+	free(handle);
 #else
 	dlclose(handle);
 #endif
 }
 
-static inline const char *dynamic_lib_error() {
+static inline const char *dynamic_lib_error(dl_handle *handle) {
 #ifdef _WIN32
 	// Does windows have an equivalent dlerror?
 	return "Error in LoadLibrary";
+#elif LTREESITTER_USE_LIBUV
+	return uv_dlerror(handle);
 #else
 	return dlerror();
 #endif
@@ -174,26 +204,20 @@ static int push_registry_table(lua_State *L) {
 	return 1;
 }
 
-static int push_registry_object_table(lua_State *L) {
-	push_registry_table(L);
-	lua_getfield(L, -1, objects_index);
-	lua_remove(L, -2);
-	return 1;
-}
+#define DEFINE_REGISTRY_GETTER(name) \
+	static int push_reg_ ##name ##_table (lua_State *L) { \
+		push_registry_table(L); \
+		lua_getfield(L, -1, name ## _index); \
+		lua_remove(L, -2); \
+		return 1; \
+	}
 
-static int push_default_predicate_table(lua_State *L) {
-	push_registry_table(L);
-	lua_getfield(L, -1, default_predicates_index);
-	lua_remove(L, -2);
-	return 1;
-}
+DEFINE_REGISTRY_GETTER(object);
+DEFINE_REGISTRY_GETTER(default_predicate);
+DEFINE_REGISTRY_GETTER(query_predicate);
+DEFINE_REGISTRY_GETTER(parser_cache);
 
-static int push_registry_query_predicate_table(lua_State *L) {
-	push_registry_table(L);
-	lua_getfield(L, -1, query_predicates_index);
-	lua_remove(L, -2);
-	return 1;
-}
+#undef DEFINE_REGISTRY_GETTER
 
 // This should only be used for only true indexes, i.e. no lua_upvalueindex, registry stuff, etc.
 static inline int absindex(lua_State *L, int idx) {
@@ -209,11 +233,13 @@ static inline void setmetatable(lua_State *L, const char *mt_name) {
 	lua_setmetatable(L, -2);
 }
 
-static void set_parent(lua_State *L, int child_idx, int parent_idx) {
-	const int abs_child_idx = absindex(L, child_idx);
+// Set the parent of the object on the top of the stack
+static void set_parent(lua_State *L, int parent_idx) {
+	const int child_idx = lua_gettop(L);
 	const int abs_parent_idx = absindex(L, parent_idx);
-	push_registry_object_table(L); // { <objects> }
-	lua_pushvalue(L, abs_child_idx);
+
+	push_reg_object_table(L); // { <objects> }
+	lua_pushvalue(L, child_idx); // { <objects> }, <Child>
 	lua_pushvalue(L, abs_parent_idx); // { <objects> }, <Child>, <Parent>
 	lua_settable(L, -3); // {<objects> [<Child>] = <Parent>}
 	lua_pop(L, 1);
@@ -226,13 +252,13 @@ static struct LuaTSNode *push_lua_node(lua_State *L, int parent_idx, TSNode node
 	ln->n = node;
 	ln->lang = lang;
 	setmetatable(L, LUA_TSNODE_METATABLE);
-	set_parent(L, -1, parent_idx);
+	set_parent(L, parent_idx);
 	return ln;
 }
 
 static void push_parent(lua_State *L, int obj_idx) {
 	lua_pushvalue(L, obj_idx); // <obj>
-	push_registry_object_table(L); // <obj>, { <ltreesitter_registry> }
+	push_reg_object_table(L); // <obj>, { <ltreesitter_registry> }
 	lua_insert(L, -2); // { <ltreesitter_registry> }, <obj>
 	lua_gettable(L, -2); // { <ltreesitter_registry> }, <parent>
 #ifdef DEBUG_ASSERTIONS
@@ -260,23 +286,23 @@ static void push_lua_tree(
 }
 
 // Funcs for grabbing things off the stack
-static inline TSNode get_node(lua_State *L, int idx) { return ((struct LuaTSNode *)luaL_checkudata(L, (idx), LUA_TSNODE_METATABLE))->n; }
-static inline struct LuaTSNode *get_lua_node(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSNODE_METATABLE); }
 
-static inline TSTree *get_tree(lua_State *L, int idx) { return ((struct LuaTSTree *)luaL_checkudata(L, (idx), LUA_TSTREE_METATABLE))->t; }
-static inline struct LuaTSTree *get_lua_tree(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSTREE_METATABLE); }
+#define DEFINE_GETTERS(name, lua_struct_type, metatable_str, field_type, field_iden) \
+	static inline struct lua_struct_type * get_lua_ ##name (lua_State *L, int idx) { \
+		return ((struct lua_struct_type *)luaL_checkudata(L, idx, (metatable_str))); \
+	} \
+	static inline field_type get_ ##name (lua_State *L, int idx) { \
+		return ((struct lua_struct_type *)luaL_checkudata(L, idx, (metatable_str)))-> field_iden; \
+	}
 
-static inline TSTreeCursor get_tree_cursor(lua_State *L, int idx) { return ((struct LuaTSTreeCursor *)luaL_checkudata(L, (idx), LUA_TSTREECURSOR_METATABLE))->c; }
-static inline struct LuaTSTreeCursor *get_lua_tree_cursor(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSTREECURSOR_METATABLE); }
+DEFINE_GETTERS(node, LuaTSNode, LUA_TSNODE_METATABLE, TSNode, n);
+DEFINE_GETTERS(tree, LuaTSTree, LUA_TSTREE_METATABLE, struct TSTree *, t);
+DEFINE_GETTERS(tree_cursor, LuaTSTreeCursor, LUA_TSTREECURSOR_METATABLE, TSTreeCursor, c);
+DEFINE_GETTERS(parser, LuaTSParser, LUA_TSPARSER_METATABLE, struct TSParser *, parser);
+DEFINE_GETTERS(query, LuaTSQuery, LUA_TSQUERY_METATABLE, TSQuery *, q);
+DEFINE_GETTERS(query_cursor, LuaTSQueryCursor, LUA_TSQUERYCURSOR_METATABLE, TSQueryCursor *, c);
 
-static inline TSParser *get_parser(lua_State *L, int idx) { return ((struct LuaTSParser *)luaL_checkudata(L, (idx), LUA_TSPARSER_METATABLE))->parser; }
-static inline struct LuaTSParser *get_lua_parser(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSPARSER_METATABLE); }
-
-static inline TSQuery *get_query(lua_State *L, int idx) { return ((struct LuaTSQuery *)luaL_checkudata(L, (idx), LUA_TSQUERY_METATABLE))->q; }
-static inline struct LuaTSQuery *get_lua_query(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSQUERY_METATABLE); }
-
-static inline TSQueryCursor *get_query_cursor(lua_State *L, int idx) { return ((struct LuaTSQueryCursor *)luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE))->c; }
-static inline struct LuaTSQueryCursor *get_lua_query_cursor(lua_State *L, int idx) { return luaL_checkudata(L, (idx), LUA_TSQUERYCURSOR_METATABLE); }
+#undef DEFINE_GETTERS
 
 /* }}}*/
 /* {{{ Query Object */
@@ -307,6 +333,23 @@ static void handle_query_error(
 	lua_error(L);
 }
 
+static void push_lua_query(
+	lua_State *L,
+	const TSLanguage *const lang,
+	const char *const src,
+	const size_t src_len,
+	TSQuery *const q,
+	int parent_idx
+) {
+	struct LuaTSQuery *lq = lua_newuserdata(L, sizeof(struct LuaTSQuery));
+	set_parent(L, parent_idx);
+	setmetatable(L, LUA_TSQUERY_METATABLE);
+	lq->lang = lang;
+	lq->src = src;
+	lq->src_len = src_len;
+	lq->q = q;
+}
+
 /* @teal-export Parser.query: function(Parser, string): Query [[
    Create a query out of the given string for the language of the given parser
 ]] */
@@ -328,14 +371,7 @@ static int lua_make_query(lua_State *L) {
 		&err_type
 	);
 	handle_query_error(L, q, err_offset, err_type, query_src);
-
-	struct LuaTSQuery *lq = lua_newuserdata(L, sizeof(struct LuaTSQuery));
-	set_parent(L, 3, 1);
-	setmetatable(L, LUA_TSQUERY_METATABLE);
-	lq->lang = p->lang;
-	lq->src = query_src;
-	lq->src_len = len;
-	lq->q = q;
+	push_lua_query(L, p->lang, query_src, len, q, 1);
 
 	return 1;
 }
@@ -355,23 +391,18 @@ static void push_query_copy(lua_State *L, int query_idx) {
 	);
 
 	handle_query_error(L, q, err_offset, err_type, orig->src);
+	const char *src_copy = str_ldup(orig->src, orig->src_len);
+	if (!src_copy) { ALLOC_FAIL(L); return; }
+	push_lua_query(L, orig->lang, src_copy, orig->src_len, q, -2); // <Parent>, <Query>
 
-	struct LuaTSQuery *new = lua_newuserdata(L, sizeof(struct LuaTSQuery)); // <Parent>, <Query>
-	set_parent(L, -1, -2);
-	setmetatable(L, LUA_TSQUERY_METATABLE);
-	new->lang = orig->lang;
-	new->q = q;
-	new->src_len = orig->src_len;
-	new->src = str_ldup(orig->src, orig->src_len);
 	lua_remove(L, -2); // <Query>
-	if (!new->src) { ALLOC_FAIL(L); }
 }
 
 static int lua_query_gc(lua_State *L) {
+	struct LuaTSQuery *q = get_lua_query(L, 1);
 #ifdef LOG_GC
 	printf("Query %p is being garbage collected\n", q);
 #endif
-	struct LuaTSQuery *q = get_lua_query(L, 1);
 	free((char *)q->src);
 	ts_query_delete(q->q);
 	return 1;
@@ -404,13 +435,13 @@ static int lua_query_cursor_gc(lua_State *L) {
 
 static void push_query_predicates(lua_State *L, int query_idx) {
 	lua_pushvalue(L, query_idx); // <Query>
-	push_registry_query_predicate_table(L); // <Query>, { <Predicates> }
+	push_reg_query_predicate_table(L); // <Query>, { <Predicates> }
 	lua_insert(L, -2); // { <Predicates> }, <Query>
 	lua_gettable(L, -2); // { <Predicates> }, <Predicate>
 	lua_remove(L, -2); // <Predicate>
 	if (lua_isnil(L, -1)) {
 		lua_pop(L, 1); // (nothing)
-		push_default_predicate_table(L); // <Default Predicate>
+		push_reg_default_predicate_table(L); // <Default Predicate>
 	}
 }
 
@@ -448,7 +479,7 @@ static bool do_predicates(
 					if (lua_isnil(L, -1)) {
 						lua_pop(L, 1);
 						// try to grab default value
-						push_default_predicate_table(L);
+						push_reg_default_predicate_table(L);
 						lua_getfield(L, -1, pred_name);
 						lua_remove(L, -2);
 						if (lua_isnil(L, -1)) {
@@ -687,7 +718,7 @@ static int lua_query_capture_factory(lua_State *L) {
 
 static int lua_query_copy_with_predicates(lua_State *L) {
 	lua_settop(L, 2); // <Orig>, <Predicates>
-	push_registry_query_predicate_table(L); // <Orig>, <Predicates>, { <RegistryPredicates> }
+	push_reg_query_predicate_table(L); // <Orig>, <Predicates>, { <RegistryPredicates> }
 	push_query_copy(L, 1); // <Orig>, <Predicates>, { <RegistryPredicates> }, <Copy>
 	lua_pushvalue(L, -1); // <Orig>, <Predicates>, { <RegistryPredicates> }, <Copy>, <Copy>
 	lua_insert(L, -3); // <Orig>, <Predicates>, <Copy>, { <RegistryPredicates> }, <Copy>
@@ -844,31 +875,63 @@ enum DLOpenError {
 };
 
 static enum DLOpenError try_dlopen(struct LuaTSParser *p, const char *parser_file, const char *lang_name) {
-	void *handle = open_dynamic_lib(parser_file);
-	if (!handle) {
-		return DLERR_DLOPEN;
-	}
 	char buf[128];
 	if (snprintf(buf, sizeof(buf) - sizeof(TREE_SITTER_SYM), TREE_SITTER_SYM "%s", lang_name) == 0) {
-		close_dynamic_lib(handle);
 		return DLERR_BUFLEN;
 	}
 
+	if (!open_dynamic_lib(parser_file, &p->dl)) {
+		return DLERR_DLOPEN;
+	}
+
 	// ISO C is not a fan of void * -> function pointer
-	TSLanguage *(*tree_sitter_lang)(void) = (TSLanguage *(*)(void))dynamic_sym(handle, buf);
+	TSLanguage *(*tree_sitter_lang)(void) = (TSLanguage *(*)(void))dynamic_sym(p->dl, buf);
 
 	if (!tree_sitter_lang) {
-		close_dynamic_lib(handle);
+		close_dynamic_lib(p->dl);
 		return DLERR_DLSYM;
 	}
 	TSParser *parser = ts_parser_new();
 	const TSLanguage *lang = tree_sitter_lang();
 	ts_parser_set_language(parser, lang);
 
-	p->dlhandle = handle;
 	p->lang = lang;
 	p->parser = parser;
 	return DLERR_NONE;
+}
+
+static struct LuaTSParser *new_parser(lua_State *L) {
+	struct LuaTSParser *const p = lua_newuserdata(L, sizeof(struct LuaTSParser));
+	setmetatable(L, LUA_TSPARSER_METATABLE);
+	return p;
+}
+
+static inline void push_parser_cache_key(lua_State *L, const char *dl_file, const char *lang_name) {
+	luaL_Buffer b;
+	luaL_buffinit(L, &b);
+	luaL_addstring(&b, dl_file);
+	luaL_addchar(&b, 1);
+	luaL_addstring(&b, lang_name);
+	luaL_pushresult(&b);
+}
+static void cache_parser(lua_State *L, const char *dl_file, const char *lang_name) {
+	const int parser_idx = lua_gettop(L);
+	push_reg_parser_cache_table(L); // cache
+	push_parser_cache_key(L, dl_file, lang_name); // parser, cache, "thing.so\1blah"
+	lua_pushvalue(L, parser_idx); // cache, "thing.so\1blah", parser
+	lua_rawset(L, -3); // cache
+	lua_pop(L, 1);
+}
+
+static bool push_cached_parser(lua_State *L, const char *dl_file, const char *lang_name) {
+	push_reg_parser_cache_table(L); // cache
+	push_parser_cache_key(L, dl_file, lang_name); // cache, "dl_file\1lang_name"
+	if (lua_rawget(L, -2) != LUA_TNIL) { // cache, nil | parser
+		lua_remove(L, -2);
+		return true;
+	}
+	lua_pop(L, 2);
+	return false;
 }
 
 /* @teal-export load: function(file_name: string, language_name: string): Parser, string [[
@@ -887,9 +950,14 @@ static int lua_load_parser(lua_State *L) {
 	const char *parser_file = luaL_checkstring(L, 1);
 	const char *lang_name = luaL_checkstring(L, 2);
 
-	struct LuaTSParser *const p = lua_newuserdata(L, sizeof(struct LuaTSParser));
+	if (push_cached_parser(L, parser_file, lang_name)) {
+		return 1;
+	}
 
-	switch (try_dlopen(p, parser_file, lang_name)) {
+	struct LuaTSParser proxy = {
+		.dl = NULL, .parser = NULL, .lang = NULL,
+	};
+	switch (try_dlopen(&proxy, parser_file, lang_name)) {
 	case DLERR_NONE:
 		break;
 	case DLERR_DLSYM:
@@ -898,7 +966,7 @@ static int lua_load_parser(lua_State *L) {
 		return 2;
 	case DLERR_DLOPEN:
 		lua_pushnil(L);
-		lua_pushstring(L, dynamic_lib_error());
+		lua_pushstring(L, dynamic_lib_error(proxy.dl));
 		return 2;
 	case DLERR_BUFLEN:
 		lua_pushnil(L);
@@ -906,7 +974,11 @@ static int lua_load_parser(lua_State *L) {
 		return 2;
 	}
 
-	setmetatable(L, LUA_TSPARSER_METATABLE);
+	struct LuaTSParser *const p = new_parser(L);
+	p->dl = proxy.dl;
+	p->parser = proxy.parser;
+	p->lang = proxy.lang;
+	cache_parser(L, parser_file, lang_name);
 	return 1;
 }
 
@@ -955,7 +1027,7 @@ static int lua_require_parser(lua_State *L) {
 	char *buf = malloc(sizeof(char) * (buf_size + lang_len));
 
 	// create parser, prepare strbuffer for error message if we can't load it
-	struct LuaTSParser *const p = lua_newuserdata(L, sizeof(struct LuaTSParser));
+
 	luaL_Buffer b;
 
 	luaL_buffinit(L, &b);
@@ -982,13 +1054,28 @@ static int lua_require_parser(lua_State *L) {
 		case ';': {
 			buf[j] = '\0';
 
-			switch (try_dlopen(p, buf, lang_name)) {
-			case DLERR_NONE:
+			if (push_cached_parser(L, buf, lang_name)) {
 				luaL_pushresult(&b);
-				free(buf);
 				lua_pop(L, 1);
-				setmetatable(L, LUA_TSPARSER_METATABLE);
+				free(buf);
 				return 1;
+			}
+
+			struct LuaTSParser proxy = (struct LuaTSParser){
+				.dl = NULL, .parser = NULL, .lang = NULL,
+			};
+			switch (try_dlopen(&proxy, buf, lang_name)) {
+			case DLERR_NONE: {
+				luaL_pushresult(&b);
+				struct LuaTSParser *const p = new_parser(L);
+				p->dl = proxy.dl;
+				p->parser = proxy.parser;
+				p->lang = proxy.lang;
+
+				cache_parser(L, buf, lang_name);
+				free(buf);
+				return 1;
+			}
 			case DLERR_DLSYM:
 				buf_add_str(&b, "\n\tFound ");
 				luaL_addlstring(&b, buf, j);
@@ -998,7 +1085,7 @@ static int lua_require_parser(lua_State *L) {
 			case DLERR_DLOPEN:
 				buf_add_str(&b, "\n\tTried ");
 				luaL_addlstring(&b, buf, j);
-				buf_add_str(&b, dynamic_lib_error());
+				buf_add_str(&b, dynamic_lib_error(proxy.dl));
 				break;
 			case DLERR_BUFLEN:
 				buf_add_str(&b, "\n\tUnable to copy langauge name '");
@@ -1026,11 +1113,12 @@ err_cleanup:
 static int lua_parser_gc(lua_State *L) {
 	struct LuaTSParser *lp = luaL_checkudata(L, 1, LUA_TSPARSER_METATABLE);
 #ifdef LOG_GC
-	printf("Parser %p is being garbage collected\n", lp);
+	printf("Parser p: %p is being garbage collected\n", lp);
+	printf("   p->dl: %p\n", lp->dl);
 #endif
 	ts_parser_delete(lp->parser);
+	close_dynamic_lib(lp->dl);
 
-	close_dynamic_lib(lp->dlhandle);
 	return 0;
 }
 
@@ -1258,8 +1346,7 @@ static int lua_tree_copy(lua_State *L) {
 static inline bool is_non_negative(lua_State *L, int i) { return lua_tonumber(L, i) >= 0; }
 
 static inline int getfield_type(lua_State *L, int idx, const char *field_name) {
-	// TODO: make a macro or something for this for different lua versions
-	/*int actual_type = */lua_getfield(L, idx, field_name);
+	lua_getfield(L, idx, field_name);
 	return lua_type(L, -1);
 }
 
@@ -1391,7 +1478,7 @@ static struct LuaTSTreeCursor *push_lua_tree_cursor(lua_State *L, int parent_idx
 	c->c = ts_tree_cursor_new(n);
 	c->lang = lang;
 	setmetatable(L, LUA_TSTREECURSOR_METATABLE);
-	set_parent(L, lua_gettop(L), parent_idx);
+	set_parent(L, parent_idx);
 	return c;
 }
 
@@ -1901,16 +1988,18 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 	lua_newtable(L); // {}
 	lua_newtable(L); // {}, {}
 	lua_newtable(L); // {}, {}, {}
+
 #ifndef PREVENT_GC
 	lua_pushstring(L, "k"); // {}, {}, {}, "k"
 	lua_setfield(L, -2, "__mode"); // {}, {}, { __mode = "k" }
 #endif
+
 	lua_setmetatable(L, -2); // {}, { <metatable { __mode = "k" }> }
-	lua_setfield(L, -2, "objects"); // { objects = { <metatable { __mode = "k" }> } }
+	lua_setfield(L, -2, object_index); // { objects = { <metatable { __mode = "k" }> } }
 
 	lua_newtable(L); // { objects = {...} }, {}
 	setfuncs(L, default_query_predicates); // { objects = {...} }, { ["eq?"] = <function>, ... }
-	lua_setfield(L, -2, default_predicates_index); // { objects = {...}, predicates = {...} }
+	lua_setfield(L, -2, default_predicate_index); // { objects = {...}, predicates = {...} }
 
 	lua_newtable(L); // { objects, predicates }, {}
 	lua_newtable(L); // { objects, predicates }, {}, {}
@@ -1922,7 +2011,10 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 
 	lua_setmetatable(L, -2); // { obj, pred }, { <metatable { __mode = "k" }> }
 
-	lua_setfield(L, -2, query_predicates_index); // { obj, pred, query_predicates = { <__mode = "k"> }}
+	lua_setfield(L, -2, query_predicate_index); // { obj, pred, query_predicates = { <__mode = "k"> }}
+
+	lua_newtable(L); // { registry entry }, {}
+	lua_setfield(L, -2, parser_cache_index); // { reg, parser_cache = {} }
 
 	lua_settable(L, LUA_REGISTRYINDEX);
 

@@ -21,7 +21,7 @@ build = {
    modules = {
       ltreesitter = {
          sources = "ltreesitter.c",
-         libraries = {"tree-sitter"},
+         libraries = {"tree-sitter", "uv"},
          incdirs = {"$(TREE_SITTER_INCDIR)"},
          libdirs = {"$(TREE_SITTER_LIBDIR)"},
       },
