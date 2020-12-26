@@ -15,10 +15,11 @@
 #define DL_EXT "so"
 #endif
 
-#define LTREESITTER_USE_LIBUV 1
+/* #define LTREESITTER_USE_LIBUV 1 */
 #ifdef LTREESITTER_USE_LIBUV
 #include <uv.h>
 typedef uv_lib_t dl_handle;
+#error hi
 #else
 #ifdef _WIN32
 #include <windows.h>
@@ -98,13 +99,13 @@ struct LuaTSQueryCursor {
 static inline bool open_dynamic_lib(const char *name, dl_handle **handle) {
 #ifdef _WIN32
 	*handle = LoadLibrary(name);
-	return handle != NULL;
+	return *handle != NULL;
 #elif LTREESITTER_USE_LIBUV
 	*handle = malloc(sizeof(dl_handle));
 	return uv_dlopen(name, *handle) == 0;
 #else
 	*handle = dlopen(name, RTLD_NOW | RTLD_LOCAL);
-	return handle != NULL;
+	return *handle != NULL;
 #endif
 }
 
@@ -133,15 +134,52 @@ static inline void close_dynamic_lib(dl_handle *handle) {
 #endif
 }
 
+#define UNUSED(x) ((void)(x))
+
 static inline const char *dynamic_lib_error(dl_handle *handle) {
 #ifdef _WIN32
 	// Does windows have an equivalent dlerror?
+	UNUSED(handle);
 	return "Error in LoadLibrary";
 #elif LTREESITTER_USE_LIBUV
 	return uv_dlerror(handle);
 #else
+	UNUSED(handle);
 	return dlerror();
 #endif
+}
+
+enum DLOpenError {
+	DLERR_NONE,
+	DLERR_DLOPEN,
+	DLERR_BUFLEN,
+	DLERR_DLSYM,
+};
+
+static enum DLOpenError try_dlopen(struct LuaTSParser *p, const char *parser_file, const char *lang_name) {
+	char buf[128];
+	if (snprintf(buf, sizeof(buf) - sizeof(TREE_SITTER_SYM), TREE_SITTER_SYM "%s", lang_name) == 0) {
+		return DLERR_BUFLEN;
+	}
+
+	if (!open_dynamic_lib(parser_file, &p->dl)) {
+		return DLERR_DLOPEN;
+	}
+
+	// ISO C is not a fan of void * -> function pointer
+	TSLanguage *(*tree_sitter_lang)(void) = (TSLanguage *(*)(void))dynamic_sym(p->dl, buf);
+
+	if (!tree_sitter_lang) {
+		close_dynamic_lib(p->dl);
+		return DLERR_DLSYM;
+	}
+	TSParser *parser = ts_parser_new();
+	const TSLanguage *lang = tree_sitter_lang();
+	ts_parser_set_language(parser, lang);
+
+	p->lang = lang;
+	p->parser = parser;
+	return DLERR_NONE;
 }
 
 #define UNREACHABLE(L) luaL_error(L, "%s line %d UNREACHABLE", __FILE__, __LINE__)
@@ -234,6 +272,7 @@ static inline void setmetatable(lua_State *L, const char *mt_name) {
 }
 
 // Set the parent of the object on the top of the stack
+// an object with a parent will keep the parent alive for as long as it stays alive
 static void set_parent(lua_State *L, int parent_idx) {
 	const int child_idx = lua_gettop(L);
 	const int abs_parent_idx = absindex(L, parent_idx);
@@ -245,8 +284,6 @@ static void set_parent(lua_State *L, int parent_idx) {
 	lua_pop(L, 1);
 }
 
-// parent_idx is the index of the lua object that needs to stay alive for the node to be valid
-// this is usually the tree itself
 static struct LuaTSNode *push_lua_node(lua_State *L, int parent_idx, TSNode node, const TSLanguage *lang) {
 	struct LuaTSNode *const ln = lua_newuserdata(L, sizeof(struct LuaTSNode));
 	ln->n = node;
@@ -319,14 +356,15 @@ static void handle_query_error(
 	strncpy(slice, &query_src[
 		err_offset >= 10 ? err_offset - 10 : err_offset
 	], 15);
-	slice[15] = 0;
 
 	switch (err_type) {
-	case TSQueryErrorSyntax:    lua_pushfstring(L, "Query syntax error: around '%s' (at offset %d)",    slice, (int)err_offset); break;
-	case TSQueryErrorNodeType:  lua_pushfstring(L, "Query node type error: around '%s' (at offset %d)", slice, (int)err_offset); break;
-	case TSQueryErrorField:     lua_pushfstring(L, "Query field error: around '%s' (at offset %d)",     slice, (int)err_offset); break;
-	case TSQueryErrorCapture:   lua_pushfstring(L, "Query capture error: around '%s' (at offset %d)",   slice, (int)err_offset); break;
-	case TSQueryErrorStructure: lua_pushfstring(L, "Query structure error: around '%s' (at offset %d)", slice, (int)err_offset); break;
+#define err(str) lua_pushfstring(L, (str), slice, (int)err_offset)
+	case TSQueryErrorSyntax:    err("Query syntax error: around '%s' (at offset %d)");    break;
+	case TSQueryErrorNodeType:  err("Query node type error: around '%s' (at offset %d)"); break;
+	case TSQueryErrorField:     err("Query field error: around '%s' (at offset %d)");     break;
+	case TSQueryErrorCapture:   err("Query capture error: around '%s' (at offset %d)");   break;
+	case TSQueryErrorStructure: err("Query structure error: around '%s' (at offset %d)"); break;
+#undef err
 	default: UNREACHABLE(L);
 	}
 
@@ -866,39 +904,6 @@ static const luaL_Reg query_cursor_metamethods[] = {
 };
 /* }}}*/
 /* {{{ Parser Object */
-
-enum DLOpenError {
-	DLERR_NONE,
-	DLERR_DLOPEN,
-	DLERR_BUFLEN,
-	DLERR_DLSYM,
-};
-
-static enum DLOpenError try_dlopen(struct LuaTSParser *p, const char *parser_file, const char *lang_name) {
-	char buf[128];
-	if (snprintf(buf, sizeof(buf) - sizeof(TREE_SITTER_SYM), TREE_SITTER_SYM "%s", lang_name) == 0) {
-		return DLERR_BUFLEN;
-	}
-
-	if (!open_dynamic_lib(parser_file, &p->dl)) {
-		return DLERR_DLOPEN;
-	}
-
-	// ISO C is not a fan of void * -> function pointer
-	TSLanguage *(*tree_sitter_lang)(void) = (TSLanguage *(*)(void))dynamic_sym(p->dl, buf);
-
-	if (!tree_sitter_lang) {
-		close_dynamic_lib(p->dl);
-		return DLERR_DLSYM;
-	}
-	TSParser *parser = ts_parser_new();
-	const TSLanguage *lang = tree_sitter_lang();
-	ts_parser_set_language(parser, lang);
-
-	p->lang = lang;
-	p->parser = parser;
-	return DLERR_NONE;
-}
 
 static struct LuaTSParser *new_parser(lua_State *L) {
 	struct LuaTSParser *const p = lua_newuserdata(L, sizeof(struct LuaTSParser));

@@ -9,21 +9,25 @@ description = {
    license = "MIT",
    summary = "Treesitter bindings to Lua",
    detailed = [[Standalone Lua bindings to the Treesitter api.]],
-   issues_url = "https://github.com/euclidianAce/ltreesitter/issues"
+   issues_url = "https://github.com/euclidianAce/ltreesitter/issues",
 }
 external_dependencies = {
    TREE_SITTER = {
-      header = "tree_sitter/api.h"
+      header = "tree_sitter/api.h",
    },
+   -- UV = {
+      -- header = "uv.h",
+   -- }
 }
 build = {
    type = "builtin",
    modules = {
       ltreesitter = {
          sources = "ltreesitter.c",
-         libraries = {"tree-sitter", "uv"},
+         libraries = {"tree-sitter", --[["uv"]]},
          incdirs = {"$(TREE_SITTER_INCDIR)"},
          libdirs = {"$(TREE_SITTER_LIBDIR)"},
+         -- defines = {"LTREESITTER_USE_LIBUV"},
       },
    },
    install = {
