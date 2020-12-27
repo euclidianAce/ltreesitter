@@ -110,6 +110,8 @@ h2 {
 <br>
 <a href="index.html#Parser.query">Parser.query</a>
 <br>
+<a href="index.html#Parser.set_ranges">Parser.set_ranges</a>
+<br>
 <a href="index.html#Parser.set_timeout">Parser.set_timeout</a>
 <br>
 </p>
@@ -205,6 +207,8 @@ h2 {
 <p><code>reader</code> should be a function that takes a byte index<br>   and a <code>Point</code> and returns the text at that point. The<br>   function should return either <code>nil</code> or an empty string<br>   to signal that there is no more text.<br><br>   A <code>Tree</code> can be provided to reuse parts of it for parsing,<br>   provided the <code>Tree:edit</code> has been called previously</p><br>
 <h2><a name="Parser.query"><code>Parser.query: function(Parser, string): Query </code></a></h2>
 <p>Create a query out of the given string for the language of the given parser</p><br>
+<h2><a name="Parser.set_ranges"><code>Parser.set_ranges: function(Parser, {Range}): boolean </code></a></h2>
+<p>Sets the ranges that <code>Parser</code> will include when parsing, so you don't have to parse an entire document, but the ranges in the tree will still match the document.<br>   The array of <code>Range</code>s must satisfy the following relationship: for a positive integer <code>i</code> within the length of <code>ranges: {Range}</code>:<br>   <pre><br>   ranges[i].end_byte <= ranges[i + 1].start_byte<br>   </pre><br><br>   returns whether or not setting the range succeeded</p><br>
 <h2><a name="Parser.set_timeout"><code>Parser.set_timeout: function(Parser, number) </code></a></h2>
 <p>Sets how long the parser is allowed to take in microseconds</p><br>
 <br>

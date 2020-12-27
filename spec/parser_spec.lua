@@ -1,5 +1,5 @@
 local assert = require("luassert")
-local ts = require("ltreesitter")
+-- local ts = require("ltreesitter")
 local util = require("spec.util")
 
 describe("Parser", function()
@@ -18,6 +18,27 @@ describe("Parser", function()
 			p:query[[ (comment) ]],
 			"ltreesitter.TSQuery"
 		)
+	end)
+	describe("set_ranges", function()
+		it("should return a boolean", function()
+			assert.is.boolean(p:set_ranges())
+		end)
+		it("should error out when ranges overlap", function()
+			assert.has.errors(function()
+				p:set_ranges{
+					{
+						start_byte = 0, end_byte = 5,
+						start_point = { row = 0, column = 0 },
+						end_point   = { row = 0, column = 5 },
+					},
+					{
+						start_byte = 3, end_byte = 10,
+						start_point = { row = 0, column = 3 },
+						end_point   = { row = 0, column = 10 },
+					}
+				}
+			end)
+		end)
 	end)
 	describe("parse_with", function()
 		it("should error out gracefully when the provided function errors", function()

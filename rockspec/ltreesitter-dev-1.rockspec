@@ -24,6 +24,7 @@ build = {
    modules = {
       ltreesitter = {
          sources = "ltreesitter.c",
+         -- TODO: is there a way to make this opt in to libuv?
          libraries = {"tree-sitter", --[["uv"]]},
          incdirs = {"$(TREE_SITTER_INCDIR)"},
          libdirs = {"$(TREE_SITTER_LIBDIR)"},

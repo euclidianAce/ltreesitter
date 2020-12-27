@@ -19,14 +19,12 @@
 #ifdef LTREESITTER_USE_LIBUV
 #include <uv.h>
 typedef uv_lib_t dl_handle;
-#error hi
 #else
+typedef void dl_handle;
 #ifdef _WIN32
 #include <windows.h>
-typedef void dl_handle;
 #else
 #include <dlfcn.h>
-typedef void dl_handle;
 #endif
 #endif
 
@@ -183,12 +181,21 @@ static enum DLOpenError try_dlopen(struct LuaTSParser *p, const char *parser_fil
 }
 
 #define UNREACHABLE(L) luaL_error(L, "%s line %d UNREACHABLE", __FILE__, __LINE__)
-#define ALLOC_FAIL(L) luaL_error(L, "%s line %d Memory allocation failed!", __FILE__, __LINE__)
+#define ALLOC_FAIL(L) luaL_error(L, "%s in %s at line %d: Memory allocation failed!", __FILE__, __FUNCTION__, __LINE__)
 
 // Some compatability shims
 #if LUA_VERSION_NUM < 502
 #define LUA_OK 0
 #endif
+
+static inline void table_geti(lua_State *L, int idx, int i) {
+#if LUA_VERSION_NUM < 503
+	lua_pushnumber(L, i);
+	lua_gettable(L, idx);
+#else
+	lua_geti(L, idx, i);
+#endif
+}
 
 static char *str_ldup(const char *s, const size_t len) {
 	char *dup = malloc(sizeof(char) * (len + 1));
@@ -227,6 +234,48 @@ static void create_metatable(
 	lua_setfield(L, -2, "__name");
 #endif
 }
+
+static inline int getfield_type(lua_State *L, int idx, const char *field_name) {
+	lua_getfield(L, idx, field_name);
+	return lua_type(L, -1);
+}
+
+// push the field 'field_name' of the object at idx onto the stack and type check it
+// (raises an error if the check fails)
+// leaves the value on the stack whether or not the type check passed
+static bool expect_field(lua_State *L, int idx, const char *field_name, int expected_type) {
+	if (lua_type(L, idx) != LUA_TTABLE) {
+		luaL_error(L, "expected table");
+		return false;
+	}
+	const int actual_type = getfield_type(L, idx, field_name);
+	if (actual_type != expected_type) {
+		luaL_error(
+			L,
+			"expected field `%s' to be of type %s (got %s)",
+			field_name,
+			lua_typename(L, expected_type),
+			lua_typename(L, actual_type)
+		);
+		return false;
+	}
+	return true;
+}
+
+static void expect_nested_field(lua_State *L, int idx, const char *parent_name, const char *field_name, int expected_type) {
+	const int actual_type = getfield_type(L, idx, field_name);
+	if (actual_type != expected_type) {
+		luaL_error(
+			L,
+			"expected field `%s.%s' to be of type %s (got %s)",
+			parent_name,
+			field_name,
+			lua_typename(L, expected_type),
+			lua_typename(L, actual_type)
+		);
+	}
+}
+
 
 /* @teal-export _get_registry_entry: function(): table [[
    ltreesitter uses a table in the Lua registry to keep references alive and prevent Lua's garbage collection from collecting things that the library needs internally.
@@ -1140,25 +1189,21 @@ static int lua_parser_parse_string(lua_State *L) {
 	struct LuaTSParser *p = get_lua_parser(L, 1);
 	size_t len;
 	const char *str = luaL_checklstring(L, 2, &len);
-	struct LuaTSTree *old_lua_tree;
+	const char *copy = str_ldup(str, len);
+	if (!copy) return ALLOC_FAIL(L);
+
 	TSTree *old_tree;
 	if (lua_type(L, 3) == LUA_TNIL) {
 		old_tree = NULL;
 	} else {
-		old_lua_tree = get_lua_tree(L, 3);
-		old_tree = old_lua_tree->t;
+		old_tree = get_tree(L, 3);
 	}
-	TSTree *tree = ts_parser_parse_string(
-		p->parser,
-		old_tree,
-		str,
-		len
-	);
+	TSTree *tree = ts_parser_parse_string(p->parser, old_tree, str, len);
 	if (!tree) {
 		lua_pushnil(L);
 		return 1;
 	}
-	push_lua_tree(L, tree, p->lang, str, len, false);
+	push_lua_tree(L, tree, p->lang, copy, len, true);
 	return 1;
 }
 
@@ -1195,6 +1240,7 @@ static const char *lua_parser_read(void *payload, uint32_t byte_index, TSPoint p
 	}
 
 	if (lua_isnil(L, -1)) {
+		lua_pop(L, 1);
 		*bytes_read = 0;
 		return NULL;
 	}
@@ -1264,11 +1310,11 @@ static int lua_parser_parse_with(lua_State *L) {
 	TSTree *t = ts_parser_parse(p->parser, old_tree, input);
 
 	switch (payload.read_error) {
-		case READERR_PCALL:
-			return luaL_error(L, "read error: Provided function errored: %s", lua_tostring(L, -1));
-		case READERR_TYPE:
-			return luaL_error(L, "read error: Provided function returned %s (expected string)", lua_typename(L, lua_type(L, -1)));
-		case READERR_NONE: default: break;
+	case READERR_PCALL:
+		return luaL_error(L, "read error: Provided function errored: %s", lua_tostring(L, -1));
+	case READERR_TYPE:
+		return luaL_error(L, "read error: Provided function returned %s (expected string)", lua_typename(L, lua_type(L, -1)));
+	case READERR_NONE: default: break;
 	}
 
 	if (!t) {
@@ -1291,10 +1337,94 @@ static int lua_parser_set_timeout(lua_State *L) {
 	return 0;
 }
 
+/* @teal-inline [[
+   record Range
+      start_byte: number
+      end_byte: number
+
+      start_point: Point
+      end_point: Point
+   end
+]]*/
+
+static TSPoint topoint(lua_State *L, const int idx) {
+	const int absidx = absindex(L, idx);
+	expect_field(L, absidx, "row", LUA_TNUMBER);
+	expect_field(L, absidx, "column", LUA_TNUMBER);
+	const uint32_t row = lua_tonumber(L, -2);
+	const uint32_t col = lua_tonumber(L, -1);
+	lua_pop(L, 2);
+	return (TSPoint){
+		.row = row,
+		.column = col,
+	};
+}
+
+/* @teal-export Parser.set_ranges: function(Parser, {Range}): boolean [[
+   Sets the ranges that <code>Parser</code> will include when parsing, so you don't have to parse an entire document, but the ranges in the tree will still match the document.
+   The array of <code>Range</code>s must satisfy the following relationship: for a positive integer <code>i</code> within the length of <code>ranges: {Range}</code>:
+   <pre>
+   ranges[i].end_byte <= ranges[i + 1].start_byte
+   </pre>
+
+   returns whether or not setting the range succeeded
+]]*/
+static int lua_parser_set_ranges(lua_State *L) {
+
+	TSParser *const p = get_parser(L, 1);
+
+	if (lua_isnoneornil(L, 2)) {
+		lua_pushboolean(L, ts_parser_set_included_ranges(p, NULL, 0));
+		return 1;
+	}
+
+	uint32_t len = 0;
+	size_t actual_len = 8;
+	size_t size = sizeof(TSRange) * actual_len;
+	TSRange *ranges = malloc(size);
+	if (!ranges) return ALLOC_FAIL(L);
+
+	size_t i = 0;
+	table_geti(L, 2, 1);
+
+#define COPY_FIELD(idx, field_name, field_type, method) \
+	if (!expect_field(L, (idx), #field_name, field_type)) return 0; \
+	ranges[i] . field_name = method(L, (idx)); \
+	lua_pop(L, 1)
+
+	while (!lua_isnil(L, -1)) {
+		if (i >= actual_len) {
+			actual_len *= 2;
+			ranges = realloc(ranges, sizeof(TSRange) * actual_len);
+			if (!ranges) return ALLOC_FAIL(L);
+		}
+
+		COPY_FIELD(-1, start_byte, LUA_TNUMBER, lua_tonumber);
+		COPY_FIELD(-1, end_byte, LUA_TNUMBER, lua_tonumber);
+
+		if (i > 0 && ranges[i-1].end_byte > ranges[i].start_byte) {
+			return luaL_error(L, "Error in ranges: range[%d].end_byte (%u) is greater than range[%d].start_byte (%u)", i, ranges[i-1], i+1, ranges[i]);
+		}
+
+		COPY_FIELD(-1, start_point, LUA_TTABLE, topoint);
+		COPY_FIELD(-1, end_point, LUA_TTABLE, topoint);
+
+		++i;
+		table_geti(L, 2, i+1);
+	}
+
+#undef COPY_FIELD
+
+	lua_pushboolean(L, ts_parser_set_included_ranges(p, ranges, len));
+	free(ranges);
+	return 1;
+}
+
 static const luaL_Reg parser_methods[] = {
 	{"parse_string", lua_parser_parse_string},
 	{"parse_with", lua_parser_parse_with},
 	{"set_timeout", lua_parser_set_timeout},
+	{"set_ranges", lua_parser_set_ranges},
 	{"query", lua_make_query},
 	{NULL, NULL}
 };
@@ -1328,59 +1458,27 @@ static int lua_tree_to_string(lua_State *L) {
 ]] */
 static int lua_tree_copy(lua_State *L) {
 	struct LuaTSTree *t = get_lua_tree(L, 1);
+
+	const char *src_copy;
+	if (t->own_str) {
+		src_copy = malloc(sizeof(char) * t->src_len);
+		if (!src_copy) return ALLOC_FAIL(L);
+		memcpy((char *)src_copy, t->src, t->src_len);
+	} else {
+		src_copy = t->src;
+	}
+
 	struct LuaTSTree *const t_copy = lua_newuserdata(L, sizeof(struct LuaTSTree));
 	t_copy->t = ts_tree_copy(t->t);
-	if (t->own_str) {
-		t_copy->src = malloc(sizeof(char) * t->src_len + 1);
-		if (!t_copy->src) {
-			ALLOC_FAIL(L);
-			ts_tree_delete(t_copy->t);
-			return 0;
-		}
-		memcpy((char *)t_copy->src, t->src, t->src_len);
-		t_copy->own_str = true;
-	} else {
-		t_copy->src = t->src;
-		t_copy->src_len = t->src_len;
-		t_copy->own_str = false;
-	}
+	t_copy->src = src_copy;
+	t_copy->src_len = t->src_len;
+	t_copy->own_str = t->own_str;
+
 	setmetatable(L, LUA_TSTREE_METATABLE);
 	return 1;
 }
 
 static inline bool is_non_negative(lua_State *L, int i) { return lua_tonumber(L, i) >= 0; }
-
-static inline int getfield_type(lua_State *L, int idx, const char *field_name) {
-	lua_getfield(L, idx, field_name);
-	return lua_type(L, -1);
-}
-
-static void expect_arg_field(lua_State *L, int idx, const char *field_name, int expected_type) {
-	const int actual_type = getfield_type(L, idx, field_name);
-	if (actual_type != expected_type) {
-		luaL_error(
-			L,
-			"expected field `%s' to be of type %s (got %s)",
-			field_name,
-			lua_typename(L, expected_type),
-			lua_typename(L, actual_type)
-		);
-	}
-}
-
-static void expect_nested_arg_field(lua_State *L, int idx, const char *parent_name, const char *field_name, int expected_type) {
-	const int actual_type = getfield_type(L, idx, field_name);
-	if (actual_type != expected_type) {
-		luaL_error(
-			L,
-			"expected field `%s.%s' to be of type %s (got %s)",
-			parent_name,
-			field_name,
-			lua_typename(L, expected_type),
-			lua_typename(L, actual_type)
-		);
-	}
-}
 
 // Maybe make this Tree.Edit?
 /* @teal-inline [[
@@ -1405,23 +1503,23 @@ static int lua_tree_edit(lua_State *L) {
 	// get the edit struct from table
 	luaL_argcheck(L, lua_type(L, 2) == LUA_TTABLE, 2, "expected table");
 
-	expect_arg_field(L, 2, "start_byte", LUA_TNUMBER);
-	expect_arg_field(L, 2, "old_end_byte", LUA_TNUMBER);
-	expect_arg_field(L, 2, "new_end_byte", LUA_TNUMBER);
+	expect_field(L, 2, "start_byte", LUA_TNUMBER);
+	expect_field(L, 2, "old_end_byte", LUA_TNUMBER);
+	expect_field(L, 2, "new_end_byte", LUA_TNUMBER);
 
-	expect_arg_field(L, 2, "start_point", LUA_TTABLE);
-	expect_arg_field(L, -1, "row", LUA_TNUMBER);
-	expect_arg_field(L, -2, "column", LUA_TNUMBER);
+	expect_field(L, 2, "start_point", LUA_TTABLE);
+	expect_field(L, -1, "row", LUA_TNUMBER);
+	expect_field(L, -2, "column", LUA_TNUMBER);
 
-	expect_arg_field(L, 2, "old_end_point", LUA_TTABLE);
-	expect_nested_arg_field(L, -1, "old_end_point", "row", LUA_TNUMBER);
-	expect_nested_arg_field(L, -2, "old_end_point", "column", LUA_TNUMBER);
+	expect_field(L, 2, "old_end_point", LUA_TTABLE);
+	expect_nested_field(L, -1, "old_end_point", "row", LUA_TNUMBER);
+	expect_nested_field(L, -2, "old_end_point", "column", LUA_TNUMBER);
 
-	expect_arg_field(L, 2, "new_end_point", LUA_TTABLE);
-	expect_nested_arg_field(L, -1, "new_end_point", "row", LUA_TNUMBER);
-	expect_nested_arg_field(L, -2, "new_end_point", "column", LUA_TNUMBER);
+	expect_field(L, 2, "new_end_point", LUA_TTABLE);
+	expect_nested_field(L, -1, "new_end_point", "row", LUA_TNUMBER);
+	expect_nested_field(L, -2, "new_end_point", "column", LUA_TNUMBER);
 
-	// stack
+	// type checked stack
 	// 1.   tree
 	// 2.   table argument
 	// 3.   start_byte (u32)
