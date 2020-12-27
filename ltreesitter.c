@@ -197,6 +197,15 @@ static inline void table_geti(lua_State *L, int idx, int i) {
 #endif
 }
 
+static inline int table_rawget(lua_State *L, int idx) {
+#if LUA_VERSION_NUM < 503
+	lua_rawget(L, idx);
+	return lua_type(L, -1);
+#else
+	return lua_rawget(L, idx);
+#endif
+}
+
 static char *str_ldup(const char *s, const size_t len) {
 	char *dup = malloc(sizeof(char) * (len + 1));
 	if (!dup) { return NULL; }
@@ -968,6 +977,7 @@ static inline void push_parser_cache_key(lua_State *L, const char *dl_file, cons
 	luaL_addstring(&b, lang_name);
 	luaL_pushresult(&b);
 }
+
 static void cache_parser(lua_State *L, const char *dl_file, const char *lang_name) {
 	const int parser_idx = lua_gettop(L);
 	push_reg_parser_cache_table(L); // cache
@@ -980,7 +990,7 @@ static void cache_parser(lua_State *L, const char *dl_file, const char *lang_nam
 static bool push_cached_parser(lua_State *L, const char *dl_file, const char *lang_name) {
 	push_reg_parser_cache_table(L); // cache
 	push_parser_cache_key(L, dl_file, lang_name); // cache, "dl_file\1lang_name"
-	if (lua_rawget(L, -2) != LUA_TNIL) { // cache, nil | parser
+	if (table_rawget(L, -2) != LUA_TNIL) { // cache, nil | parser
 		lua_remove(L, -2);
 		return true;
 	}
