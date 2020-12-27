@@ -1,9 +1,9 @@
 rockspec_format = "3.0"
 package = "ltreesitter"
-version = "0.0.5-1"
+version = "0.0.6-1"
 source = {
    url = "git+https://github.com/euclidianAce/ltreesitter.git",
-   tag = "v0.0.5"
+   tag = "v0.0.6"
 }
 description = {
    summary = "Treesitter bindings to Lua",

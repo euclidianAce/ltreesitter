@@ -48,7 +48,7 @@ static const char query_predicate_index[] = "query_predicates";
 static const char parser_cache_index[] = "parsers";
 
 // @teal-export version: string
-static const char version_str[] = "0.0.5+dev";
+static const char version_str[] = "0.0.6";
 
 struct LuaTSParser {
 	const TSLanguage *lang;
@@ -295,7 +295,7 @@ static void expect_nested_field(lua_State *L, int idx, const char *parent_name, 
 static int push_registry_table(lua_State *L) {
 	lua_pushvalue(L, LUA_REGISTRYINDEX); // { <Registry> }
 	lua_pushlightuserdata(L, (void *)&registry_index); // { <Registry> }, <void *>
-	lua_rawget(L, -2); //  { <Registry> }, { <ltreesitter Registry> }
+	table_rawget(L, -2); //  { <Registry> }, { <ltreesitter Registry> }
 	lua_remove(L, -2); // { <ltreesitter Registry> }
 	return 1;
 }
