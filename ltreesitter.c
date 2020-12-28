@@ -41,6 +41,7 @@ typedef void dl_handle;
 #define LUA_TSQUERY_METATABLE          "ltreesitter.TSQuery"
 #define LUA_TSQUERYCURSOR_METATABLE    "ltreesitter.TSQueryCursor"
 
+/* #define malloc(s) (printf("Oh boy, a malloc! line %d\n", __LINE__), malloc(s)) */
 static const char registry_index = 'k';
 static const char object_index[] = "objects";
 static const char default_predicate_index[] = "default_predicates";
@@ -209,8 +210,8 @@ static inline int table_rawget(lua_State *L, int idx) {
 static char *str_ldup(const char *s, const size_t len) {
 	char *dup = malloc(sizeof(char) * (len + 1));
 	if (!dup) { return NULL; }
-	memcpy(dup, s, len);
-	dup[len+1] = '\0';
+	strncpy(dup, s, len);
+	dup[len] = '\0';
 	return dup;
 }
 
