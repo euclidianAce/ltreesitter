@@ -68,6 +68,13 @@ local function insert_into(dest: {string:any}, name: string, content: string)
    end
 end
 
+local function process_documentation(doc: string): string
+   -- cut out all the blocks to be exempt from formatting
+   while true do
+      local s, e, tag, content = string.find(doc, "<(.-)>(.*)</%1>")
+   end
+end
+
 -- TODO: should probably just use the teal parser to pull out these type definitions
 local directives: {string:function(ts.Node, string)} = {
    ["@teal-export"] = function(n: ts.Node, content: string)
@@ -81,6 +88,7 @@ local directives: {string:function(ts.Node, string)} = {
       typedef = typedef:gsub("[*/]", "")
       if name then
          if documentation then
+
             insert_into(docs, name, "<" .. typedef .. ">" .. trim(documentation))
          end
          local c_src_start <const> = n:start_point()
