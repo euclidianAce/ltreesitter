@@ -10,3 +10,4 @@ tl*
 /lua_modules
 /.luarocks
 scratch.tl
+tree-sitter-c

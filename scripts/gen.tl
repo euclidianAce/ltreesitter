@@ -24,7 +24,7 @@ local records <const>: RecordDef = {}
 local inlines <const>: {string} = {}
 
 local type DocDef = {string:string|DocDef}
-local docs <const> = {}
+local docs <const>: DocDef = {}
 
 local function trim(s: string): string
    return s:match("^%s*(.-)%s*$")
@@ -68,10 +68,11 @@ local function insert_into(dest: {string:any}, name: string, content: string)
    end
 end
 
-local function process_documentation(doc: string): string
+-- TODO: do some formatting on the docs so the random linebreaks dont actually get into the docs
+local function _process_documentation(doc: string): string
    -- cut out all the blocks to be exempt from formatting
    while true do
-      local s, e, tag, content = string.find(doc, "<(.-)>(.*)</%1>")
+      local _s, _e, _tag, _content = string.find(doc, "<(.-)>(.*)</%1>")
    end
 end
 

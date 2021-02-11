@@ -49,7 +49,7 @@ static const char query_predicate_index[] = "query_predicates";
 static const char parser_cache_index[] = "parsers";
 
 // @teal-export version: string
-static const char version_str[] = "0.0.6";
+static const char version_str[] = "0.0.6+dev";
 
 struct LuaTSParser {
 	const TSLanguage *lang;
@@ -412,9 +412,7 @@ static void handle_query_error(
 ) {
 	if (q) return;
 	char slice[16] = { 0 };
-	strncpy(slice, &query_src[
-		err_offset >= 10 ? err_offset - 10 : err_offset
-	], 15);
+	strncpy(slice, &query_src[ err_offset >= 10 ? err_offset - 10 : err_offset ], 15);
 
 	switch (err_type) {
 #define err(str) lua_pushfstring(L, (str), slice, (int)err_offset)
@@ -712,7 +710,7 @@ try_again:
 
    The match object is a record populated with all the information given by treesitter
    <pre>
-   type Query.Match = record
+   type Match = record
       id: number
       pattern_index: number
       capture_count: number
@@ -1090,6 +1088,8 @@ static int lua_require_parser(lua_State *L) {
 	const char *cpath = lua_tostring(L, -1);
 	const size_t buf_size = strlen(cpath);
 	char *buf = malloc(sizeof(char) * (buf_size + lang_len));
+	if (!buf) return ALLOC_FAIL(L);
+
 
 	// create parser, prepare strbuffer for error message if we can't load it
 
@@ -1282,7 +1282,7 @@ static const char *lua_parser_read(void *payload, uint32_t byte_index, TSPoint p
 	return read_str;
 }
 
-/* @teal-export Parser.parse_with: function(Parser, reader: function(number, Point): (string), old_tree: Tree) [[
+/* @teal-export Parser.parse_with: function(Parser, reader: function(number, Point): (string), old_tree: Tree): Tree [[
    <code>reader</code> should be a function that takes a byte index
    and a <code>Point</code> and returns the text at that point. The
    function should return either <code>nil</code> or an empty string
@@ -1399,7 +1399,7 @@ static int lua_parser_set_ranges(lua_State *L) {
 	table_geti(L, 2, 1);
 
 #define COPY_FIELD(idx, field_name, field_type, method) \
-	if (!expect_field(L, (idx), #field_name, field_type)) return 0; \
+	if (!expect_field(L, (idx), #field_name, field_type)) { free(ranges); return 0; } \
 	ranges[i] . field_name = method(L, (idx)); \
 	lua_pop(L, 1)
 
@@ -1912,7 +1912,7 @@ static int lua_node_named_children(lua_State *L) {
 	get_node(L, 1);
 	push_parent(L, 1);
 	lua_pushnumber(L, 0);
-	
+
 	lua_pushcclosure(L, lua_node_named_children_iterator, 3);
 	return 1;
 }

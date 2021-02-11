@@ -4,65 +4,65 @@ local record ltreesitter
    -- Exports
 
    record Cursor
-      current_field_name: function(Cursor): string  -- from 1612
-      current_node: function(Cursor): Node  -- from 1598
-      goto_first_child: function(Cursor): boolean  -- from 1654
-      goto_next_sibling: function(Cursor): boolean  -- from 1645
-      goto_parent: function(Cursor): boolean  -- from 1636
-      reset: function(Cursor, Node)  -- from 1626
+      current_field_name: function(Cursor): string  -- from 1623
+      current_node: function(Cursor): Node  -- from 1609
+      goto_first_child: function(Cursor): boolean  -- from 1665
+      goto_next_sibling: function(Cursor): boolean  -- from 1656
+      goto_parent: function(Cursor): boolean  -- from 1647
+      reset: function(Cursor, Node)  -- from 1637
    end
    record Node
-      child: function(Node, idx: number): Node  -- from 1782
-      child_by_field_name: function(Node, string): Node  -- from 2004
-      child_count: function(Node): number  -- from 1801
-      children: function(Node): function(): Node  -- from 1882
-      create_cursor: function(Node): Cursor  -- from 1587
-      end_byte: function(Node): number  -- from 1706
-      end_point: function(Node): Point  -- from 1739
-      is_extra: function(Node): boolean  -- from 1773
-      is_missing: function(Node): boolean  -- from 1764
-      is_named: function(Node): boolean  -- from 1755
-      name: function(Node): string  -- from 1987
-      named_child: function(Node, idx: number): Node  -- from 1810
-      named_child_count: function(Node): number  -- from 1829
-      named_children: function(Node): function(): Node  -- from 1896
-      next_named_sibling: function(Node): Node  -- from 1940
-      next_sibling: function(Node): Node  -- from 1908
-      prev_named_sibling: function(Node): Node  -- from 1956
-      prev_sibling: function(Node): Node  -- from 1924
-      source: function(Node): string  -- from 2026
-      start_byte: function(Node): number  -- from 1697
-      start_point: function(Node): Point  -- from 1722
-      type: function(Node): string  -- from 1688
+      child: function(Node, idx: number): Node  -- from 1793
+      child_by_field_name: function(Node, string): Node  -- from 2015
+      child_count: function(Node): number  -- from 1812
+      children: function(Node): function(): Node  -- from 1893
+      create_cursor: function(Node): Cursor  -- from 1598
+      end_byte: function(Node): number  -- from 1717
+      end_point: function(Node): Point  -- from 1750
+      is_extra: function(Node): boolean  -- from 1784
+      is_missing: function(Node): boolean  -- from 1775
+      is_named: function(Node): boolean  -- from 1766
+      name: function(Node): string  -- from 1998
+      named_child: function(Node, idx: number): Node  -- from 1821
+      named_child_count: function(Node): number  -- from 1840
+      named_children: function(Node): function(): Node  -- from 1907
+      next_named_sibling: function(Node): Node  -- from 1951
+      next_sibling: function(Node): Node  -- from 1919
+      prev_named_sibling: function(Node): Node  -- from 1967
+      prev_sibling: function(Node): Node  -- from 1935
+      source: function(Node): string  -- from 2037
+      start_byte: function(Node): number  -- from 1708
+      start_point: function(Node): Point  -- from 1733
+      type: function(Node): string  -- from 1699
    end
    record Parser
-      parse_string: function(Parser, string, Tree): Tree  -- from 1178
-      parse_with: function(Parser, reader: function(number, Point): (string), old_tree: Tree)  -- from 1273
-      query: function(Parser, string): Query  -- from 439
-      set_ranges: function(Parser, {Range}): boolean  -- from 1362
-      set_timeout: function(Parser, number)  -- from 1328
+      parse_string: function(Parser, string, Tree): Tree  -- from 1189
+      parse_with: function(Parser, reader: function(number, Point): (string), old_tree: Tree): Tree  -- from 1284
+      query: function(Parser, string): Query  -- from 447
+      set_ranges: function(Parser, {Range}): boolean  -- from 1373
+      set_timeout: function(Parser, number)  -- from 1339
    end
    record Query
       record Match
-         capture_count: number  -- from 622
-         captures: {string|number:Node}  -- from 623
-         id: number  -- from 620
-         pattern_index: number  -- from 621
+         capture_count: number  -- from 630
+         captures: {string|number:Node}  -- from 631
+         id: number  -- from 628
+         pattern_index: number  -- from 629
       end
-      capture: function(Query, Node): function(): Node, string  -- from 734
-      exec: function(Query, Node)  -- from 817
-      match: function(Query, Node): function(): Match  -- from 699
-      with: function(Query, {string:function(...: string): any...}): Query  -- from 758
+      capture: function(Query, Node): function(): Node, string  -- from 742
+      exec: function(Query, Node)  -- from 825
+      match: function(Query, Node): function(): Match  -- from 707
+      with: function(Query, {string:function(...: string): any...}): Query  -- from 766
    end
    record Tree
-      copy: function(Tree): Tree  -- from 1455
-      edit: function(Tree, TreeEdit)  -- from 1494
-      root: function(Tree): Node  -- from 1436
+      copy: function(Tree): Tree  -- from 1466
+      edit: function(Tree, TreeEdit)  -- from 1505
+      root: function(Tree): Node  -- from 1447
    end
-   _get_registry_entry: function(): table  -- from 279
-   load: function(file_name: string, language_name: string): Parser, string  -- from 990
-   require: function(library_file_name: string, language_name: string): Parser  -- from 1038
-   version: string -- from 49
+   _get_registry_entry: function(): table  -- from 289
+   load: function(file_name: string, language_name: string): Parser, string  -- from 999
+   require: function(library_file_name: string, language_name: string): Parser  -- from 1047
+   version: string -- from 50
 
    -- Inlines
 
@@ -72,7 +72,7 @@ local record ltreesitter
 
       start_point: Point
       end_point: Point
-   end -- from 1339
+   end -- from 1350
 
    record TreeEdit
       start_byte: number
@@ -82,12 +82,12 @@ local record ltreesitter
       start_point: Point
       old_end_point: Point
       new_end_point: Point
-   end -- from 1483
+   end -- from 1494
 
    record Point
       row: number
       column: number
-   end -- from 1715
+   end -- from 1726
 end
 
 return ltreesitter
