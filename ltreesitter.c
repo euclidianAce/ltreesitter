@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
+
 #ifdef _WIN32
 #define DL_EXT "dll"
 #else
@@ -41,7 +42,9 @@ typedef void dl_handle;
 #define LUA_TSQUERY_METATABLE          "ltreesitter.TSQuery"
 #define LUA_TSQUERYCURSOR_METATABLE    "ltreesitter.TSQueryCursor"
 
-/* #define malloc(s) (printf("Oh boy, a malloc! line %d\n", __LINE__), malloc(s)) */
+/* #define malloc(s) (printf("Oh boy, a malloc! line %d, function %s\n", __LINE__, __FUNCTION__), malloc(s)) */
+/* #define free(s) (printf("Oh boy, a free! line %d, function %s\n", __LINE__, __FUNCTION__), free(s)) */
+
 static const char registry_index = 'k';
 static const char object_index[] = "objects";
 static const char default_predicate_index[] = "default_predicates";
@@ -182,7 +185,7 @@ static enum DLOpenError try_dlopen(struct LuaTSParser *p, const char *parser_fil
 }
 
 #define UNREACHABLE(L) luaL_error(L, "%s line %d UNREACHABLE", __FILE__, __LINE__)
-#define ALLOC_FAIL(L) luaL_error(L, "%s in %s at line %d: Memory allocation failed!", __FILE__, __FUNCTION__, __LINE__)
+#define ALLOC_FAIL(L) (printf("ALLOC_FAILURE on line %d\n", __LINE__), luaL_error(L, "%s in %s at line %d: Memory allocation failed!", __FILE__, __FUNCTION__, __LINE__))
 
 // Some compatability shims
 #if LUA_VERSION_NUM < 502
@@ -209,7 +212,9 @@ static inline int table_rawget(lua_State *L, int idx) {
 
 static char *str_ldup(const char *s, const size_t len) {
 	char *dup = malloc(sizeof(char) * (len + 1));
-	if (!dup) { return NULL; }
+	if (!dup) {
+		return NULL;
+	}
 	strncpy(dup, s, len);
 	dup[len] = '\0';
 	return dup;
@@ -639,37 +644,36 @@ static int lua_query_match(lua_State *L) {
 	const int parent_idx = lua_gettop(L);
 	struct LuaTSTree *const t = get_lua_tree(L, -1);
 
-try_again:
-	if (ts_query_cursor_next_match(c->c, &m)) {
-		if (!do_predicates(
-			L,
-			lua_upvalueindex(1),
-			q->q,
-			t,
-			&m
-		)) { goto try_again; }
+	do {
+		if (!ts_query_cursor_next_match(c->c, &m))
+			return 0;
+	} while (!do_predicates(L, lua_upvalueindex(1), q->q, t, &m));
 
-		lua_createtable(L, 0, 5); // { <match> }
-		lua_pushnumber(L, m.id); lua_setfield(L, -2, "id"); // { <match> }
-		lua_pushnumber(L, m.pattern_index); lua_setfield(L, -2, "pattern_index"); // { <match> }
-		lua_pushnumber(L, m.capture_count); lua_setfield(L, -2, "capture_count"); // { <match> }
-		lua_createtable(L, m.capture_count, m.capture_count); // { <match> }, { <arraymap> }
-		for (uint16_t i = 0; i < m.capture_count; ++i) {
-			push_lua_node(
-				L, parent_idx,
-				m.captures[i].node,
-				c->q->lang
-			); // {<match>}, {<arraymap>}, <Node>
-			lua_pushvalue(L, -1); // {<match>}, {<arraymap>}, <Node>, <Node>
-			lua_rawseti(L, -3, i+1); // {<match>}, {<arraymap> <Node>}, <Node>
-			uint32_t len;
-			const char *name = ts_query_capture_name_for_id(c->q->q, i, &len);
-			lua_setfield(L, -2, name); // {<match>}, {<arraymap> <Node>, [name]=<Node>}
+	lua_createtable(L, 0, 5); // { <match> }
+	lua_pushnumber(L, m.id); lua_setfield(L, -2, "id"); // { <match> }
+	lua_pushnumber(L, m.pattern_index); lua_setfield(L, -2, "pattern_index"); // { <match> }
+	lua_pushnumber(L, m.capture_count); lua_setfield(L, -2, "capture_count"); // { <match> }
+	lua_createtable(L, m.capture_count, m.capture_count); // { <match> }, { <arraymap> }
+	for (uint16_t i = 0; i < m.capture_count; ++i) {
+		push_lua_node(
+			L, parent_idx,
+			m.captures[i].node,
+			c->q->lang
+		); // {<match>}, {<arraymap>}, <Node>
+		lua_pushvalue(L, -1); // {<match>}, {<arraymap>}, <Node>, <Node>
+		lua_rawseti(L, -3, i+1); // {<match>}, {<arraymap> <Node>}, <Node>
+		uint32_t len;
+		const char *name = ts_query_capture_name_for_id(c->q->q, m.captures[i].index, &len);
+		if (len > 0) {
+			lua_pushstring(L, name); // {<match>}, {<arraymap>}, <Node>, "name"
+			lua_insert(L, -2); // {<match>}, {<arraymap>}, "name", <Node>
+			lua_rawset(L, -3); // {<match>}, {<arraymap> <Node>, [name]=<Node>}
+		} else {
+			lua_pop(L, 1);
 		}
-		lua_setfield(L, -2, "captures"); // {<match> captures=<arraymap>}
-		return 1;
 	}
-	return 0;
+	lua_setfield(L, -2, "captures"); // {<match> captures=<arraymap>}
+	return 1;
 }
 
 static int lua_query_capture(lua_State *L) {
@@ -682,27 +686,20 @@ static int lua_query_capture(lua_State *L) {
 	TSQueryMatch m;
 	uint32_t capture_index;
 
-try_again:
-	if (ts_query_cursor_next_capture(c, &m, &capture_index)) {
-		if (!do_predicates(
-			L,
-			lua_upvalueindex(1),
-			q->q,
-			t,
-			&m
-		)) { goto try_again; }
+	do {
+		if (!ts_query_cursor_next_capture(c, &m, &capture_index))
+			return 0;
+	} while (!do_predicates(L, lua_upvalueindex(1), q->q, t, &m));
 
-		push_lua_node(
-			L, parent_idx,
-			m.captures[capture_index].node,
-			q->lang
-		);
-		uint32_t len;
-		const char *name = ts_query_capture_name_for_id(q->q, capture_index, &len);
-		lua_pushlstring(L, name, len);
-		return 2;
-	}
-	return 0;
+	push_lua_node(
+		L, parent_idx,
+		m.captures[capture_index].node,
+		q->lang
+	);
+	uint32_t len;
+	const char *name = ts_query_capture_name_for_id(q->q, capture_index, &len);
+	lua_pushlstring(L, name, len);
+	return 2;
 }
 
 /* @teal-export Query.match: function(Query, Node): function(): Match [[
@@ -1702,7 +1699,9 @@ static const luaL_Reg tree_cursor_metamethods[] = {
 ]] */
 static int lua_node_type(lua_State *L) {
 	TSNode n = get_node(L, 1);
-	lua_pushstring(L, ts_node_type(n));
+	if (!lua_pushstring(L, ts_node_type(n))) {
+		return ALLOC_FAIL(L);
+	}
 	return 1;
 }
 
