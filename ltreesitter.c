@@ -1699,9 +1699,7 @@ static const luaL_Reg tree_cursor_metamethods[] = {
 ]] */
 static int lua_node_type(lua_State *L) {
 	TSNode n = get_node(L, 1);
-	if (!lua_pushstring(L, ts_node_type(n))) {
-		return ALLOC_FAIL(L);
-	}
+	lua_pushstring(L, ts_node_type(n));
 	return 1;
 }
 
