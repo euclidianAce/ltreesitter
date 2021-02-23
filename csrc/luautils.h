@@ -30,20 +30,24 @@ void push_registry_field(lua_State *L, const char *f);
 void set_registry_field(lua_State *L, const char *f);
 void newtable_with_mode(lua_State *L, const char *mode);
 
-#include <stdio.h>
-#define DUMP_STACK(...) do { \
-		printf("Lua Stack: "); \
-		__VA_OPT__(printf(__VA_ARGS__);) \
-		printf("\n"); \
-		for (int i = 1; i <= lua_gettop(L); ++i) { \
-			printf("   %d: ", i); \
-			if (lua_tostring(L, i)) \
-				printf("%s", lua_tostring(L, i)); \
-			else if (lua_topointer(L, i)) \
-				printf("%p", lua_topointer(L, i)); \
-			printf(" (%s)\n", lua_typename(L, lua_type(L, i))); \
-		} \
-		printf("\n\n"); \
-	} while (0)
+#ifndef LUA_OK
+#define LUA_OK 0
+#endif
+
+/* #include <stdio.h> */
+/* #define DUMP_STACK(...) do { \ */
+		/* printf("Lua Stack: "); \ */
+		/* __VA_OPT__(printf(__VA_ARGS__);) \ */
+		/* printf("\n"); \ */
+		/* for (int i = 1; i <= lua_gettop(L); ++i) { \ */
+			/* printf("   %d: ", i); \ */
+			/* if (lua_tostring(L, i)) \ */
+				/* printf("%s", lua_tostring(L, i)); \ */
+			/* else if (lua_topointer(L, i)) \ */
+				/* printf("%p", lua_topointer(L, i)); \ */
+			/* printf(" (%s)\n", lua_typename(L, lua_type(L, i))); \ */
+		/* } \ */
+		/* printf("\n\n"); \ */
+	/* } while (0) */
 
 #endif
