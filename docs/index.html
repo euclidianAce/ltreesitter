@@ -31,8 +31,6 @@ h2 {
 <td valign=top>
 <h4>ltreesitter</h4>
 <p>
-<a href="index.html#_get_registry_entry">_get_registry_entry</a>
-<br>
 <a href="index.html#load">load</a>
 <br>
 <a href="index.html#require">require</a>
@@ -136,8 +134,6 @@ h2 {
 <br>
 </p></td></tr></tbody></table>
 <br><br><br><br><br><br><br><br><br><br>
-<h2><a name="_get_registry_entry"><code>_get_registry_entry: function(): table </code></a></h2>
-<p>ltreesitter uses a table in the Lua registry to keep references alive and prevent Lua's garbage collection from collecting things that the library needs internally.<br>   The behavior nor existence of this function should not be relied upon and is included strictly for memory debugging purposes<br><br>   Though, if you are looking to debug a segfault/garbage collection bug, this is a useful tool in addition to the lua inspect module</p><br>
 <h2><a name="load"><code>load: function(file_name: string, language_name: string): Parser, string </code></a></h2>
 <p>Load a parser from a given file<br><br>   Keep in mind that this includes the <code>.so</code> or <code>.dll</code> extension<br><br>   On Unix this uses dlopen, on Windows this uses LoadLibrary so if a path without a path separator is given, these functions have their own path's that they will search for your file in.<br>   So if in doubt use a file path like<br>   <pre><br>   local my_parser = ltreesitter.load("./my_parser.so", "my_language")<br>   </pre></p><br>
 <h2><a name="require"><code>require: function(library_file_name: string, language_name: string): Parser </code></a></h2>
