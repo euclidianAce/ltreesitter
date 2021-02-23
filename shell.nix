@@ -15,5 +15,7 @@ pkgs.mkShell {
     lua53Packages.busted
 
     tree-sitter
+
+    valgrind
   ];
 }
