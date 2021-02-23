@@ -7,16 +7,16 @@ describe("Parser", function()
 	setup(function()
 		p = util.c_parser
 	end)
-	it("parse_string should return a ltreesitter.TSTree", function()
+	it("parse_string should return a ltreesitter.Tree", function()
 		util.assert_userdata_type(
 			p:parse_string[[ int main(void) { return 0; } ]],
-			"ltreesitter.TSTree"
+			"ltreesitter.Tree"
 		)
 	end)
-	it("query should return a ltreesitter.TSQuery", function()
+	it("query should return a ltreesitter.Query", function()
 		util.assert_userdata_type(
 			p:query[[ (comment) ]],
-			"ltreesitter.TSQuery"
+			"ltreesitter.Query"
 		)
 	end)
 	describe("set_ranges", function()
@@ -73,8 +73,8 @@ describe("Parser", function()
 			assert.are.equal(
 				util.assert_userdata_type(
 					util.assert_userdata_type(
-						tree, "ltreesitter.TSTree"
-					):root(), "ltreesitter.TSNode"
+						tree, "ltreesitter.Tree"
+					):root(), "ltreesitter.Node"
 				):child_count(),
 				2
 			)

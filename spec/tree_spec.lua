@@ -11,13 +11,13 @@ describe("Tree", function()
 	it("copy should return a ltreesitter.TSTree", function()
 		util.assert_userdata_type(
 			t:copy(),
-			"ltreesitter.TSTree"
+			"ltreesitter.Tree"
 		)
 	end)
 	it("root should return a ltreesitter.TSNode", function()
 		util.assert_userdata_type(
 			t:root(),
-			"ltreesitter.TSNode"
+			"ltreesitter.Node"
 		)
 	end)
 end)

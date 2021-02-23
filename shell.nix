@@ -18,4 +18,9 @@ pkgs.mkShell {
 
     valgrind
   ];
+
+  shellHook = ''
+  export LUA_CPATH="./?.so;$LUA_CPATH"
+  export LUA_PATH="./?.lua;./?/init.lua;$LUA_PATH"
+  '';
 }
