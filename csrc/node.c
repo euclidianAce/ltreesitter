@@ -113,7 +113,7 @@ static int node_is_extra(lua_State *L) {
 }
 
 void push_node(lua_State *L, int parent, TSNode n, const TSLanguage *lang) {
-	ltreesitter_check_tree(L, parent, "Internal error!: node parent is not a tree");
+	ltreesitter_check_tree(L, parent, "Internal error: node parent is not a tree");
 	struct ltreesitter_Node *node = lua_newuserdata(L, sizeof(struct ltreesitter_Node));
 	node->node = n;
 	node->lang = lang;
@@ -332,8 +332,7 @@ static int node_child_by_field_name(lua_State *L) {
 		lua_pushnil(L);
 	} else {
 		push_parent(L, 1);
-		ltreesitter_check_tree(L, -1, "aaaaaaaaaaaaaaaaaaaaa");
-		push_node(L, -1, child, n->lang);
+		push_node(L, lua_gettop(L), child, n->lang);
 	}
 	return 1;
 }
@@ -342,12 +341,13 @@ static int node_child_by_field_name(lua_State *L) {
    Get the substring of the source that was parsed to create <code>Node</code>
 ]]*/
 static int node_get_source_str(lua_State *L) {
+	lua_settop(L, 1);
 	TSNode n = ltreesitter_check_node(L, 1)->node;
 	const uint32_t start = ts_node_start_byte(n);
 	const uint32_t end = ts_node_end_byte(n);
 
 	push_parent(L, 1);
-	struct ltreesitter_Tree *const t = ltreesitter_check_tree(L, -1, "wat");
+	struct ltreesitter_Tree *const t = ltreesitter_check_tree(L, 2, "Internal error: node parent was not a tree");
 	lua_pushlstring(L, t->src + start, end - start);
 	return 1;
 }
@@ -359,7 +359,6 @@ static int node_tree_cursor_create(lua_State *L) {
 	lua_settop(L ,1);
 	struct ltreesitter_Node *const n = ltreesitter_check_node(L, 1);
 	push_parent(L, 1);
-	ltreesitter_check_tree(L, 2, "Internal error: node parent was not a tree");
 	ltreesitter_push_tree_cursor(L, 2, n->lang, n->node);
 	return 1;
 }

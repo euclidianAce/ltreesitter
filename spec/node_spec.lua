@@ -127,6 +127,10 @@ describe("Node", function()
 			local src = root[1]:source()
 			assert.is.string(src)
 		end)
+		it("should return the correct string", function()
+			local src = assert(root[2]:child(0), "Error in Node:child"):source()
+			assert.are.equal(src, "/* hello world */")
+		end)
 	end)
 
 	-- TODO: assert the correct values for these

@@ -72,7 +72,6 @@ void push_tree(
 ]] */
 static int tree_push_root(lua_State *L) {
 	struct ltreesitter_Tree *const t = ltreesitter_check_tree_arg(L, 1);
-	ltreesitter_check_tree(L, 1, "ASSERTION FAILED");
 	lua_newuserdata(L, sizeof(struct ltreesitter_Node));
 	push_node(L, 1, ts_tree_root_node(t->tree), t->lang);
 	return 1;

@@ -103,12 +103,8 @@ bool expect_nested_field(lua_State *L, int idx, const char *parent_name, const c
 }
 
 // This should only be used for only true indexes, i.e. no lua_upvalueindex, registry stuff, etc.
-int absindex(lua_State *L, int idx) {
-	if (idx < 0) {
-		return lua_gettop(L) + idx + 1;
-	} else {
-		return idx;
-	}
+int absindex (lua_State *L, int idx) {
+  return idx > 0 ? idx : lua_gettop(L) + 1 + idx;
 }
 
 void setmetatable(lua_State *L, const char *mt_name) {
