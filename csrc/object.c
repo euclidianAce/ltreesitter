@@ -19,6 +19,9 @@ void push_parent(lua_State *L, int obj_idx) {
 	lua_insert(L, -2);
 	lua_gettable(L, -2);
 	lua_remove(L, -2);
+	if (lua_isnil(L, -1)) {
+		luaL_error(L, "Internal error: object has no parent!");
+	}
 }
 
 void set_parent(lua_State *L, int obj_idx, int parent_idx) {

@@ -1,6 +1,7 @@
 
 #include "luautils.h"
 #include "node.h"
+#include "tree.h"
 #include "object.h"
 #include "types.h"
 

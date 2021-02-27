@@ -307,7 +307,7 @@ int ltreesitter_parser_parse_string(lua_State *L) {
 	if (lua_type(L, 3) == LUA_TNIL) {
 		old_tree = NULL;
 	} else {
-		old_tree = ltreesitter_check_tree(L, 3)->tree;
+		old_tree = ltreesitter_check_tree_arg(L, 3)->tree;
 	}
 	TSTree *tree = ts_parser_parse_string(p->parser, old_tree, str, len);
 	if (!tree) {
@@ -397,7 +397,7 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 	struct ltreesitter_Parser *const p = ltreesitter_check_parser(L, 1);
 	TSTree *old_tree = NULL;
 	if (!lua_isnil(L, 3)) {
-		old_tree = ltreesitter_check_tree(L, 3)->tree;
+		old_tree = ltreesitter_check_tree_arg(L, 3)->tree;
 	}
 	lua_pop(L, 1);
 	struct CallInfo payload = {

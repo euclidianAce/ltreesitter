@@ -216,13 +216,17 @@ static bool do_predicates(
 /* @teal-export Query.Match.capture_count : number */
 /* @teal-export Query.Match.captures : {string|number:Node} */
 
+#include <stdio.h>
 static int query_match(lua_State *L) {
+	// upvalues: Query, Node, Cursor
 	struct ltreesitter_Query *const q = ltreesitter_check_query(L, lua_upvalueindex(1));
 	struct ltreesitter_QueryCursor *c = ltreesitter_check_query_cursor(L, lua_upvalueindex(3));
 	TSQueryMatch m;
 	push_parent(L, lua_upvalueindex(2));
 	const int parent_idx = lua_gettop(L);
-	struct ltreesitter_Tree *const t = ltreesitter_check_tree(L, -1);
+	/* printf("checking if parent is tree\n"); */
+	struct ltreesitter_Tree *const t = ltreesitter_check_tree(L, parent_idx, "check failed");
+	/* printf("   ptr: %p\n", t); */
 
 	do {
 		if (!ts_query_cursor_next_match(c->query_cursor, &m))
@@ -234,24 +238,25 @@ static int query_match(lua_State *L) {
 	lua_pushnumber(L, m.pattern_index); lua_setfield(L, -2, "pattern_index"); // { <match> }
 	lua_pushnumber(L, m.capture_count); lua_setfield(L, -2, "capture_count"); // { <match> }
 	lua_createtable(L, m.capture_count, m.capture_count); // { <match> }, { <arraymap> }
+
 	for (uint16_t i = 0; i < m.capture_count; ++i) {
 		push_node(
 			L, parent_idx,
 			m.captures[i].node,
 			c->query->lang
-		); // {<match>}, {<arraymap>}, <Node>
-		lua_pushvalue(L, -1); // {<match>}, {<arraymap>}, <Node>, <Node>
-		lua_rawseti(L, -3, i+1); // {<match>}, {<arraymap> <Node>}, <Node>
+		); // {<arraymap>}, <Node>
+		lua_pushvalue(L, -1); // {<arraymap>}, <Node>, <Node>
+		lua_rawseti(L, -3, i+1); // {<arraymap> <Node>}, <Node>
 		uint32_t len;
 		const char *name = ts_query_capture_name_for_id(c->query->query, m.captures[i].index, &len);
 		if (len > 0) {
-			lua_pushstring(L, name); // {<match>}, {<arraymap>}, <Node>, "name"
-			lua_insert(L, -2); // {<match>}, {<arraymap>}, "name", <Node>
-			lua_rawset(L, -3); // {<match>}, {<arraymap> <Node>, [name]=<Node>}
+			lua_pushstring(L, name); // {<arraymap>}, <Node>, "name"
+			lua_insert(L, -2); // {<arraymap>}, "name", <Node>
+			lua_rawset(L, -3); // {<arraymap> <Node>, [name]=<Node>}
 		} else {
 			lua_pop(L, 1);
-		}
-	}
+		} // {<arraymap>}
+	} // { <match> }, { <arraymap> }
 	lua_setfield(L, -2, "captures"); // {<match> captures=<arraymap>}
 	return 1;
 }
@@ -262,7 +267,7 @@ static int query_capture(lua_State *L) {
 	TSQueryCursor *c = ltreesitter_check_query_cursor(L, lua_upvalueindex(3))->query_cursor;
 	push_parent(L, lua_upvalueindex(2));
 	const int parent_idx = lua_gettop(L);
-	struct ltreesitter_Tree *const t = ltreesitter_check_tree(L, -1);
+	struct ltreesitter_Tree *const t = ltreesitter_check_tree(L, -1, "parent check fail");
 	TSQueryMatch m;
 	uint32_t capture_index;
 
@@ -438,7 +443,7 @@ static int query_exec(lua_State *L) {
 	TSQueryCursor *c = ts_query_cursor_new();
 
 	push_parent(L, 2);
-	struct ltreesitter_Tree *const t = ltreesitter_check_tree(L, -1);
+	struct ltreesitter_Tree *const t = ltreesitter_check_tree_arg(L, -1);
 
 	TSQueryMatch m;
 	ts_query_cursor_exec(c, q, n);

@@ -13,7 +13,39 @@
 #include "types.h"
 #include "luautils.h"
 
-struct ltreesitter_Tree *ltreesitter_check_tree(lua_State *L, int idx) {
+static void err_if(lua_State *L, const char *msg) {
+	if (msg) {
+		luaL_error(L, "%s", msg);
+	}
+}
+
+#include <stdio.h>
+struct ltreesitter_Tree *ltreesitter_check_tree(lua_State *L, int idx, const char *msg) {
+	if (lua_type(L, idx) != LUA_TUSERDATA) {
+		err_if(L, msg);
+		return NULL;
+	}
+	if (lua_getmetatable(L, idx) == 0) {
+		err_if(L, msg);
+		return NULL;
+	}
+	lua_getfield(L, -1, "__name");
+	if (lua_isnil(L, -1)) {
+		lua_pop(L, 1);
+		err_if(L, msg);
+		return NULL;
+	}
+	const char *name = lua_tostring(L, -1);
+	const int cmp = strcmp(name, LTREESITTER_TREE_METATABLE_NAME);
+	lua_pop(L, 2);
+	if (cmp != 0) {
+		err_if(L, msg);
+		return NULL;
+	}
+	return lua_touserdata(L, idx);
+}
+
+struct ltreesitter_Tree *ltreesitter_check_tree_arg(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_TREE_METATABLE_NAME);
 }
 
@@ -39,14 +71,15 @@ void push_tree(
    Returns the root node of the given parse tree
 ]] */
 static int tree_push_root(lua_State *L) {
-	struct ltreesitter_Tree *const t = ltreesitter_check_tree(L, 1);
+	struct ltreesitter_Tree *const t = ltreesitter_check_tree_arg(L, 1);
+	ltreesitter_check_tree(L, 1, "ASSERTION FAILED");
 	lua_newuserdata(L, sizeof(struct ltreesitter_Node));
 	push_node(L, 1, ts_tree_root_node(t->tree), t->lang);
 	return 1;
 }
 
 static int tree_to_string(lua_State *L) {
-	TSTree *t = ltreesitter_check_tree(L, 1)->tree;
+	TSTree *t = ltreesitter_check_tree_arg(L, 1)->tree;
 	const TSNode root = ts_tree_root_node(t);
 	char *s = ts_node_string(root);
 	lua_pushlstring(L, (const char *)s, strlen(s));
@@ -58,7 +91,7 @@ static int tree_to_string(lua_State *L) {
    Creates a copy of the tree. Tree-sitter recommends to create copies if you are going to use multithreading since tree accesses are not thread-safe, but copying them is cheap and quick
 ]] */
 static int tree_copy(lua_State *L) {
-	struct ltreesitter_Tree *t = ltreesitter_check_tree(L, 1);
+	struct ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1);
 
 	const char *src_copy;
 	if (t->own_str) {
@@ -99,7 +132,7 @@ static inline bool is_non_negative(lua_State *L, int i) { return lua_tonumber(L,
 static int tree_edit(lua_State *L) {
 	lua_settop(L, 2);
 	lua_checkstack(L, 15);
-	struct ltreesitter_Tree *t = ltreesitter_check_tree(L, 1);
+	struct ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1);
 
 	// get the edit struct from table
 	luaL_argcheck(L, lua_type(L, 2) == LUA_TTABLE, 2, "expected table");
@@ -149,7 +182,7 @@ static int tree_edit(lua_State *L) {
 }
 
 static int tree_gc(lua_State *L) {
-	struct ltreesitter_Tree *t = ltreesitter_check_tree(L, 1);
+	struct ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1);
 #ifdef LOG_GC
 	printf("Tree %p is being garbage collected\n", t);
 #endif
