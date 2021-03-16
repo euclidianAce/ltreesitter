@@ -231,7 +231,7 @@ local function traverse_docs(t: DocDef, prefix: string, entries: {DocInfo}): {Do
    for name, v in pairs(t) do
       if v is DocDef then
          traverse_docs(v, prefix .. name .. ".", entries)
-      elseif v is string then
+      else
          local full_name = prefix .. name
          local typ, content = v:match("^<(.-)>(.*)$")
          if not typ then

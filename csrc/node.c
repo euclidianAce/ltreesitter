@@ -317,7 +317,6 @@ static int node_name(lua_State *L) {
 	lua_pushstring(L, name);
 	return 1;
 }
-#include <stdio.h>
 
 /* @teal-export Node.child_by_field_name: function(Node, string): Node [[
    Get a node's child given a field name
@@ -362,7 +361,6 @@ static int node_tree_cursor_create(lua_State *L) {
 	ltreesitter_push_tree_cursor(L, 2, n->lang, n->node);
 	return 1;
 }
-
 
 static const luaL_Reg node_methods[] = {
 	{"child", node_child},

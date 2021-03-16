@@ -31,13 +31,27 @@ Looking for a quick start? These snippets should be descriptive enough to get yo
 ### Loading parsers you have installed on your system
 ```lua
 local ltreesitter = require("ltreesitter")
-local c_parser = ltreesitter.require("c") -- assuming you have a compiled c parser named 'c.so' (or 'c.dll' on windows) in '~/.tree-sitter/bin/' and package.cpath
-local lua_parser = ltreesitter.require("parser", "lua") -- you have a 'parser.so' (or .dll) with the symbol 'tree_sitter_lua' to load the language
 ```
 
+#### `ltreesitter.require`
+Assuming you have a compiled c parser named `c.so` (or `c.dll` on windows) in `~/.tree-sitter/bin/` and `package.cpath`
 ```lua
-local local_c_parser = ltreesitter.load("./c-parser.so", "c") -- load will just directly load from the filename given. Using a path without a path separator may have unintended consequences, see documentation for details.
+local c_parser = ltreesitter.require("c")
 ```
+
+You have a `parser.so` (or `.dll`) with the symbol `tree_sitter_lua` to load the language
+```lua
+local lua_parser = ltreesitter.require("parser", "lua")
+```
+
+#### `ltreesitter.load`
+`load` will just directly load from the filename given.
+```lua
+local local_c_parser = ltreesitter.load("./c-parser.so", "c")
+```
+Using a path without a path separator may have unintended consequences, so when in doubt, include a leading `./` or use an absolute path.
+
+For more information, look into how `dlopen` and `LoadLibrary` find paths.
 
 ## Basic parsing and usage of trees and nodes
 ```lua

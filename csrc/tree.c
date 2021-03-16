@@ -13,13 +13,16 @@
 #include "types.h"
 #include "luautils.h"
 
+#ifdef LOG_GC
+#include <stdio.h>
+#endif
+
 static void err_if(lua_State *L, const char *msg) {
 	if (msg) {
 		luaL_error(L, "%s", msg);
 	}
 }
 
-#include <stdio.h>
 struct ltreesitter_Tree *ltreesitter_check_tree(lua_State *L, int idx, const char *msg) {
 	if (lua_type(L, idx) != LUA_TUSERDATA) {
 		err_if(L, msg);

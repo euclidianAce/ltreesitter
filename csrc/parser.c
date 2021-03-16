@@ -160,6 +160,11 @@ int ltreesitter_load_parser(lua_State *L) {
 ]] */
 static inline void buf_add_str(luaL_Buffer *b, const char *s) { luaL_addlstring(b, s, strlen(s)); }
 
+#ifdef _WIN32
+#define PATH_SEP "\\"
+#else
+#define PATH_SEP "/"
+#endif
 int ltreesitter_require_parser(lua_State *L) {
 	// grab args
 	lua_settop(L, 2);
@@ -170,7 +175,7 @@ int ltreesitter_require_parser(lua_State *L) {
 
 	const char *user_home = getenv("HOME");
 	if (user_home) {
-		lua_pushfstring(L, "%s/.tree-sitter/bin/?." DL_EXT ";", user_home);
+		lua_pushfstring(L, "%s" PATH_SEP ".tree-sitter" PATH_SEP "bin" PATH_SEP "?." DL_EXT ";", user_home);
 	}
 
 	// prepend ~/.tree-sitter/bin/?.so to package.cpath
@@ -444,7 +449,7 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 int ltreesitter_parser_set_timeout(lua_State *L) {
 	struct ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
 	const lua_Number n = luaL_checknumber(L, 2);
-	luaL_argcheck(L, n >= 0, 2, "expected non-negative number");
+	luaL_argcheck(L, n >= 0, 2, "expected non-negative integer");
 	ts_parser_set_timeout_micros(p->parser, (uint64_t)n);
 	return 0;
 }
