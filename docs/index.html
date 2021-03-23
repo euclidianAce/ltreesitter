@@ -102,6 +102,8 @@ h2 {
 <td valign=top>
 <h4>Parser</h4>
 <p>
+<a href="index.html#Parser.get_version">Parser.get_version</a>
+<br>
 <a href="index.html#Parser.parse_string">Parser.parse_string</a>
 <br>
 <a href="index.html#Parser.parse_with">Parser.parse_with</a>
@@ -197,6 +199,8 @@ h2 {
 <h2><a name="Node.type"><code>Node.type: function(Node): string </code></a></h2>
 <p>Get the type of the given node</p><br>
 <br>
+<h2><a name="Parser.get_version"><code>Parser.get_version: function(Parser): number </code></a></h2>
+<p>get the api version of the parser's language</p><br>
 <h2><a name="Parser.parse_string"><code>Parser.parse_string: function(Parser, string, Tree): Tree </code></a></h2>
 <p>Uses the given parser to parse the string<br><br>   If <code>Tree</code> is provided then it will be used to create a new updated tree<br>   (but it is the responsibility of the programmer to make the correct <code>Tree:edit</code> calls)<br><br>   Could return <code>nil</code> if the parser has a timeout</p><br>
 <h2><a name="Parser.parse_with"><code>Parser.parse_with: function(Parser, reader: function(number, Point): (string), old_tree: Tree): Tree </code></a></h2>

@@ -31,6 +31,8 @@ enum ParserLoadErr {
 	PARSE_LOAD_ERR_BUFLEN,
 	PARSE_LOAD_ERR_DLOPEN,
 	PARSE_LOAD_ERR_DLSYM,
+	PARSE_LOAD_ERR_LANG_VERSION_TOO_OLD,
+	PARSE_LOAD_ERR_LANG_VERSION_TOO_NEW,
 	PARSE_LOAD_ERR_NONE,
 };
 
@@ -54,10 +56,21 @@ static enum ParserLoadErr try_dlopen(struct ltreesitter_Parser *p, const char *p
 	}
 	TSParser *parser = ts_parser_new();
 	const TSLanguage *lang = tree_sitter_lang();
-	ts_parser_set_language(parser, lang);
-
+	const uint32_t version = ts_language_version(lang);
+	p->lang_version = version;
 	p->lang = lang;
 	p->parser = parser;
+
+	if (version < TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION) {
+		close_dynamic_lib(p->dl);
+		return PARSE_LOAD_ERR_LANG_VERSION_TOO_OLD;
+	} else if (version > TREE_SITTER_LANGUAGE_VERSION) {
+		close_dynamic_lib(p->dl);
+		return PARSE_LOAD_ERR_LANG_VERSION_TOO_NEW;
+	}
+
+	ts_parser_set_language(parser, lang);
+
 	return PARSE_LOAD_ERR_NONE;
 }
 
@@ -133,6 +146,14 @@ int ltreesitter_load_parser(lua_State *L) {
 	case PARSE_LOAD_ERR_BUFLEN:
 		lua_pushnil(L);
 		lua_pushfstring(L, "Unable to copy language name '%s' into buffer", lang_name);
+		return 2;
+	case PARSE_LOAD_ERR_LANG_VERSION_TOO_OLD:
+		lua_pushnil(L);
+		lua_pushfstring(L, "%s parser is too old, parser version: %u, minimum version: %u", lang_name, proxy.lang_version, TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION);
+		return 2;
+	case PARSE_LOAD_ERR_LANG_VERSION_TOO_NEW:
+		lua_pushnil(L);
+		lua_pushfstring(L, "%s parser is too new, parser version: %u, maximum version: %u", lang_name, proxy.lang_version, TREE_SITTER_LANGUAGE_VERSION);
 		return 2;
 	}
 
@@ -251,12 +272,39 @@ int ltreesitter_require_parser(lua_State *L) {
 			case PARSE_LOAD_ERR_DLOPEN:
 				buf_add_str(&b, "\n\tTried ");
 				luaL_addlstring(&b, buf, j);
+				buf_add_str(&b, ": ");
 				buf_add_str(&b, dynamic_lib_error(proxy.dl));
 				break;
 			case PARSE_LOAD_ERR_BUFLEN:
 				buf_add_str(&b, "\n\tUnable to copy langauge name '");
 				buf_add_str(&b, lang_name);
 				buf_add_str(&b, "' into buffer");
+				goto err_cleanup;
+			case PARSE_LOAD_ERR_LANG_VERSION_TOO_OLD:
+				buf_add_str(&b, "\n\tthe found ");
+				buf_add_str(&b, lang_name);
+				buf_add_str(&b, " parser (at ");
+				buf_add_str(&b, buf);
+				buf_add_str(&b, ") is too old, parser version: ");
+				lua_pushfstring(L, "%d", proxy.lang_version);
+				luaL_addvalue(&b);
+				buf_add_str(&b, ", minimum version: ");
+				lua_pushfstring(L, "%d", TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION);
+				luaL_addvalue(&b);
+				buf_add_str(&b, ". Either find a newer parser or recompile ltreesitter with an older tree-sitter api version");
+				goto err_cleanup;
+			case PARSE_LOAD_ERR_LANG_VERSION_TOO_NEW:
+				buf_add_str(&b, "\n\tthe found ");
+				buf_add_str(&b, lang_name);
+				buf_add_str(&b, " parser (at ");
+				buf_add_str(&b, buf);
+				buf_add_str(&b, ") is too new, parser version: ");
+				lua_pushfstring(L, "%d", proxy.lang_version);
+				luaL_addvalue(&b);
+				buf_add_str(&b, ", maximum version: ");
+				lua_pushfstring(L, "%d", TREE_SITTER_LANGUAGE_VERSION);
+				luaL_addvalue(&b);
+				buf_add_str(&b, ". Either find an older parser or recompile ltreesitter with a newer tree-sitter api version");
 				goto err_cleanup;
 			}
 
@@ -540,7 +588,7 @@ int ltreesitter_parser_set_ranges(lua_State *L) {
 /* @teal-export Parser.query: function(Parser, string): Query [[
    Create a query out of the given string for the language of the given parser
 ]] */
-static int make_query(lua_State *L) {
+int make_query(lua_State *L) {
 	lua_settop(L, 2);
 	struct ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
 	size_t len;
@@ -548,8 +596,8 @@ static int make_query(lua_State *L) {
 	const char *lua_query_src = luaL_checklstring(L, 2, &len);
 	const char *query_src = str_ldup(lua_query_src, len);
 	if (!query_src) { return ALLOC_FAIL(L); }
-	uint32_t err_offset;
-	TSQueryError err_type;
+	uint32_t err_offset = 0;
+	TSQueryError err_type = TSQueryErrorNone;
 	TSQuery *q = ts_query_new(
 		p->lang,
 		query_src,
@@ -563,10 +611,19 @@ static int make_query(lua_State *L) {
 	return 1;
 }
 
+/* @teal-export Parser.get_version: function(Parser): number [[
+   get the api version of the parser's language
+]] */
+static int get_version(lua_State *L) {
+	struct ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
+	lua_pushnumber(L, p->lang_version);
+	return 1;
+}
 
 static const luaL_Reg parser_methods[] = {
 	{"set_timeout", ltreesitter_parser_set_timeout},
 	{"set_ranges", ltreesitter_parser_set_ranges},
+	{"get_version", get_version},
 
 	{"parse_string", ltreesitter_parser_parse_string},
 	{"parse_with", ltreesitter_parser_parse_with},

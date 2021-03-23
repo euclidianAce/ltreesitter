@@ -6,6 +6,7 @@
 
 struct ltreesitter_Parser {
 	const TSLanguage *lang;
+	uint32_t lang_version;
 	dl_handle *dl;
 	TSParser *parser;
 };
