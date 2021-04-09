@@ -19,8 +19,7 @@ jobs:
         run: |
           git clone https://github.com/tree-sitter/tree-sitter
           cd tree-sitter
-          make
-          make install PREFIX=~/tree-sitter-prefix
+          sudo make install
 
       - name: Install tree-sitter-c
         run: |

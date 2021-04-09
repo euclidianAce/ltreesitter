@@ -28,6 +28,9 @@ build = {
       LUA_BINDIR = "$(LUA_BINDIR)",
       LUA_INCDIR = "$(LUA_INCDIR)",
       LUA = "$(LUA)",
+      TREE_SITTER_DIR = "$(TREE_SITTER_DIR)",
+      TREE_SITTER_INCDIR = "$(TREE_SITTER_INCDIR)",
+      TREE_SITTER_LIBDIR = "$(TREE_SITTER_LIBDIR)",
    },
    install_variables = {
       INST_PREFIX = "$(PREFIX)",
