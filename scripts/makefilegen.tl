@@ -39,7 +39,7 @@ LIBUV_INCDIR = $(LIBUV_DIR)/include
 LIBUV_LIBDIR = $(LIBUV_DIR)/lib
 
 INCLUDE += -I$(LUA_INCDIR) -I$(TREE_SITTER_INCDIR) -I./include
-LDFLAGS += -L$(LUA_LIBDIR) -ldl -llua
+LDFLAGS += -ldl
 
 ]]
 
