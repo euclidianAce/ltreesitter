@@ -14,11 +14,12 @@ INST_LIBDIR = $(INST_PREFIX)/lib/lua/$(LUA_VERSION)
 INST_LUADIR = $(INST_PREFIX)/share/lua/$(LUA_VERSION)
 INST_CONFDIR = $(INST_PREFIX)/etc
 
+DEFINES =
 CFLAGS = -Wall -Wextra -O2 -g -fPIC
 LIBFLAG = -shared
 OBJ =
 
-USE_STATIC_TREESITTER = 0
+USE_STATIC_TREE_SITTER = 0
 TREE_SITTER_DIR = /usr/local
 TREE_SITTER_INCDIR = $(TREE_SITTER_DIR)/include
 TREE_SITTER_LIBDIR = $(TREE_SITTER_DIR)/lib
@@ -29,6 +30,10 @@ LIBUV_DIR = /usr/local
 LIBUV_INCDIR = $(LIBUV_DIR)/include
 LIBUV_LIBDIR = $(LIBUV_DIR)/lib
 
+ifeq ($(USE_LIBUV), 1)
+  DEFINES += -DLTREESITTER_USE_LIBUV
+endif
+
 INCLUDE += -I$(LUA_INCDIR) -I$(TREE_SITTER_INCDIR) -I./include
 LDFLAGS += -ldl
 
@@ -36,39 +41,39 @@ all: ltreesitter.so
 
 OBJ += dynamiclib.o
 dynamiclib.o: csrc/dynamiclib.c csrc/dynamiclib.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE) $(DEFINES)
 OBJ += ltreesitter.o
 ltreesitter.o: csrc/ltreesitter.c csrc/dynamiclib.c csrc/luautils.c csrc/node.c csrc/object.c csrc/parser.c csrc/tree.c csrc/tree_cursor.c csrc/query.c csrc/query_cursor.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE) $(DEFINES)
 OBJ += luautils.o
 luautils.o: csrc/luautils.c csrc/luautils.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE) $(DEFINES)
 OBJ += node.o
 node.o: csrc/node.c csrc/luautils.c csrc/object.c csrc/types.c csrc/node.c csrc/tree.c csrc/tree_cursor.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE) $(DEFINES)
 OBJ += object.o
 object.o: csrc/object.c csrc/luautils.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE) $(DEFINES)
 OBJ += parser.o
 parser.o: csrc/parser.c csrc/types.c csrc/tree.c csrc/luautils.c csrc/dynamiclib.c csrc/query.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE) $(DEFINES)
 OBJ += query.o
 query.o: csrc/query.c csrc/luautils.c csrc/node.c csrc/types.c csrc/object.c csrc/parser.c csrc/query_cursor.c csrc/tree.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE) $(DEFINES)
 OBJ += query_cursor.o
 query_cursor.o: csrc/query_cursor.c csrc/luautils.c csrc/types.c csrc/object.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE) $(DEFINES)
 OBJ += tree.o
 tree.o: csrc/tree.c csrc/object.c csrc/node.c csrc/types.c csrc/luautils.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE) $(DEFINES)
 OBJ += tree_cursor.o
 tree_cursor.o: csrc/tree_cursor.c csrc/luautils.c csrc/node.c csrc/tree.c csrc/object.c csrc/types.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE) $(DEFINES)
 OBJ += types.o
 types.o: csrc/types.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE) $(DEFINES)
 
-ifeq ($(USE_STATIC_TREESITTER), 0)
+ifneq ($(USE_STATIC_TREE_SITTER), 1)
   LDFLAGS += -L$(TREE_SITTER_LIBDIR) -ltree-sitter
 else
   OBJ += $(TREE_SITTER_STATIC_LIB)
@@ -80,19 +85,19 @@ endif
 
 ltreesitter.so: $(OBJ)
 	@echo -- Building ltreesitter.so
-	@echo CFLAGS: $(CFLAGS)
-	@echo Using static treesitter? $(USE_STATIC_TREESITTER)
-	@echo Using libuv? $(USE_LIBUV)
+	@echo    CFLAGS: $(CFLAGS)
+	@echo    Using static treesitter? $(USE_STATIC_TREE_SITTER)
+	@echo    Using libuv? $(USE_LIBUV)
 	$(CC) $(CFLAGS) $(LIBFLAG) -o $@ $(OBJ) $(LDFLAGS)
 
 install: ltreesitter.so
 	@echo -- Installing ltreesitter.so
-	@echo LUA_VERSION: $(LUA_VERSION)
-	@echo INST_PREFIX: $(INST_PREFIX)
-	@echo INST_BINDIR: $(INST_BINDIR)
-	@echo INST_LIBDIR: $(INST_LIBDIR)
-	@echo INST_LUADIR: $(INST_LUADIR)
-	@echo INST_CONFDIR: $(INST_CONFDIR)
+	@echo    LUA_VERSION: $(LUA_VERSION)
+	@echo    INST_PREFIX: $(INST_PREFIX)
+	@echo    INST_BINDIR: $(INST_BINDIR)
+	@echo    INST_LIBDIR: $(INST_LIBDIR)
+	@echo    INST_LUADIR: $(INST_LUADIR)
+	@echo    INST_CONFDIR: $(INST_CONFDIR)
 	mkdir -p $(INST_LIBDIR)/ltreesitter
 	mkdir -p $(INST_LUADIR)
 	cp ltreesitter.so $(INST_LIBDIR)
