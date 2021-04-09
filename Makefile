@@ -4,8 +4,8 @@
 # luarocks will override all of these so the running lua version wont matter in that case
 LUA_VERSION = $(shell lua -e 'print(_VERSION:match("%d.%d"))')
 LUA_DIR = /usr/local
-LUA_INCDIR = $(LUA_DIR)/include/lua/$(LUA_VERSION)
-LUA_LIBDIR = $(LUA_DIR)/lib/lua/$(LUA_VERSION)
+LUA_INCDIR = $(LUA_DIR)/include
+LUA_LIBDIR = $(LUA_DIR)/lib
 LUA_SHAREDIR = $(LUA_DIR)/share/lua/$(LUA_VERSION)
 
 INST_PREFIX = /usr/local
@@ -34,44 +34,44 @@ LDFLAGS += -L$(LUA_LIBDIR) -ldl -llua
 
 all: ltreesitter.so
 
-OBJ += tree_cursor.o
-tree_cursor.o: csrc/tree_cursor.c csrc/luautils.c csrc/node.c csrc/tree.c csrc/object.c csrc/types.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
-OBJ += node.o
-node.o: csrc/node.c csrc/luautils.c csrc/object.c csrc/types.c csrc/node.c csrc/tree.c csrc/tree_cursor.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
-OBJ += tree.o
-tree.o: csrc/tree.c csrc/object.c csrc/node.c csrc/types.c csrc/luautils.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
-OBJ += query.o
-query.o: csrc/query.c csrc/luautils.c csrc/node.c csrc/types.c csrc/object.c csrc/parser.c csrc/query_cursor.c csrc/tree.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
-OBJ += types.o
-types.o: csrc/types.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
-OBJ += parser.o
-parser.o: csrc/parser.c csrc/types.c csrc/tree.c csrc/luautils.c csrc/dynamiclib.c csrc/query.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
-OBJ += query_cursor.o
-query_cursor.o: csrc/query_cursor.c csrc/luautils.c csrc/types.c csrc/object.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
-OBJ += luautils.o
-luautils.o: csrc/luautils.c csrc/luautils.c
+OBJ += dynamiclib.o
+dynamiclib.o: csrc/dynamiclib.c csrc/dynamiclib.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
 OBJ += ltreesitter.o
 ltreesitter.o: csrc/ltreesitter.c csrc/dynamiclib.c csrc/luautils.c csrc/node.c csrc/object.c csrc/parser.c csrc/tree.c csrc/tree_cursor.c csrc/query.c csrc/query_cursor.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
-OBJ += dynamiclib.o
-dynamiclib.o: csrc/dynamiclib.c csrc/dynamiclib.c
+OBJ += luautils.o
+luautils.o: csrc/luautils.c csrc/luautils.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+OBJ += node.o
+node.o: csrc/node.c csrc/luautils.c csrc/object.c csrc/types.c csrc/node.c csrc/tree.c csrc/tree_cursor.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
 OBJ += object.o
 object.o: csrc/object.c csrc/luautils.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+OBJ += parser.o
+parser.o: csrc/parser.c csrc/types.c csrc/tree.c csrc/luautils.c csrc/dynamiclib.c csrc/query.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+OBJ += query.o
+query.o: csrc/query.c csrc/luautils.c csrc/node.c csrc/types.c csrc/object.c csrc/parser.c csrc/query_cursor.c csrc/tree.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+OBJ += query_cursor.o
+query_cursor.o: csrc/query_cursor.c csrc/luautils.c csrc/types.c csrc/object.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+OBJ += tree.o
+tree.o: csrc/tree.c csrc/object.c csrc/node.c csrc/types.c csrc/luautils.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+OBJ += tree_cursor.o
+tree_cursor.o: csrc/tree_cursor.c csrc/luautils.c csrc/node.c csrc/tree.c csrc/object.c csrc/types.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
+OBJ += types.o
+types.o: csrc/types.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
 
 ifeq ($(USE_STATIC_TREESITTER), 0)
   LDFLAGS += -L$(TREE_SITTER_LIBDIR) -ltree-sitter
 else
-  OBJ += $(TREESITTER_STATIC_LIB)
+  OBJ += $(TREE_SITTER_STATIC_LIB)
 endif
 
 ifeq ($(USE_LIBUV), 1)

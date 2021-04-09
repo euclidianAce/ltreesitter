@@ -13,8 +13,8 @@ io.write[[
 # luarocks will override all of these so the running lua version wont matter in that case
 LUA_VERSION = $(shell lua -e 'print(_VERSION:match("%d.%d"))')
 LUA_DIR = /usr/local
-LUA_INCDIR = $(LUA_DIR)/include/lua/$(LUA_VERSION)
-LUA_LIBDIR = $(LUA_DIR)/lib/lua/$(LUA_VERSION)
+LUA_INCDIR = $(LUA_DIR)/include
+LUA_LIBDIR = $(LUA_DIR)/lib
 LUA_SHAREDIR = $(LUA_DIR)/share/lua/$(LUA_VERSION)
 
 INST_PREFIX = /usr/local
@@ -69,17 +69,25 @@ for f in lfs.dir("csrc") do
    end
 end
 
+local objs <const> = {}
+
 for f, deps in pairs(files) do
    local o <const> = f:gsub("%.c$", ".o")
-	io.write("OBJ += ", o, "\n")
-   io.write(o, ": csrc/", f, " ", table.concat(deps, " "), "\n\t", compile_obj, "\n")
+	local rule <const> = {
+		"OBJ += ", o, "\n",
+		o, ": csrc/", f, " ", table.concat(deps, " "), "\n\t", compile_obj, "\n"
+	}
+	table.insert(objs, table.concat(rule))
 end
+table.sort(objs)
+io.write(table.unpack(objs))
+
 io.write[[
 
 ifeq ($(USE_STATIC_TREESITTER), 0)
   LDFLAGS += -L$(TREE_SITTER_LIBDIR) -ltree-sitter
 else
-  OBJ += $(TREESITTER_STATIC_LIB)
+  OBJ += $(TREE_SITTER_STATIC_LIB)
 endif
 
 ifeq ($(USE_LIBUV), 1)
