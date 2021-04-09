@@ -1,5 +1,5 @@
 
-#include "luautils.h"
+#include <ltreesitter/luautils.h>
 
 char *str_ldup(const char *s, const size_t len) {
 	char *dup = malloc(sizeof(char) * (len + 1));
@@ -26,6 +26,14 @@ int table_rawget(lua_State *L, int idx) {
 	return lua_type(L, -1);
 #else
 	return lua_rawget(L, idx);
+#endif
+}
+
+void pushinteger(lua_State *L, int n) {
+#if LUA_VERSION_NUM < 503
+	lua_pushnumber(L, n);
+#else
+	lua_pushinteger(L, n);
 #endif
 }
 

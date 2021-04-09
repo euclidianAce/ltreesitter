@@ -3,13 +3,13 @@
 #include <stddef.h>
 #include <tree_sitter/api.h>
 
-#include "luautils.h"
-#include "node.h"
-#include "types.h"
-#include "object.h"
-#include "parser.h"
-#include "query_cursor.h"
-#include "tree.h"
+#include <ltreesitter/luautils.h>
+#include <ltreesitter/node.h>
+#include <ltreesitter/types.h>
+#include <ltreesitter/object.h>
+#include <ltreesitter/parser.h>
+#include <ltreesitter/query_cursor.h>
+#include <ltreesitter/tree.h>
 
 static const char *default_predicate_field = "default_predicates";
 static const char *predicate_field = "predicates";
@@ -61,7 +61,7 @@ void push_query(
 ) {
 	struct ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query));
 	setmetatable(L, LTREESITTER_QUERY_METATABLE_NAME);
-	set_parent(L, -1, parent_idx);
+	lua_pushvalue(L, -1); set_parent(L, parent_idx);
 	lq->lang = lang;
 	lq->src = src;
 	lq->src_len = src_len;
@@ -99,17 +99,17 @@ static int query_gc(lua_State *L) {
 
 static int query_pattern_count(lua_State *L) {
 	TSQuery *q = ltreesitter_check_query(L, 1)->query;
-	lua_pushnumber(L, ts_query_pattern_count(q));
+	pushinteger(L, ts_query_pattern_count(q));
 	return 1;
 }
 static int query_capture_count(lua_State *L) {
 	TSQuery *q = ltreesitter_check_query(L, 1)->query;
-	lua_pushnumber(L, ts_query_capture_count(q));
+	pushinteger(L, ts_query_capture_count(q));
 	return 1;
 }
 static int query_string_count(lua_State *L) {
 	TSQuery *q = ltreesitter_check_query(L, 1)->query;
-	lua_pushnumber(L, ts_query_string_count(q));
+	pushinteger(L, ts_query_string_count(q));
 	return 1;
 }
 
@@ -211,12 +211,11 @@ static bool do_predicates(
 }
 
 // TODO: find a better way to do this, @teal-inline wont work since it needs to be nested
-/* @teal-export Query.Match.id : number */
-/* @teal-export Query.Match.pattern_index : number */
-/* @teal-export Query.Match.capture_count : number */
-/* @teal-export Query.Match.captures : {string|number:Node} */
+/* @teal-export Query.Match.id : integer */
+/* @teal-export Query.Match.pattern_index : integer */
+/* @teal-export Query.Match.capture_count : integer */
+/* @teal-export Query.Match.captures : {string|integer:Node} */
 
-#include <stdio.h>
 static int query_match(lua_State *L) {
 	// upvalues: Query, Node, Cursor
 	struct ltreesitter_Query *const q = ltreesitter_check_query(L, lua_upvalueindex(1));
@@ -234,9 +233,9 @@ static int query_match(lua_State *L) {
 	} while (!do_predicates(L, lua_upvalueindex(1), q->query, t, &m));
 
 	lua_createtable(L, 0, 5); // { <match> }
-	lua_pushnumber(L, m.id); lua_setfield(L, -2, "id"); // { <match> }
-	lua_pushnumber(L, m.pattern_index); lua_setfield(L, -2, "pattern_index"); // { <match> }
-	lua_pushnumber(L, m.capture_count); lua_setfield(L, -2, "capture_count"); // { <match> }
+	pushinteger(L, m.id); lua_setfield(L, -2, "id"); // { <match> }
+	pushinteger(L, m.pattern_index); lua_setfield(L, -2, "pattern_index"); // { <match> }
+	pushinteger(L, m.capture_count); lua_setfield(L, -2, "capture_count"); // { <match> }
 	lua_createtable(L, m.capture_count, m.capture_count); // { <match> }, { <arraymap> }
 
 	for (uint16_t i = 0; i < m.capture_count; ++i) {
@@ -293,10 +292,10 @@ static int query_capture(lua_State *L) {
    The match object is a record populated with all the information given by treesitter
    <pre>
    type Match = record
-      id: number
-      pattern_index: number
-      capture_count: number
-      captures: {string|number:Node}
+      id: integer
+      pattern_index: integer
+      capture_count: integer
+      captures: {string|integer:Node}
    end
    </pre>
 
@@ -501,7 +500,7 @@ static int find_predicate(lua_State *L) {
 	lua_remove(L, -2);
 
 	lua_insert(L, -3);
-	lua_pushnumber(L, 0);
+	pushinteger(L, 0);
 	lua_pushboolean(L, true);
 	lua_call(L, 4, 1);
 

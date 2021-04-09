@@ -4,15 +4,15 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "dynamiclib.h"
-#include "luautils.h"
-#include "node.h"
-#include "object.h"
-#include "parser.h"
-#include "tree.h"
-#include "tree_cursor.h"
-#include "query.h"
-#include "query_cursor.h"
+#include <ltreesitter/dynamiclib.h>
+#include <ltreesitter/luautils.h>
+#include <ltreesitter/node.h>
+#include <ltreesitter/object.h>
+#include <ltreesitter/parser.h>
+#include <ltreesitter/tree.h>
+#include <ltreesitter/tree_cursor.h>
+#include <ltreesitter/query.h>
+#include <ltreesitter/query_cursor.h>
 
 // @teal-export version: string
 static const char version_str[] = "0.0.6+dev";

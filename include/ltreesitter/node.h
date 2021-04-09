@@ -5,8 +5,6 @@
 
 void ltreesitter_create_node_metatable(lua_State *L);
 struct ltreesitter_Node *ltreesitter_check_node(lua_State *L, int idx);
-
-#include <stdio.h>
-void push_node(lua_State *L, int parent, TSNode n, const TSLanguage *lang);
+void push_node(lua_State *L, int parent_idx, TSNode n, const TSLanguage *lang);
 
 #endif

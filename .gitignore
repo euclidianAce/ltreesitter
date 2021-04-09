@@ -11,3 +11,4 @@ tl*
 /.luarocks
 scratch.tl
 tree-sitter-c
+_Makefile

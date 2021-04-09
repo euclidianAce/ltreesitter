@@ -16,6 +16,7 @@
 char *str_ldup(const char *s, const size_t len);
 void table_geti(lua_State *L, int idx, int i);
 int table_rawget(lua_State *L, int idx);
+void pushinteger(lua_State *L, int n);
 void setfuncs(lua_State *L, const luaL_Reg l[]);
 void create_libtable(lua_State *L, const luaL_Reg l[]);
 void create_metatable(lua_State *L, const char *name, const luaL_Reg metamethods[], const luaL_Reg index[]);

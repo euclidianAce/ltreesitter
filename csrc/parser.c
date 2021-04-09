@@ -10,11 +10,11 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "types.h"
-#include "tree.h"
-#include "luautils.h"
-#include "dynamiclib.h"
-#include "query.h"
+#include <ltreesitter/types.h>
+#include <ltreesitter/tree.h>
+#include <ltreesitter/luautils.h>
+#include <ltreesitter/dynamiclib.h>
+#include <ltreesitter/query.h>
 
 static const char *parser_cache_index = "parsers";
 
@@ -390,12 +390,12 @@ static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, T
 	struct CallInfo *const i = payload;
 	lua_State *const L = i->L;
 	lua_pushvalue(L, -1); // grab a copy of the function
-	lua_pushnumber(L, byte_index);
+	pushinteger(L, byte_index);
 
 	lua_newtable(L); // byte_index, {}
-	lua_pushnumber(L, position.row); // byte_index, {}, row
+	pushinteger(L, position.row); // byte_index, {}, row
 	lua_setfield(L, -2, "row"); // byte_index, { row = row }
-	lua_pushnumber(L, position.column); // byte_index, { row = row }, column
+	pushinteger(L, position.column); // byte_index, { row = row }, column
 	lua_setfield(L, -2, "column"); // byte_index, { row = row, column = column }
 
 	if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
@@ -436,7 +436,7 @@ static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, T
 	return read_str;
 }
 
-/* @teal-export Parser.parse_with: function(Parser, reader: function(number, Point): (string), old_tree: Tree): Tree [[
+/* @teal-export Parser.parse_with: function(Parser, reader: function(integer, Point): (string), old_tree: Tree): Tree [[
    <code>reader</code> should be a function that takes a byte index
    and a <code>Point</code> and returns the text at that point. The
    function should return either <code>nil</code> or an empty string
@@ -491,7 +491,7 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Parser.set_timeout: function(Parser, number) [[
+/* @teal-export Parser.set_timeout: function(Parser, integer) [[
    Sets how long the parser is allowed to take in microseconds
 ]] */
 int ltreesitter_parser_set_timeout(lua_State *L) {
@@ -504,8 +504,8 @@ int ltreesitter_parser_set_timeout(lua_State *L) {
 
 /* @teal-inline [[
    record Range
-      start_byte: number
-      end_byte: number
+      start_byte: integer
+      end_byte: integer
 
       start_point: Point
       end_point: Point
@@ -611,12 +611,12 @@ int make_query(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Parser.get_version: function(Parser): number [[
+/* @teal-export Parser.get_version: function(Parser): integer [[
    get the api version of the parser's language
 ]] */
 static int get_version(lua_State *L) {
 	struct ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
-	lua_pushnumber(L, p->lang_version);
+	pushinteger(L, p->lang_version);
 	return 1;
 }
 

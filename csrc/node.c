@@ -1,16 +1,17 @@
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
 
-#include "luautils.h"
-#include "object.h"
-#include "types.h"
-#include "node.h"
-#include "tree.h"
-#include "tree_cursor.h"
+#include <ltreesitter/luautils.h>
+#include <ltreesitter/object.h>
+#include <ltreesitter/types.h>
+#include <ltreesitter/node.h>
+#include <ltreesitter/tree.h>
+#include <ltreesitter/tree_cursor.h>
 
 #include <tree_sitter/api.h>
 
@@ -27,28 +28,28 @@ static int node_type(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.start_byte: function(Node): number [[
+/* @teal-export Node.start_byte: function(Node): integer [[
    Get the byte of the source string that the given node starts at
 ]] */
 static int node_start_byte(lua_State *L) {
 	TSNode n = ltreesitter_check_node(L, 1)->node;
-	lua_pushnumber(L, ts_node_start_byte(n));
+	pushinteger(L, ts_node_start_byte(n));
 	return 1;
 }
 
-/* @teal-export Node.end_byte: function(Node): number [[
+/* @teal-export Node.end_byte: function(Node): integer [[
    Get the byte of the source string that the given node ends at
 ]] */
 static int node_end_byte(lua_State *L) {
 	TSNode n = ltreesitter_check_node(L, 1)->node;
-	lua_pushnumber(L, ts_node_end_byte(n));
+	pushinteger(L, ts_node_end_byte(n));
 	return 1;
 }
 
 /* @teal-inline [[
    record Point
-      row: number
-      column: number
+      row: integer
+      column: integer
    end
 ]]*/
 
@@ -60,10 +61,10 @@ static int node_start_point(lua_State *L) {
 	TSPoint p = ts_node_start_point(n);
 	lua_newtable(L);
 
-	lua_pushnumber(L, p.row);
+	pushinteger(L, p.row);
 	lua_setfield(L, -2, "row");
 
-	lua_pushnumber(L, p.column);
+	pushinteger(L, p.column);
 	lua_setfield(L, -2, "column");
 
 	return 1;
@@ -77,10 +78,10 @@ static int node_end_point(lua_State *L) {
 	TSPoint p = ts_node_end_point(n);
 	lua_newtable(L);
 
-	lua_pushnumber(L, p.row);
+	pushinteger(L, p.row);
 	lua_setfield(L, -2, "row");
 
-	lua_pushnumber(L, p.column);
+	pushinteger(L, p.column);
 	lua_setfield(L, -2, "column");
 	return 1;
 }
@@ -112,19 +113,22 @@ static int node_is_extra(lua_State *L) {
 	return 1;
 }
 
-void push_node(lua_State *L, int parent, TSNode n, const TSLanguage *lang) {
-	ltreesitter_check_tree(L, parent, "Internal error: node parent is not a tree");
+void push_node(lua_State *L, int rel_parent_idx, TSNode n, const TSLanguage *lang) {
+	const int parent_idx = absindex(L, rel_parent_idx);
+	ltreesitter_check_tree(L, parent_idx, "Internal error: node parent is not a tree");
 	struct ltreesitter_Node *node = lua_newuserdata(L, sizeof(struct ltreesitter_Node));
 	node->node = n;
 	node->lang = lang;
-	set_parent(L, -1, parent);
+
+	lua_pushvalue(L, -1);
+	set_parent(L, parent_idx);
 	setmetatable(L, LTREESITTER_NODE_METATABLE_NAME);
 }
 
-/* @teal-export Node.child: function(Node, idx: number): Node [[
+/* @teal-export Node.child: function(Node, idx: integer): Node [[
    Get the node's idx'th child (0-indexed)
 ]] */
-int node_child(lua_State *L) {
+static int node_child(lua_State *L) {
 	struct ltreesitter_Node *parent = ltreesitter_check_node(L, 1);
 	const uint32_t idx = luaL_checknumber(L, 2);
 	if (idx >= ts_node_child_count(parent->node)) {
@@ -132,8 +136,7 @@ int node_child(lua_State *L) {
 	} else {
 		push_parent(L, 1);
 		push_node(
-			L,
-			lua_gettop(L),
+			L, -1,
 			ts_node_child(parent->node, (uint32_t)luaL_checknumber(L, 2)),
 			parent->lang
 		);
@@ -141,16 +144,16 @@ int node_child(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.child_count: function(Node): number [[
+/* @teal-export Node.child_count: function(Node): integer [[
    Get the number of children a node has
 ]] */
 static int node_child_count(lua_State *L) {
 	TSNode n = ltreesitter_check_node(L, 1)->node;
-	lua_pushnumber(L, ts_node_child_count(n));
+	pushinteger(L, ts_node_child_count(n));
 	return 1;
 }
 
-/* @teal-export Node.named_child: function(Node, idx: number): Node [[
+/* @teal-export Node.named_child: function(Node, idx: integer): Node [[
    Get the node's idx'th named child (0-indexed)
 ]] */
 static int node_named_child(lua_State *L) {
@@ -160,17 +163,17 @@ static int node_named_child(lua_State *L) {
 		lua_pushnil(L);
 	} else {
 		push_parent(L, 1);
-		push_node(L, 3, ts_node_named_child(parent->node, idx), parent->lang);
+		push_node(L, -1, ts_node_named_child(parent->node, idx), parent->lang);
 	}
 	return 1;
 }
 
-/* @teal-export Node.named_child_count: function(Node): number [[
+/* @teal-export Node.named_child_count: function(Node): integer [[
    Get the number of named children a node has
 ]] */
 static int node_named_child_count(lua_State *L) {
 	TSNode n = ltreesitter_check_node(L, 1)->node;
-	lua_pushnumber(L, ts_node_named_child_count(n));
+	pushinteger(L, ts_node_named_child_count(n));
 	return 1;
 }
 
@@ -183,7 +186,7 @@ static int node_children_iterator(lua_State *L) {
 
 	const TSNode n = ts_tree_cursor_current_node(&c->cursor);
 	push_parent(L, lua_upvalueindex(1));
-	push_node(L, 1, n, c->lang);
+	push_node(L, -1, n, c->lang);
 
 	lua_pushboolean(L, ts_tree_cursor_goto_next_sibling(&c->cursor));
 	lua_replace(L, lua_upvalueindex(2));
@@ -196,14 +199,15 @@ static int node_named_children_iterator(lua_State *L) {
 	struct ltreesitter_Node *n = ltreesitter_check_node(L, lua_upvalueindex(1));
 
 	const uint32_t idx = lua_tonumber(L, lua_upvalueindex(3));
-	lua_pushnumber(L, idx + 1);
+	pushinteger(L, idx + 1);
 	lua_replace(L, lua_upvalueindex(3));
 
 	if (idx >= ts_node_named_child_count(n->node)) {
 		lua_pushnil(L);
 	} else {
+		lua_pushvalue(L, lua_upvalueindex(2));
 		push_node(
-			L, lua_upvalueindex(2),
+			L, -1,
 			ts_node_named_child(n->node, idx),
 			n->lang
 		);
@@ -232,7 +236,7 @@ static int node_children(lua_State *L) {
 static int node_named_children(lua_State *L) {
 	ltreesitter_check_node(L, 1);
 	push_parent(L, 1);
-	lua_pushnumber(L, 0);
+	pushinteger(L, 0);
 
 	lua_pushcclosure(L, node_named_children_iterator, 3);
 	return 1;
@@ -246,7 +250,7 @@ static int node_next_sibling(lua_State *L) {
 	push_parent(L, 1);
 	TSNode sibling = ts_node_next_sibling(n->node);
 	if (ts_node_is_null(sibling)) { lua_pushnil(L); return 1; }
-	push_node(L, 2, sibling, n->lang);
+	push_node(L, -1, sibling, n->lang);
 	return 1;
 }
 
@@ -258,7 +262,7 @@ static int node_prev_sibling(lua_State *L) {
 	push_parent(L, 1);
 	TSNode sibling = ts_node_prev_sibling(n->node);
 	if (ts_node_is_null(sibling)) { lua_pushnil(L); return 1; }
-	push_node(L, 2, sibling, n->lang);
+	push_node(L, -1, sibling, n->lang);
 	return 1;
 }
 
@@ -270,7 +274,7 @@ static int node_next_named_sibling(lua_State *L) {
 	push_parent(L, 1);
 	TSNode sibling = ts_node_next_named_sibling(n->node);
 	if (ts_node_is_null(sibling)) { lua_pushnil(L); return 1; }
-	push_node(L, 2, sibling, n->lang);
+	push_node(L, -1, sibling, n->lang);
 	return 1;
 }
 
@@ -282,7 +286,7 @@ static int node_prev_named_sibling(lua_State *L) {
 	push_parent(L, 1);
 	TSNode sibling = ts_node_prev_named_sibling(n->node);
 	if (ts_node_is_null(sibling)) { lua_pushnil(L); return 1; }
-	push_node(L, 2, sibling, n->lang);
+	push_node(L, -1, sibling, n->lang);
 	return 1;
 }
 
@@ -331,7 +335,7 @@ static int node_child_by_field_name(lua_State *L) {
 		lua_pushnil(L);
 	} else {
 		push_parent(L, 1);
-		push_node(L, lua_gettop(L), child, n->lang);
+		push_node(L, -1, child, n->lang);
 	}
 	return 1;
 }

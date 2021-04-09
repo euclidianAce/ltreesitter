@@ -20,34 +20,21 @@ external_dependencies = {
    -- }
 }
 build = {
-   type = "builtin",
-   modules = {
-      ltreesitter = {
-         sources = {
-            "csrc/dynamiclib.c",
-            "csrc/ltreesitter.c",
-            "csrc/luautils.c",
-            "csrc/node.c",
-            "csrc/object.c",
-            "csrc/parser.c",
-            "csrc/query.c",
-            "csrc/query_cursor.c",
-            "csrc/tree.c",
-            "csrc/tree_cursor.c",
-         },
-
-         -- TODO: is there a way to make this opt in to libuv?
-         --       basically like gentoo's USE flags
-         libraries = {"tree-sitter", --[["uv"]]},
-         incdirs = {"$(TREE_SITTER_INCDIR)"},
-         libdirs = {"$(TREE_SITTER_LIBDIR)"},
-         -- defines = {"LTREESITTER_USE_LIBUV"},
-      },
+   type = "make",
+   build_variables = {
+      CFLAGS = "$(CFLAGS)",
+      LIBFLAG = "$(LIBFLAG)",
+      LUA_LIBDIR = "$(LUA_LIBDIR)",
+      LUA_BINDIR = "$(LUA_BINDIR)",
+      LUA_INCDIR = "$(LUA_INCDIR)",
+      LUA = "$(LUA)",
    },
-   install = {
-      lua = {
-         ["ltreesitter"] = "ltreesitter.d.tl",
-      },
+   install_variables = {
+      INST_PREFIX = "$(PREFIX)",
+      INST_BINDIR = "$(BINDIR)",
+      INST_LIBDIR = "$(LIBDIR)",
+      INST_LUADIR = "$(LUADIR)",
+      INST_CONFDIR = "$(CONFDIR)",
    },
    copy_directories = {
       "docs",

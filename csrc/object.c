@@ -1,5 +1,5 @@
 
-#include "luautils.h"
+#include <ltreesitter/luautils.h>
 
 static const char *object_field = "objects";
 // map of objects to their parents
@@ -24,12 +24,13 @@ void push_parent(lua_State *L, int obj_idx) {
 	}
 }
 
-void set_parent(lua_State *L, int obj_idx, int parent_idx) {
-	const int abs_obj = absindex(L, obj_idx);
-	const int abs_parent = absindex(L, parent_idx);
-	push_object_table(L);
-	lua_pushvalue(L, abs_obj);
-	lua_pushvalue(L, abs_parent);
-	lua_rawset(L, -3);
+// sets the parent of an object at the top of the stack
+// pops the object off of the stack
+void set_parent(lua_State *L, int parent_idx) {
+	// object
+	push_object_table(L); // object, object_table
+	lua_insert(L, -2); // object_table, object
+	lua_pushvalue(L, parent_idx); // object_table, object, parent
+	lua_rawset(L, -3); // object_table
 	lua_pop(L, 1);
 }
