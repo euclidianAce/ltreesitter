@@ -121,7 +121,6 @@ static bool push_cached_parser(lua_State *L, const char *dl_file, const char *la
    local my_parser = ltreesitter.load("./my_parser.so", "my_language")
    </pre>
 ]] */
-
 int ltreesitter_load_parser(lua_State *L) {
 	lua_settop(L, 2);
 	const char *parser_file = luaL_checkstring(L, 1);
@@ -161,6 +160,7 @@ int ltreesitter_load_parser(lua_State *L) {
 	p->dl = proxy.dl;
 	p->parser = proxy.parser;
 	p->lang = proxy.lang;
+
 	return 1;
 }
 
@@ -362,6 +362,7 @@ int ltreesitter_parser_parse_string(lua_State *L) {
 	} else {
 		old_tree = ltreesitter_check_tree_arg(L, 3)->tree;
 	}
+
 	TSTree *tree = ts_parser_parse_string(p->parser, old_tree, str, len);
 	if (!tree) {
 		lua_pushnil(L);
@@ -598,6 +599,7 @@ int make_query(lua_State *L) {
 	if (!query_src) { return ALLOC_FAIL(L); }
 	uint32_t err_offset = 0;
 	TSQueryError err_type = TSQueryErrorNone;
+	// TODO: this segfaults for some reason, (:
 	TSQuery *q = ts_query_new(
 		p->lang,
 		query_src,
@@ -606,9 +608,13 @@ int make_query(lua_State *L) {
 		&err_type
 	);
 	handle_query_error(L, q, err_offset, err_type, query_src);
-	push_query(L, p->lang, query_src, len, q, 1);
 
-	return 1;
+	if (q) {
+		push_query(L, p->lang, query_src, len, q, 1);
+		return 1;
+	}
+
+	return 0;
 }
 
 /* @teal-export Parser.get_version: function(Parser): integer [[

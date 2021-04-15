@@ -1,5 +1,5 @@
 
-/* #define LTREESITTER_DEBUG */
+// #define LTREESITTER_DEBUG
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -35,7 +35,7 @@ static void dump_stacktrace() {
 	char **strs = backtrace_symbols(callstack, frames);
 	printf("STACKTRACE:\n");
 	for(int i = 0; i < frames; ++i) {
-		printf("%s\n", strs[i]);
+		printf("   %s\n", strs[i]);
 	}
 	free(strs);
 	printf("DONE STACKTRACE\n");

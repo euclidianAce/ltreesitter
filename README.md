@@ -34,7 +34,7 @@ local ltreesitter = require("ltreesitter")
 ```
 
 #### `ltreesitter.require`
-Assuming you have a compiled c parser named `c.so` (or `c.dll` on windows) in `~/.tree-sitter/bin/` and `package.cpath`
+Assuming you have a compiled c parser named `c.so` (or `c.dll` on windows) in `~/.tree-sitter/bin/` or `package.cpath`
 ```lua
 local c_parser = ltreesitter.require("c")
 ```
@@ -87,9 +87,9 @@ local my_query = c_parser:query[[
         declarator: (function_declarator
                       declarator: (identifier) @name))) ]]
 
-for capture, name in my_query:capture(tree:root()) do -- iterate over captured nodes without caring about order
+for capture, capture_name in my_query:capture(tree:root()) do -- iterate over captured nodes without caring about order
    -- Node:source() gives the source code that the node comes from
-   print(capture:source(), name) -- => "stuff_doer", "name" and "main", "name"
+   print(capture:source(), capture_name) -- => "stuff_doer", "name" and "main", "name"
 end
 
 for match in my_query:match(tree:root()) do
