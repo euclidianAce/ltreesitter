@@ -40,7 +40,7 @@ jobs:
       - name: Build
         run: |
           luarocks install busted
-          luarocks make USE_STATIC_TREE_SITTER=1 TREE_SITTER_STATIC_LIB=./tree-sitter/libtree-sitter.a TREE_SITTER_INCDIR=./tree-sitter/lib/include
+          luarocks make
 
       - name: Test
         run: |
