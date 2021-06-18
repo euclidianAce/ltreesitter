@@ -5,12 +5,6 @@ pkgs.mkShell {
     lua5_3
     lua53Packages.luarocks
 
-    # teal deps for the docgen script
-    lua53Packages.inspect
-    lua53Packages.argparse
-    lua53Packages.luafilesystem
-    lua53Packages.compat53
-
     # tests
     lua53Packages.busted
 
@@ -22,5 +16,6 @@ pkgs.mkShell {
   shellHook = ''
   export LUA_CPATH="./?.so;$LUA_CPATH"
   export LUA_PATH="./?.lua;./?/init.lua;$LUA_PATH"
+  export PATH="$PWD:$PWD/lua_modules/bin:$PATH"
   '';
 }

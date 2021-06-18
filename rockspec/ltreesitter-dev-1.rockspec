@@ -8,7 +8,7 @@ description = {
    homepage = "https://github.com/euclidianAce/ltreesitter",
    license = "MIT",
    summary = "Treesitter bindings to Lua",
-   detailed = [[Standalone Lua bindings to the Treesitter api.]],
+   detailed = [[Standalone Lua bindings to the Treesitter api (with full type definitions for Teal).]],
    issues_url = "https://github.com/euclidianAce/ltreesitter/issues",
 }
 external_dependencies = {
@@ -20,29 +20,29 @@ external_dependencies = {
    -- }
 }
 build = {
-   type = "make",
-   build_variables = {
-      CFLAGS = "$(CFLAGS)",
-      LIBFLAG = "$(LIBFLAG)",
-      LUA_LIBDIR = "$(LUA_LIBDIR)",
-      LUA_BINDIR = "$(LUA_BINDIR)",
-      LUA_INCDIR = "$(LUA_INCDIR)",
-      LUA = "$(LUA)",
-      TREE_SITTER_DIR = "$(TREE_SITTER_DIR)",
-      TREE_SITTER_INCDIR = "$(TREE_SITTER_INCDIR)",
-      TREE_SITTER_LIBDIR = "$(TREE_SITTER_LIBDIR)",
-      TREE_SITTER_STATIC_LIB = "$(TREE_SITTER_STATIC_LIB)",
-      USE_STATIC_TREE_SITTER = "$(USE_STATIC_TREE_SITTER)",
-      USE_LIBUV = "$(USE_LIBUV)",
-   },
-   install_variables = {
-      INST_PREFIX = "$(PREFIX)",
-      INST_BINDIR = "$(BINDIR)",
-      INST_LIBDIR = "$(LIBDIR)",
-      INST_LUADIR = "$(LUADIR)",
-      INST_CONFDIR = "$(CONFDIR)",
+	type = "builtin",
+   modules = {
+      ltreesitter = {
+         sources = {
+            "csrc/dynamiclib.c",
+            "csrc/luautils.c",
+            "csrc/object.c",
+            "csrc/query.c",
+            "csrc/tree.c",
+            "csrc/types.c",
+            "csrc/ltreesitter.c",
+            "csrc/node.c",
+            "csrc/parser.c",
+            "csrc/query_cursor.c",
+            "csrc/tree_cursor.c",
+         },
+         incdirs = { "include", "$(TREESITTER_INCDIR)" },
+         libraries = { "tree-sitter" },
+         libdirs = { "$(TREESITTER_LIBDIR)" },
+      },
    },
    copy_directories = {
       "docs",
+      "include",
    },
 }

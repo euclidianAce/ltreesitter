@@ -1,18 +1,18 @@
 
 // #define LTREESITTER_DEBUG
 
-#include <lua.h>
 #include <lauxlib.h>
+#include <lua.h>
 
 #include <ltreesitter/dynamiclib.h>
 #include <ltreesitter/luautils.h>
 #include <ltreesitter/node.h>
 #include <ltreesitter/object.h>
 #include <ltreesitter/parser.h>
-#include <ltreesitter/tree.h>
-#include <ltreesitter/tree_cursor.h>
 #include <ltreesitter/query.h>
 #include <ltreesitter/query_cursor.h>
+#include <ltreesitter/tree.h>
+#include <ltreesitter/tree_cursor.h>
 
 // @teal-export version: string
 static const char version_str[] = "0.0.6+dev";
@@ -26,15 +26,15 @@ static const luaL_Reg lib_funcs[] = {
 
 #ifdef LTREESITTER_DEBUG
 #include <execinfo.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
 static void dump_stacktrace() {
 	void *callstack[128];
 	int frames = backtrace(callstack, 128);
 	char **strs = backtrace_symbols(callstack, frames);
 	printf("STACKTRACE:\n");
-	for(int i = 0; i < frames; ++i) {
+	for (int i = 0; i < frames; ++i) {
 		printf("   %s\n", strs[i]);
 	}
 	free(strs);
