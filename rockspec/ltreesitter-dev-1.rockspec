@@ -36,9 +36,9 @@ build = {
             "csrc/query_cursor.c",
             "csrc/tree_cursor.c",
          },
-         incdirs = { "include", "$(TREESITTER_INCDIR)" },
+         incdirs = { "include", "$(TREE_SITTER_INCDIR)" },
          libraries = { "tree-sitter" },
-         libdirs = { "$(TREESITTER_LIBDIR)" },
+         libdirs = { "$(TREE_SITTER_LIBDIR)" },
       },
    },
    copy_directories = {
