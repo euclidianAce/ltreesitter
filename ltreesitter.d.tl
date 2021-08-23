@@ -7,6 +7,7 @@ local record ltreesitter
       current_field_name: function(Cursor): string  -- csrc/tree_cursor.c:34
       current_node: function(Cursor): Node  -- csrc/tree_cursor.c:20
       goto_first_child: function(Cursor): boolean  -- csrc/tree_cursor.c:76
+      goto_first_child_for_byte: function(Cursor, integer): integer  -- csrc/tree_cursor.c:85
       goto_next_sibling: function(Cursor): boolean  -- csrc/tree_cursor.c:67
       goto_parent: function(Cursor): boolean  -- csrc/tree_cursor.c:58
       reset: function(Cursor, Node)  -- csrc/tree_cursor.c:48
@@ -36,12 +37,12 @@ local record ltreesitter
       type: function(Node): string  -- csrc/node.c:21
    end
    record Parser
-      get_version: function(Parser): integer  -- csrc/parser.c:613
+      get_version: function(Parser): integer  -- csrc/parser.c:619
       parse_string: function(Parser, string, Tree): Tree  -- csrc/parser.c:342
-      parse_with: function(Parser, reader: function(integer, Point): (string), old_tree: Tree): Tree  -- csrc/parser.c:438
-      query: function(Parser, string): Query  -- csrc/parser.c:587
-      set_ranges: function(Parser, {Range}): boolean  -- csrc/parser.c:527
-      set_timeout: function(Parser, integer)  -- csrc/parser.c:493
+      parse_with: function(Parser, reader: function(integer, Point): (string), old_tree: Tree): Tree  -- csrc/parser.c:439
+      query: function(Parser, string): Query  -- csrc/parser.c:588
+      set_ranges: function(Parser, {Range}): boolean  -- csrc/parser.c:528
+      set_timeout: function(Parser, integer)  -- csrc/parser.c:494
    end
    record Query
       record Match
@@ -87,7 +88,7 @@ local record ltreesitter
 
       start_point: Point
       end_point: Point
-   end -- csrc/parser.c:504
+   end -- csrc/parser.c:505
 end
 
 return ltreesitter

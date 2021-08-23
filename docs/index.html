@@ -44,6 +44,8 @@ h2 {
 <br>
 <a href="index.html#Cursor.goto_first_child">Cursor.goto_first_child</a>
 <br>
+<a href="index.html#Cursor.goto_first_child_for_byte">Cursor.goto_first_child_for_byte</a>
+<br>
 <a href="index.html#Cursor.goto_next_sibling">Cursor.goto_next_sibling</a>
 <br>
 <a href="index.html#Cursor.goto_parent">Cursor.goto_parent</a>
@@ -147,6 +149,8 @@ h2 {
 <p>Get the current node under the cursor</p><br>
 <h2><a name="Cursor.goto_first_child"><code>Cursor.goto_first_child: function(Cursor): boolean </code></a></h2>
 <p>Position the cursor at the first child of the current node</p><br>
+<h2><a name="Cursor.goto_first_child_for_byte"><code>Cursor.goto_first_child_for_byte: function(Cursor, integer): integer </code></a></h2>
+<p>Move the given cursor to the first child of its current node that extends<br>   beyond the given byte offset.<br><br>   Returns the index of the found node, if a node wasn't found, returns nil</p><br>
 <h2><a name="Cursor.goto_next_sibling"><code>Cursor.goto_next_sibling: function(Cursor): boolean </code></a></h2>
 <p>Position the cursor at the sibling of the current node</p><br>
 <h2><a name="Cursor.goto_parent"><code>Cursor.goto_parent: function(Cursor): boolean </code></a></h2>

@@ -83,6 +83,24 @@ static int tree_cursor_goto_first_child(lua_State *L) {
 	return 1;
 }
 
+/* @teal-export Cursor.goto_first_child_for_byte: function(Cursor, integer): integer [[
+   Move the given cursor to the first child of its current node that extends
+   beyond the given byte offset.
+
+   Returns the index of the found node, if a node wasn't found, returns nil
+]] */
+static int tree_cursor_goto_first_child_for_byte(lua_State *L) {
+	struct ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	uint32_t byte = luaL_checknumber(L, 2);
+	int64_t idx = ts_tree_cursor_goto_first_child_for_byte(&c->cursor, byte);
+	if (idx == -1) {
+		lua_pushnil(L);
+	} else {
+		lua_pushinteger(L, idx);
+	}
+	return 1;
+}
+
 static int tree_cursor_gc(lua_State *L) {
 	struct ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
 #ifdef LOG_GC
@@ -97,6 +115,7 @@ static const luaL_Reg tree_cursor_methods[] = {
 	{"current_field_name", tree_cursor_current_field_name},
 	{"goto_parent", tree_cursor_goto_parent},
 	{"goto_first_child", tree_cursor_goto_first_child},
+	{"goto_first_child_for_byte", tree_cursor_goto_first_child_for_byte},
 	{"goto_next_sibling", tree_cursor_goto_next_sibling},
 	{"reset", tree_cursor_reset},
 	{NULL, NULL}
