@@ -12,15 +12,12 @@ typedef struct ltreesitter_Query ltreesitter_Query;
 typedef struct ltreesitter_QueryCursor ltreesitter_QueryCursor;
 
 struct ltreesitter_Parser {
-	const TSLanguage *lang;
-	uint32_t lang_version;
 	dl_handle *dl;
 	TSParser *parser;
 };
 #define LTREESITTER_PARSER_METATABLE_NAME "ltreesitter.Parser"
 
 struct ltreesitter_Tree {
-	const TSLanguage *lang;
 	TSTree *tree;
 
 	// The *TSTree structure is opaque so we don't have access to how it
@@ -35,21 +32,19 @@ struct ltreesitter_Tree {
 #define LTREESITTER_TREE_METATABLE_NAME "ltreesitter.Tree"
 
 struct ltreesitter_TreeCursor {
-	const TSLanguage *lang;
 	TSTreeCursor cursor;
 };
 #define LTREESITTER_TREE_CURSOR_METATABLE_NAME "ltreesitter.TreeCursor"
 
 struct ltreesitter_Node {
-	const TSLanguage *lang;
 	TSNode node;
 };
 #define LTREESITTER_NODE_METATABLE_NAME "ltreesitter.Node"
 
 struct ltreesitter_Query {
-	const TSLanguage *lang;
 	TSQuery *query;
 
+	const TSLanguage *lang;
 	const char *src;
 	size_t src_len;
 };

@@ -52,15 +52,13 @@ ltreesitter_Tree *ltreesitter_check_tree_arg(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_TREE_METATABLE_NAME);
 }
 
-void push_tree(
+void ltreesitter_push_tree(
     lua_State *L,
-    const TSLanguage *lang,
     TSTree *t,
     bool own_str,
     const char *src,
     size_t src_len) {
 	ltreesitter_Tree *tree = lua_newuserdata(L, sizeof(struct ltreesitter_Tree));
-	tree->lang = lang;
 	tree->tree = t;
 	tree->own_str = own_str;
 	tree->src = src;
@@ -74,7 +72,7 @@ void push_tree(
 static int tree_push_root(lua_State *L) {
 	ltreesitter_Tree *const t = ltreesitter_check_tree_arg(L, 1);
 	lua_newuserdata(L, sizeof(ltreesitter_Node));
-	push_node(L, 1, ts_tree_root_node(t->tree), t->lang);
+	ltreesitter_push_node(L, 1, ts_tree_root_node(t->tree));
 	return 1;
 }
 

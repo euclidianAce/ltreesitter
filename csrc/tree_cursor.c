@@ -14,7 +14,6 @@ ltreesitter_TreeCursor *ltreesitter_push_tree_cursor(lua_State *L, int parent_id
 	lua_pushvalue(L, -1);
 	set_parent(L, parent_idx);
 	c->cursor = ts_tree_cursor_new(n);
-	c->lang = lang;
 	setmetatable(L, LTREESITTER_TREE_CURSOR_METATABLE_NAME);
 	return c;
 }
@@ -25,10 +24,9 @@ ltreesitter_TreeCursor *ltreesitter_push_tree_cursor(lua_State *L, int parent_id
 static int tree_cursor_current_node(lua_State *L) {
 	ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
 	push_parent(L, 1);
-	push_node(
+	ltreesitter_push_node(
 	    L, -1,
-	    ts_tree_cursor_current_node(&c->cursor),
-	    c->lang);
+	    ts_tree_cursor_current_node(&c->cursor));
 	return 1;
 }
 

@@ -36,7 +36,7 @@ enum ParserLoadErr {
 };
 
 #define TREE_SITTER_SYM "tree_sitter_"
-static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_file, const char *lang_name) {
+static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_file, const char *lang_name, uint32_t *out_version) {
 	static char buf[128];
 	if (snprintf(buf, sizeof(buf) - sizeof(TREE_SITTER_SYM), TREE_SITTER_SYM "%s", lang_name) == 0) {
 		return PARSE_LOAD_ERR_BUFLEN;
@@ -56,8 +56,7 @@ static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_f
 	TSParser *parser = ts_parser_new();
 	const TSLanguage *lang = tree_sitter_lang();
 	const uint32_t version = ts_language_version(lang);
-	p->lang_version = version;
-	p->lang = lang;
+	*out_version = version;
 	p->parser = parser;
 
 	if (version < TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION) {
@@ -131,9 +130,9 @@ int ltreesitter_load_parser(lua_State *L) {
 	ltreesitter_Parser proxy = {
 	    .dl = NULL,
 	    .parser = NULL,
-	    .lang = NULL,
 	};
-	switch (try_dlopen(&proxy, parser_file, lang_name)) {
+	uint32_t version = 0;
+	switch (try_dlopen(&proxy, parser_file, lang_name, &version)) {
 	case PARSE_LOAD_ERR_NONE:
 		break;
 	case PARSE_LOAD_ERR_DLSYM:
@@ -150,18 +149,17 @@ int ltreesitter_load_parser(lua_State *L) {
 		return 2;
 	case PARSE_LOAD_ERR_LANG_VERSION_TOO_OLD:
 		lua_pushnil(L);
-		lua_pushfstring(L, "%s parser is too old, parser version: %u, minimum version: %u", lang_name, proxy.lang_version, TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION);
+		lua_pushfstring(L, "%s parser is too old, parser version: %u, minimum version: %u", lang_name, version, TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION);
 		return 2;
 	case PARSE_LOAD_ERR_LANG_VERSION_TOO_NEW:
 		lua_pushnil(L);
-		lua_pushfstring(L, "%s parser is too new, parser version: %u, maximum version: %u", lang_name, proxy.lang_version, TREE_SITTER_LANGUAGE_VERSION);
+		lua_pushfstring(L, "%s parser is too new, parser version: %u, maximum version: %u", lang_name, version, TREE_SITTER_LANGUAGE_VERSION);
 		return 2;
 	}
 
 	ltreesitter_Parser *const p = new_parser(L);
 	p->dl = proxy.dl;
 	p->parser = proxy.parser;
-	p->lang = proxy.lang;
 
 	return 1;
 }
@@ -258,15 +256,14 @@ int ltreesitter_require_parser(lua_State *L) {
 			ltreesitter_Parser proxy = (struct ltreesitter_Parser){
 			    .dl = NULL,
 			    .parser = NULL,
-			    .lang = NULL,
 			};
-			switch (try_dlopen(&proxy, buf, lang_name)) {
+			uint32_t version = 0;
+			switch (try_dlopen(&proxy, buf, lang_name, &version)) {
 			case PARSE_LOAD_ERR_NONE: {
 				luaL_pushresult(&b);
 				ltreesitter_Parser *const p = new_parser(L);
 				p->dl = proxy.dl;
 				p->parser = proxy.parser;
-				p->lang = proxy.lang;
 
 				cache_parser(L, buf, lang_name);
 				free(buf);
@@ -295,7 +292,7 @@ int ltreesitter_require_parser(lua_State *L) {
 				buf_add_str(&b, " parser (at ");
 				buf_add_str(&b, buf);
 				buf_add_str(&b, ") is too old, parser version: ");
-				lua_pushfstring(L, "%d", proxy.lang_version);
+				lua_pushfstring(L, "%d", version);
 				luaL_addvalue(&b);
 				buf_add_str(&b, ", minimum version: ");
 				lua_pushfstring(L, "%d", TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION);
@@ -308,7 +305,7 @@ int ltreesitter_require_parser(lua_State *L) {
 				buf_add_str(&b, " parser (at ");
 				buf_add_str(&b, buf);
 				buf_add_str(&b, ") is too new, parser version: ");
-				lua_pushfstring(L, "%d", proxy.lang_version);
+				lua_pushfstring(L, "%d", version);
 				luaL_addvalue(&b);
 				buf_add_str(&b, ", maximum version: ");
 				lua_pushfstring(L, "%d", TREE_SITTER_LANGUAGE_VERSION);
@@ -379,7 +376,7 @@ int ltreesitter_parser_parse_string(lua_State *L) {
 		return 1;
 	}
 
-	push_tree(L, p->lang, tree, true, copy, len);
+	ltreesitter_push_tree(L, tree, true, copy, len);
 	return 1;
 }
 
@@ -499,7 +496,7 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 		lua_pushnil(L);
 		return 1;
 	}
-	push_tree(L, p->lang, t, true, payload.string_builder.str, payload.string_builder.len);
+	ltreesitter_push_tree(L, t, true, payload.string_builder.str, payload.string_builder.len);
 
 	return 1;
 }
@@ -649,9 +646,9 @@ int make_query(lua_State *L) {
 	}
 	uint32_t err_offset = 0;
 	TSQueryError err_type = TSQueryErrorNone;
-	// TODO: this segfaults for some reason, (:
+	const TSLanguage *lang = ts_parser_language(p->parser);
 	TSQuery *q = ts_query_new(
-	    p->lang,
+	    lang,
 	    query_src,
 	    len,
 	    &err_offset,
@@ -659,7 +656,7 @@ int make_query(lua_State *L) {
 	handle_query_error(L, q, err_offset, err_type, query_src);
 
 	if (q) {
-		push_query(L, p->lang, query_src, len, q, 1);
+		ltreesitter_push_query(L, lang, query_src, len, q, 1);
 		return 1;
 	}
 
@@ -671,7 +668,7 @@ int make_query(lua_State *L) {
 ]] */
 static int get_version(lua_State *L) {
 	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
-	pushinteger(L, p->lang_version);
+	pushinteger(L, ts_language_version(ts_parser_language(p->parser)));
 	return 1;
 }
 

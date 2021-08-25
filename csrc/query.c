@@ -56,13 +56,14 @@ void handle_query_error(
 	lua_error(L);
 }
 
-void push_query(
+void ltreesitter_push_query(
     lua_State *L,
-    const TSLanguage *const lang,
-    const char *const src,
+    const TSLanguage *lang,
+    const char *src,
     const size_t src_len,
-    TSQuery *const q,
+    TSQuery *q,
     int parent_idx) {
+
 	ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query));
 	setmetatable(L, LTREESITTER_QUERY_METATABLE_NAME);
 	lua_pushvalue(L, -1);
@@ -92,7 +93,7 @@ static void push_query_copy(lua_State *L, int query_idx) {
 		ALLOC_FAIL(L);
 		return;
 	}
-	push_query(L, orig->lang, src_copy, orig->src_len, q, -2); // <Parent>, <Query>
+	ltreesitter_push_query(L, orig->lang, src_copy, orig->src_len, q, -2); // <Parent>, <Query>
 
 	lua_remove(L, -2); // <Query>
 }
@@ -248,10 +249,9 @@ static int query_match(lua_State *L) {
 	lua_createtable(L, m.capture_count, m.capture_count); // { <match> }, { <arraymap> }
 
 	for (uint16_t i = 0; i < m.capture_count; ++i) {
-		push_node(
+		ltreesitter_push_node(
 		    L, parent_idx,
-		    m.captures[i].node,
-		    c->query->lang);       // {<arraymap>}, <Node>
+		    m.captures[i].node);   // {<arraymap>}, <Node>
 		lua_pushvalue(L, -1);      // {<arraymap>}, <Node>, <Node>
 		lua_rawseti(L, -3, i + 1); // {<arraymap> <Node>}, <Node>
 		uint32_t len;
@@ -283,10 +283,9 @@ static int query_capture(lua_State *L) {
 			return 0;
 	} while (!do_predicates(L, lua_upvalueindex(1), q->query, t, &m));
 
-	push_node(
+	ltreesitter_push_node(
 	    L, parent_idx,
-	    m.captures[capture_index].node,
-	    q->lang);
+	    m.captures[capture_index].node);
 	uint32_t len;
 	const char *name = ts_query_capture_name_for_id(q->query, capture_index, &len);
 	lua_pushlstring(L, name, len);
