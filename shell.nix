@@ -11,6 +11,9 @@ pkgs.mkShell {
     tree-sitter
 
     valgrind
+
+    # clang-format
+    clang_12
   ];
 
   shellHook = ''

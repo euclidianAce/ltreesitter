@@ -1,0 +1,22 @@
+ColumnLimit: 0
+
+IndentWidth: 4
+TabWidth: 4
+AccessModifierOffset: -4
+
+UseTab: Always
+
+BreakBeforeBinaryOperators: true
+BreakConstructorInitializers: AfterColon
+
+AlwaysBreakAfterReturnType: None
+AlwaysBreakAfterDefinitionReturnType: None
+
+PointerAlignment: Right
+IndentCaseLabels: false
+
+AlignOperands: DontAlign
+AllowShortFunctionsOnASingleLine: None
+AllowAllArgumentsOnNextLine: true
+
+IncludeBlocks: Preserve
