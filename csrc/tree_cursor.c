@@ -5,12 +5,12 @@
 #include <ltreesitter/tree.h>
 #include <ltreesitter/types.h>
 
-struct ltreesitter_TreeCursor *ltreesitter_check_tree_cursor(lua_State *L, int idx) {
+ltreesitter_TreeCursor *ltreesitter_check_tree_cursor(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_TREE_CURSOR_METATABLE_NAME);
 }
 
-struct ltreesitter_TreeCursor *ltreesitter_push_tree_cursor(lua_State *L, int parent_idx, const TSLanguage *lang, TSNode n) {
-	struct ltreesitter_TreeCursor *c = lua_newuserdata(L, sizeof(struct ltreesitter_TreeCursor));
+ltreesitter_TreeCursor *ltreesitter_push_tree_cursor(lua_State *L, int parent_idx, const TSLanguage *lang, TSNode n) {
+	ltreesitter_TreeCursor *c = lua_newuserdata(L, sizeof(struct ltreesitter_TreeCursor));
 	lua_pushvalue(L, -1);
 	set_parent(L, parent_idx);
 	c->cursor = ts_tree_cursor_new(n);
@@ -23,7 +23,7 @@ struct ltreesitter_TreeCursor *ltreesitter_push_tree_cursor(lua_State *L, int pa
    Get the current node under the cursor
 ]] */
 static int tree_cursor_current_node(lua_State *L) {
-	struct ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
 	push_parent(L, 1);
 	push_node(
 	    L, -1,
@@ -36,7 +36,7 @@ static int tree_cursor_current_node(lua_State *L) {
    Get the field name of the current node under the cursor
 ]] */
 static int tree_cursor_current_field_name(lua_State *L) {
-	struct ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
 	const char *field_name = ts_tree_cursor_current_field_name(&c->cursor);
 	if (field_name) {
 		lua_pushstring(L, field_name);
@@ -50,7 +50,7 @@ static int tree_cursor_current_field_name(lua_State *L) {
    Position the cursor at the given node
 ]] */
 static int tree_cursor_reset(lua_State *L) {
-	struct ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
 	TSNode n = ltreesitter_check_node(L, 2)->node;
 	ts_tree_cursor_reset(&c->cursor, n);
 	return 0;
@@ -60,7 +60,7 @@ static int tree_cursor_reset(lua_State *L) {
    Position the cursor at the parent of the current node
 ]] */
 static int tree_cursor_goto_parent(lua_State *L) {
-	struct ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
 	lua_pushboolean(L, ts_tree_cursor_goto_parent(&c->cursor));
 	return 1;
 }
@@ -69,7 +69,7 @@ static int tree_cursor_goto_parent(lua_State *L) {
    Position the cursor at the sibling of the current node
 ]] */
 static int tree_cursor_goto_next_sibling(lua_State *L) {
-	struct ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
 	lua_pushboolean(L, ts_tree_cursor_goto_next_sibling(&c->cursor));
 	return 1;
 }
@@ -78,7 +78,7 @@ static int tree_cursor_goto_next_sibling(lua_State *L) {
    Position the cursor at the first child of the current node
 ]] */
 static int tree_cursor_goto_first_child(lua_State *L) {
-	struct ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
 	lua_pushboolean(L, ts_tree_cursor_goto_first_child(&c->cursor));
 	return 1;
 }
@@ -90,7 +90,7 @@ static int tree_cursor_goto_first_child(lua_State *L) {
    Returns the index of the found node, if a node wasn't found, returns nil
 ]] */
 static int tree_cursor_goto_first_child_for_byte(lua_State *L) {
-	struct ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
 	uint32_t byte = luaL_checknumber(L, 2);
 	int64_t idx = ts_tree_cursor_goto_first_child_for_byte(&c->cursor, byte);
 	if (idx == -1) {
@@ -102,7 +102,7 @@ static int tree_cursor_goto_first_child_for_byte(lua_State *L) {
 }
 
 static int tree_cursor_gc(lua_State *L) {
-	struct ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
 #ifdef LOG_GC
 	printf("Tree Cursor %p is being garbage collected\n", c);
 #endif

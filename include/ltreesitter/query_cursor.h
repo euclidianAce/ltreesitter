@@ -4,6 +4,6 @@
 #include <lua.h>
 
 void ltreesitter_create_query_cursor_metatable(lua_State *L);
-struct ltreesitter_QueryCursor *ltreesitter_check_query_cursor(lua_State *L, int idx);
+ltreesitter_QueryCursor *ltreesitter_check_query_cursor(lua_State *L, int idx);
 
 #endif

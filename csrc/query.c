@@ -22,7 +22,7 @@ static void push_predicate_table(lua_State *L) {
 	push_registry_field(L, predicate_field);
 }
 
-struct ltreesitter_Query *ltreesitter_check_query(lua_State *L, int idx) {
+ltreesitter_Query *ltreesitter_check_query(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_QUERY_METATABLE_NAME);
 }
 
@@ -63,7 +63,7 @@ void push_query(
     const size_t src_len,
     TSQuery *const q,
     int parent_idx) {
-	struct ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query));
+	ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query));
 	setmetatable(L, LTREESITTER_QUERY_METATABLE_NAME);
 	lua_pushvalue(L, -1);
 	set_parent(L, parent_idx);
@@ -74,7 +74,7 @@ void push_query(
 }
 
 static void push_query_copy(lua_State *L, int query_idx) {
-	struct ltreesitter_Query *orig = ltreesitter_check_query(L, query_idx);
+	ltreesitter_Query *orig = ltreesitter_check_query(L, query_idx);
 	push_parent(L, query_idx); // <parent>
 
 	uint32_t err_offset;
@@ -98,7 +98,7 @@ static void push_query_copy(lua_State *L, int query_idx) {
 }
 
 static int query_gc(lua_State *L) {
-	struct ltreesitter_Query *q = ltreesitter_check_query(L, 1);
+	ltreesitter_Query *q = ltreesitter_check_query(L, 1);
 	free((char *)q->src);
 	ts_query_delete(q->query);
 	return 1;
@@ -136,7 +136,7 @@ static bool do_predicates(
     lua_State *L,
     const int query_idx,
     const TSQuery *const q,
-    const struct ltreesitter_Tree *const t,
+    const ltreesitter_Tree *const t,
     const TSQueryMatch *const m) {
 	const uint32_t num_patterns = ts_query_pattern_count(q);
 	for (uint32_t i = 0; i < num_patterns; ++i) {
@@ -224,13 +224,13 @@ static bool do_predicates(
 
 static int query_match(lua_State *L) {
 	// upvalues: Query, Node, Cursor
-	struct ltreesitter_Query *const q = ltreesitter_check_query(L, lua_upvalueindex(1));
-	struct ltreesitter_QueryCursor *c = ltreesitter_check_query_cursor(L, lua_upvalueindex(3));
+	ltreesitter_Query *const q = ltreesitter_check_query(L, lua_upvalueindex(1));
+	ltreesitter_QueryCursor *c = ltreesitter_check_query_cursor(L, lua_upvalueindex(3));
 	TSQueryMatch m;
 	push_parent(L, lua_upvalueindex(2));
 	const int parent_idx = lua_gettop(L);
 	/* printf("checking if parent is tree\n"); */
-	struct ltreesitter_Tree *const t = ltreesitter_check_tree(L, parent_idx, "check failed");
+	ltreesitter_Tree *const t = ltreesitter_check_tree(L, parent_idx, "check failed");
 	/* printf("   ptr: %p\n", t); */
 
 	do {
@@ -270,11 +270,11 @@ static int query_match(lua_State *L) {
 
 static int query_capture(lua_State *L) {
 	// upvalues: Query, Node, Cursor
-	struct ltreesitter_Query *const q = ltreesitter_check_query(L, lua_upvalueindex(1));
+	ltreesitter_Query *const q = ltreesitter_check_query(L, lua_upvalueindex(1));
 	TSQueryCursor *c = ltreesitter_check_query_cursor(L, lua_upvalueindex(3))->query_cursor;
 	push_parent(L, lua_upvalueindex(2));
 	const int parent_idx = lua_gettop(L);
-	struct ltreesitter_Tree *const t = ltreesitter_check_tree(L, -1, "parent check fail");
+	ltreesitter_Tree *const t = ltreesitter_check_tree(L, -1, "parent check fail");
 	TSQueryMatch m;
 	uint32_t capture_index;
 
@@ -316,10 +316,10 @@ static int query_capture(lua_State *L) {
 ]]*/
 static int query_match_factory(lua_State *L) {
 	lua_settop(L, 2);
-	struct ltreesitter_Query *const q = ltreesitter_check_query(L, 1);
+	ltreesitter_Query *const q = ltreesitter_check_query(L, 1);
 	TSNode n = ltreesitter_check_node(L, 2)->node;
 	TSQueryCursor *c = ts_query_cursor_new();
-	struct ltreesitter_QueryCursor *lc = lua_newuserdata(L, sizeof(struct ltreesitter_QueryCursor));
+	ltreesitter_QueryCursor *lc = lua_newuserdata(L, sizeof(struct ltreesitter_QueryCursor));
 	setmetatable(L, LTREESITTER_QUERY_CURSOR_METATABLE_NAME);
 	lc->query_cursor = c;
 	lc->query = q;
@@ -340,10 +340,10 @@ static int query_match_factory(lua_State *L) {
 ]]*/
 static int query_capture_factory(lua_State *L) {
 	lua_settop(L, 2);
-	struct ltreesitter_Query *const q = ltreesitter_check_query(L, 1);
+	ltreesitter_Query *const q = ltreesitter_check_query(L, 1);
 	TSNode n = ltreesitter_check_node(L, 2)->node;
 	TSQueryCursor *c = ts_query_cursor_new();
-	struct ltreesitter_QueryCursor *lc = lua_newuserdata(L, sizeof(struct ltreesitter_QueryCursor));
+	ltreesitter_QueryCursor *lc = lua_newuserdata(L, sizeof(struct ltreesitter_QueryCursor));
 	setmetatable(L, LTREESITTER_QUERY_CURSOR_METATABLE_NAME);
 	lc->query_cursor = c;
 	lc->query = q;
@@ -449,7 +449,7 @@ static int query_exec(lua_State *L) {
 	TSQueryCursor *c = ts_query_cursor_new();
 
 	push_parent(L, 2);
-	struct ltreesitter_Tree *const t = ltreesitter_check_tree_arg(L, -1);
+	ltreesitter_Tree *const t = ltreesitter_check_tree_arg(L, -1);
 
 	TSQueryMatch m;
 	ts_query_cursor_exec(c, q, n);

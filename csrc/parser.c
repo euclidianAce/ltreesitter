@@ -14,7 +14,6 @@
 #include <ltreesitter/dynamiclib.h>
 #include <ltreesitter/query.h>
 #include <ltreesitter/tree.h>
-#include <ltreesitter/types.h>
 
 static const char *parser_cache_index = "parsers";
 
@@ -37,7 +36,7 @@ enum ParserLoadErr {
 };
 
 #define TREE_SITTER_SYM "tree_sitter_"
-static enum ParserLoadErr try_dlopen(struct ltreesitter_Parser *p, const char *parser_file, const char *lang_name) {
+static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_file, const char *lang_name) {
 	static char buf[128];
 	if (snprintf(buf, sizeof(buf) - sizeof(TREE_SITTER_SYM), TREE_SITTER_SYM "%s", lang_name) == 0) {
 		return PARSE_LOAD_ERR_BUFLEN;
@@ -74,8 +73,8 @@ static enum ParserLoadErr try_dlopen(struct ltreesitter_Parser *p, const char *p
 	return PARSE_LOAD_ERR_NONE;
 }
 
-static struct ltreesitter_Parser *new_parser(lua_State *L) {
-	struct ltreesitter_Parser *const p = lua_newuserdata(L, sizeof(struct ltreesitter_Parser));
+static ltreesitter_Parser *new_parser(lua_State *L) {
+	ltreesitter_Parser *const p = lua_newuserdata(L, sizeof(struct ltreesitter_Parser));
 	setmetatable(L, LTREESITTER_PARSER_METATABLE_NAME);
 	return p;
 }
@@ -129,7 +128,7 @@ int ltreesitter_load_parser(lua_State *L) {
 	if (push_cached_parser(L, parser_file, lang_name))
 		return 1;
 
-	struct ltreesitter_Parser proxy = {
+	ltreesitter_Parser proxy = {
 	    .dl = NULL,
 	    .parser = NULL,
 	    .lang = NULL,
@@ -159,7 +158,7 @@ int ltreesitter_load_parser(lua_State *L) {
 		return 2;
 	}
 
-	struct ltreesitter_Parser *const p = new_parser(L);
+	ltreesitter_Parser *const p = new_parser(L);
 	p->dl = proxy.dl;
 	p->parser = proxy.parser;
 	p->lang = proxy.lang;
@@ -256,7 +255,7 @@ int ltreesitter_require_parser(lua_State *L) {
 				return 1;
 			}
 
-			struct ltreesitter_Parser proxy = (struct ltreesitter_Parser){
+			ltreesitter_Parser proxy = (struct ltreesitter_Parser){
 			    .dl = NULL,
 			    .parser = NULL,
 			    .lang = NULL,
@@ -264,7 +263,7 @@ int ltreesitter_require_parser(lua_State *L) {
 			switch (try_dlopen(&proxy, buf, lang_name)) {
 			case PARSE_LOAD_ERR_NONE: {
 				luaL_pushresult(&b);
-				struct ltreesitter_Parser *const p = new_parser(L);
+				ltreesitter_Parser *const p = new_parser(L);
 				p->dl = proxy.dl;
 				p->parser = proxy.parser;
 				p->lang = proxy.lang;
@@ -335,7 +334,7 @@ err_cleanup:
 }
 
 static int parser_gc(lua_State *L) {
-	struct ltreesitter_Parser *lp = luaL_checkudata(L, 1, LTREESITTER_PARSER_METATABLE_NAME);
+	ltreesitter_Parser *lp = luaL_checkudata(L, 1, LTREESITTER_PARSER_METATABLE_NAME);
 #ifdef LOG_GC
 	printf("Parser p: %p is being garbage collected\n", lp);
 	printf("   p->dl: %p\n", lp->dl);
@@ -346,7 +345,7 @@ static int parser_gc(lua_State *L) {
 	return 0;
 }
 
-struct ltreesitter_Parser *ltreesitter_check_parser(lua_State *L, int idx) {
+ltreesitter_Parser *ltreesitter_check_parser(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_PARSER_METATABLE_NAME);
 }
 
@@ -360,7 +359,7 @@ struct ltreesitter_Parser *ltreesitter_check_parser(lua_State *L, int idx) {
 ]] */
 int ltreesitter_parser_parse_string(lua_State *L) {
 	lua_settop(L, 3);
-	struct ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
+	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
 	size_t len;
 	const char *str = luaL_checklstring(L, 2, &len);
 	const char *copy = str_ldup(str, len);
@@ -459,7 +458,7 @@ static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, T
 ]] */
 int ltreesitter_parser_parse_with(lua_State *L) {
 	lua_settop(L, 3);
-	struct ltreesitter_Parser *const p = ltreesitter_check_parser(L, 1);
+	ltreesitter_Parser *const p = ltreesitter_check_parser(L, 1);
 	TSTree *old_tree = NULL;
 	if (!lua_isnil(L, 3)) {
 		old_tree = ltreesitter_check_tree_arg(L, 3)->tree;
@@ -509,7 +508,7 @@ int ltreesitter_parser_parse_with(lua_State *L) {
    Sets how long the parser is allowed to take in microseconds
 ]] */
 int ltreesitter_parser_set_timeout(lua_State *L) {
-	struct ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
+	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
 	const lua_Number n = luaL_checknumber(L, 2);
 	luaL_argcheck(L, n >= 0, 2, "expected non-negative integer");
 	ts_parser_set_timeout_micros(p->parser, (uint64_t)n);
@@ -550,7 +549,7 @@ static TSPoint topoint(lua_State *L, const int idx) {
 ]]*/
 static int parser_set_ranges(lua_State *L) {
 	lua_settop(L, 2);
-	struct ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
+	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
 
 	if (lua_isnil(L, 2)) {
 		lua_pushboolean(L, ts_parser_set_included_ranges(p->parser, NULL, 0));
@@ -622,7 +621,7 @@ static void push_range(lua_State *L, TSRange const *range) {
    Get the ranges of text that the parser will include when parsing
 ]] */
 static int parser_get_ranges(lua_State *L) {
-	struct ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
+	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
 
 	uint32_t length = 0;
 	const TSRange *ranges = ts_parser_included_ranges(p->parser, &length);
@@ -640,7 +639,7 @@ static int parser_get_ranges(lua_State *L) {
 ]] */
 int make_query(lua_State *L) {
 	lua_settop(L, 2);
-	struct ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
+	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
 	size_t len;
 	// lua doesn't guarantee that this string stays alive after it is popped from the stack, so dupe it
 	const char *lua_query_src = luaL_checklstring(L, 2, &len);
@@ -671,7 +670,7 @@ int make_query(lua_State *L) {
    get the api version of the parser's language
 ]] */
 static int get_version(lua_State *L) {
-	struct ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
+	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
 	pushinteger(L, p->lang_version);
 	return 1;
 }

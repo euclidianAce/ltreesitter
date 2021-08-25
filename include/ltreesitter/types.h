@@ -4,6 +4,13 @@
 #include "dynamiclib.h"
 #include <tree_sitter/api.h>
 
+typedef struct ltreesitter_Parser ltreesitter_Parser;
+typedef struct ltreesitter_Tree ltreesitter_Tree;
+typedef struct ltreesitter_TreeCursor ltreesitter_TreeCursor;
+typedef struct ltreesitter_Node ltreesitter_Node;
+typedef struct ltreesitter_Query ltreesitter_Query;
+typedef struct ltreesitter_QueryCursor ltreesitter_QueryCursor;
+
 struct ltreesitter_Parser {
 	const TSLanguage *lang;
 	uint32_t lang_version;
@@ -49,7 +56,7 @@ struct ltreesitter_Query {
 #define LTREESITTER_QUERY_METATABLE_NAME "ltreesitter.Query"
 
 struct ltreesitter_QueryCursor {
-	struct ltreesitter_Query *query;
+	ltreesitter_Query *query;
 	TSQueryCursor *query_cursor;
 };
 #define LTREESITTER_QUERY_CURSOR_METATABLE_NAME "ltreesitter.QueryCursor"
