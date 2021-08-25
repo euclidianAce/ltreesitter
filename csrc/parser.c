@@ -12,7 +12,7 @@
 
 #include <ltreesitter/types.h>
 #include <ltreesitter/tree.h>
-#include <ltreesitter/luautils.h>
+#include "luautils.h"
 #include <ltreesitter/dynamiclib.h>
 #include <ltreesitter/query.h>
 

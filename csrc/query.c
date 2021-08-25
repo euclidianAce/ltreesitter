@@ -3,10 +3,10 @@
 #include <stddef.h>
 #include <tree_sitter/api.h>
 
-#include <ltreesitter/luautils.h>
+#include "luautils.h"
 #include <ltreesitter/node.h>
 #include <ltreesitter/types.h>
-#include <ltreesitter/object.h>
+#include "object.h"
 #include <ltreesitter/parser.h>
 #include <ltreesitter/query_cursor.h>
 #include <ltreesitter/tree.h>

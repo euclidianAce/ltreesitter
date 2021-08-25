@@ -1,5 +1,5 @@
 
-#include <ltreesitter/luautils.h>
+#include "luautils.h"
 
 char *str_ldup(const char *s, const size_t len) {
 	char *dup = malloc(sizeof(char) * (len + 1));

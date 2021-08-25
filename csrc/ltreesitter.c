@@ -5,9 +5,9 @@
 #include <lua.h>
 
 #include <ltreesitter/dynamiclib.h>
-#include <ltreesitter/luautils.h>
+#include "luautils.h"
 #include <ltreesitter/node.h>
-#include <ltreesitter/object.h>
+#include "object.h"
 #include <ltreesitter/parser.h>
 #include <ltreesitter/query.h>
 #include <ltreesitter/query_cursor.h>

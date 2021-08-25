@@ -6,8 +6,8 @@
 #include <lualib.h>
 #include <lauxlib.h>
 
-#include <ltreesitter/luautils.h>
-#include <ltreesitter/object.h>
+#include "luautils.h"
+#include "object.h"
 #include <ltreesitter/types.h>
 #include <ltreesitter/node.h>
 #include <ltreesitter/tree.h>

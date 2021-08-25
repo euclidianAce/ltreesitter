@@ -1,5 +1,5 @@
 
-#include <ltreesitter/luautils.h>
+#include "luautils.h"
 
 static const char *object_field = "objects";
 // map of objects to their parents

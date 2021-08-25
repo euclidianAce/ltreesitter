@@ -8,10 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ltreesitter/object.h>
+#include "object.h"
 #include <ltreesitter/node.h>
 #include <ltreesitter/types.h>
-#include <ltreesitter/luautils.h>
+#include "luautils.h"
 
 #ifdef LOG_GC
 #include <stdio.h>

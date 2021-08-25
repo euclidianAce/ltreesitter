@@ -1,7 +1,7 @@
 
-#include <ltreesitter/luautils.h>
+#include "luautils.h"
 #include <ltreesitter/types.h>
-#include <ltreesitter/object.h>
+#include "object.h"
 
 struct ltreesitter_QueryCursor *ltreesitter_check_query_cursor(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_QUERY_CURSOR_METATABLE_NAME);

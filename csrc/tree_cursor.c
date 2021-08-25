@@ -1,8 +1,8 @@
 
-#include <ltreesitter/luautils.h>
+#include "luautils.h"
 #include <ltreesitter/node.h>
 #include <ltreesitter/tree.h>
-#include <ltreesitter/object.h>
+#include "object.h"
 #include <ltreesitter/types.h>
 
 struct ltreesitter_TreeCursor *ltreesitter_check_tree_cursor(lua_State *L, int idx) {
