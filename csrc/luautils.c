@@ -158,4 +158,13 @@ void newtable_with_mode(lua_State *L, const char *mode) {
 	lua_setmetatable(L, -2); // { <metatable> = { __mode = mode } }
 }
 
-
+size_t length_of(lua_State *L, int index) {
+#if LUA_VERSION_NUM == 501
+	return lua_objlen(L, index);
+#else
+	lua_len(L, index);
+	size_t len = lua_tointeger(L, -1);
+	lua_pop(L, 1);
+	return len;
+#endif
+}
