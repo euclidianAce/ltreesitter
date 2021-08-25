@@ -225,7 +225,8 @@ static bool do_predicates(
 
 static int query_match(lua_State *L) {
 	// upvalues: Query, Node, Cursor
-	ltreesitter_Query *const q = ltreesitter_check_query(L, lua_upvalueindex(1));
+	const int query_idx = lua_upvalueindex(1);
+	ltreesitter_Query *const q = ltreesitter_check_query(L, query_idx);
 	ltreesitter_QueryCursor *c = ltreesitter_check_query_cursor(L, lua_upvalueindex(3));
 	TSQueryMatch m;
 	push_parent(L, lua_upvalueindex(2));
@@ -237,7 +238,7 @@ static int query_match(lua_State *L) {
 	do {
 		if (!ts_query_cursor_next_match(c->query_cursor, &m))
 			return 0;
-	} while (!do_predicates(L, lua_upvalueindex(1), q->query, t, &m));
+	} while (!do_predicates(L, query_idx, q->query, t, &m));
 
 	lua_createtable(L, 0, 5); // { <match> }
 	pushinteger(L, m.id);
@@ -270,7 +271,8 @@ static int query_match(lua_State *L) {
 
 static int query_capture(lua_State *L) {
 	// upvalues: Query, Node, Cursor
-	ltreesitter_Query *const q = ltreesitter_check_query(L, lua_upvalueindex(1));
+	const int query_idx = lua_upvalueindex(1);
+	ltreesitter_Query *const q = ltreesitter_check_query(L, query_idx);
 	TSQueryCursor *c = ltreesitter_check_query_cursor(L, lua_upvalueindex(3))->query_cursor;
 	push_parent(L, lua_upvalueindex(2));
 	const int parent_idx = lua_gettop(L);
@@ -281,7 +283,7 @@ static int query_capture(lua_State *L) {
 	do {
 		if (!ts_query_cursor_next_capture(c, &m, &capture_index))
 			return 0;
-	} while (!do_predicates(L, lua_upvalueindex(1), q->query, t, &m));
+	} while (!do_predicates(L, query_idx, q->query, t, &m));
 
 	ltreesitter_push_node(
 	    L, parent_idx,
