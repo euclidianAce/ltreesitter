@@ -4,9 +4,11 @@ pkgs.mkShell {
   buildInputs = with pkgs; [
     lua5_3
     lua53Packages.luarocks
-
-    # tests
     lua53Packages.busted
+
+    # luajit
+    # luajitPackages.luarocks
+    # luajitPackages.busted
 
     tree-sitter
 
