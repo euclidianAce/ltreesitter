@@ -1,20 +1,20 @@
 #include <stdio.h>
 
+#include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
-#include <lauxlib.h>
 
 #include <tree_sitter/api.h>
 
-#include <stdlib.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 
-#include <ltreesitter/types.h>
-#include <ltreesitter/tree.h>
 #include "luautils.h"
 #include <ltreesitter/dynamiclib.h>
 #include <ltreesitter/query.h>
+#include <ltreesitter/tree.h>
+#include <ltreesitter/types.h>
 
 static const char *parser_cache_index = "parsers";
 
@@ -48,7 +48,7 @@ static enum ParserLoadErr try_dlopen(struct ltreesitter_Parser *p, const char *p
 	}
 
 	// ISO C is not a fan of void * -> function pointer
-	TSLanguage *(*tree_sitter_lang)(void) = (TSLanguage *(*)(void))dynamic_sym(p->dl, buf);
+	TSLanguage *(*tree_sitter_lang)(void) = (TSLanguage * (*)(void)) dynamic_sym(p->dl, buf);
 
 	if (!tree_sitter_lang) {
 		close_dynamic_lib(p->dl);
@@ -91,15 +91,15 @@ static inline void push_parser_cache_key(lua_State *L, const char *dl_file, cons
 
 static void cache_parser(lua_State *L, const char *dl_file, const char *lang_name) {
 	const int parser_idx = lua_gettop(L);
-	push_parser_cache(L); // cache
+	push_parser_cache(L);						  // cache
 	push_parser_cache_key(L, dl_file, lang_name); // parser, cache, "thing.so\1blah"
-	lua_pushvalue(L, parser_idx); // cache, "thing.so\1blah", parser
-	lua_rawset(L, -3); // cache
+	lua_pushvalue(L, parser_idx);				  // cache, "thing.so\1blah", parser
+	lua_rawset(L, -3);							  // cache
 	lua_pop(L, 1);
 }
 
 static bool push_cached_parser(lua_State *L, const char *dl_file, const char *lang_name) {
-	push_parser_cache(L); // cache
+	push_parser_cache(L);						  // cache
 	push_parser_cache_key(L, dl_file, lang_name); // cache, "dl_file\1lang_name"
 
 	if (table_rawget(L, -2) != LUA_TNIL) { // cache, nil | parser
@@ -126,10 +126,13 @@ int ltreesitter_load_parser(lua_State *L) {
 	const char *parser_file = luaL_checkstring(L, 1);
 	const char *lang_name = luaL_checkstring(L, 2);
 
-	if (push_cached_parser(L, parser_file, lang_name)) return 1;
+	if (push_cached_parser(L, parser_file, lang_name))
+		return 1;
 
 	struct ltreesitter_Parser proxy = {
-		.dl = NULL, .parser = NULL, .lang = NULL,
+		.dl = NULL,
+		.parser = NULL,
+		.lang = NULL,
 	};
 	switch (try_dlopen(&proxy, parser_file, lang_name)) {
 	case PARSE_LOAD_ERR_NONE:
@@ -179,7 +182,9 @@ int ltreesitter_load_parser(lua_State *L) {
    -- etc.
    </pre>
 ]] */
-static inline void buf_add_str(luaL_Buffer *b, const char *s) { luaL_addlstring(b, s, strlen(s)); }
+static inline void buf_add_str(luaL_Buffer *b, const char *s) {
+	luaL_addlstring(b, s, strlen(s));
+}
 
 #ifdef _WIN32
 #define PATH_SEP "\\"
@@ -200,9 +205,9 @@ int ltreesitter_require_parser(lua_State *L) {
 	}
 
 	// prepend ~/.tree-sitter/bin/?.so to package.cpath
-	lua_getglobal(L, "package"); // lang_name, <ts path>, package
+	lua_getglobal(L, "package");  // lang_name, <ts path>, package
 	lua_getfield(L, -1, "cpath"); // lang_name, <ts path>, package, package.cpath
-	lua_remove(L, -2); // lang_name, <ts path>, package.cpath
+	lua_remove(L, -2);			  // lang_name, <ts path>, package.cpath
 
 	if (user_home) {
 		lua_concat(L, 2);
@@ -212,7 +217,8 @@ int ltreesitter_require_parser(lua_State *L) {
 	const char *cpath = lua_tostring(L, -1);
 	const size_t buf_size = strlen(cpath);
 	char *buf = malloc(sizeof(char) * (buf_size + lang_len));
-	if (!buf) return ALLOC_FAIL(L);
+	if (!buf)
+		return ALLOC_FAIL(L);
 
 	// buffer to build up search paths in error message
 	luaL_Buffer b;
@@ -228,8 +234,10 @@ int ltreesitter_require_parser(lua_State *L) {
 	for (size_t i = 0; i <= buf_size; ++i, ++j) {
 		// cpath doesn't necessarily end with a ; so lets pretend it does
 		char c;
-		if (i == buf_size) c = ';';
-		else c = cpath[i];
+		if (i == buf_size)
+			c = ';';
+		else
+			c = cpath[i];
 
 		switch (c) {
 		case '?':
@@ -249,7 +257,9 @@ int ltreesitter_require_parser(lua_State *L) {
 			}
 
 			struct ltreesitter_Parser proxy = (struct ltreesitter_Parser){
-				.dl = NULL, .parser = NULL, .lang = NULL,
+				.dl = NULL,
+				.parser = NULL,
+				.lang = NULL,
 			};
 			switch (try_dlopen(&proxy, buf, lang_name)) {
 			case PARSE_LOAD_ERR_NONE: {
@@ -354,7 +364,8 @@ int ltreesitter_parser_parse_string(lua_State *L) {
 	size_t len;
 	const char *str = luaL_checklstring(L, 2, &len);
 	const char *copy = str_ldup(str, len);
-	if (!copy) return ALLOC_FAIL(L);
+	if (!copy)
+		return ALLOC_FAIL(L);
 
 	TSTree *old_tree;
 	if (lua_type(L, 3) == LUA_TNIL) {
@@ -393,11 +404,11 @@ static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, T
 	lua_pushvalue(L, -1); // grab a copy of the function
 	pushinteger(L, byte_index);
 
-	lua_newtable(L); // byte_index, {}
-	pushinteger(L, position.row); // byte_index, {}, row
-	lua_setfield(L, -2, "row"); // byte_index, { row = row }
+	lua_newtable(L);				 // byte_index, {}
+	pushinteger(L, position.row);	 // byte_index, {}, row
+	lua_setfield(L, -2, "row");		 // byte_index, { row = row }
 	pushinteger(L, position.column); // byte_index, { row = row }, column
-	lua_setfield(L, -2, "column"); // byte_index, { row = row, column = column }
+	lua_setfield(L, -2, "column");	 // byte_index, { row = row, column = column }
 
 	if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
 		i->read_error = READERR_PCALL;
@@ -480,7 +491,9 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 		return luaL_error(L, "read error: Provided function errored: %s", lua_tostring(L, -1));
 	case READERR_TYPE:
 		return luaL_error(L, "read error: Provided function returned %s (expected string)", lua_typename(L, lua_type(L, -1)));
-	case READERR_NONE: default: break;
+	case READERR_NONE:
+	default:
+		break;
 	}
 
 	if (!t) {
@@ -535,54 +548,90 @@ static TSPoint topoint(lua_State *L, const int idx) {
 
    returns whether or not setting the range succeeded
 ]]*/
-int ltreesitter_parser_set_ranges(lua_State *L) {
-
+static int parser_set_ranges(lua_State *L) {
+	lua_settop(L, 2);
 	struct ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
 
-	if (lua_isnoneornil(L, 2)) {
+	if (lua_isnil(L, 2)) {
 		lua_pushboolean(L, ts_parser_set_included_ranges(p->parser, NULL, 0));
 		return 1;
 	}
 
-	uint32_t len = 0;
-	size_t actual_len = 8;
-	size_t size = sizeof(TSRange) * actual_len;
-	TSRange *ranges = malloc(size);
-	if (!ranges) return ALLOC_FAIL(L);
+	size_t len = length_of(L, -1);
+	TSRange *ranges = malloc(len * sizeof(TSRange));
+	if (!ranges)
+		return ALLOC_FAIL(L);
 
-	size_t i = 0;
-	table_geti(L, 2, 1);
+#define COPY_FIELD(field_name, field_type, method)           \
+	do {                                                     \
+		if (!expect_field(L, -1, #field_name, field_type)) { \
+			free(ranges);                                    \
+			return 0;                                        \
+		}                                                    \
+		ranges[i].field_name = method(L, -1);                \
+		lua_pop(L, 1);                                       \
+	} while (0)
 
-#define COPY_FIELD(idx, field_name, field_type, method) do {\
-	if (!expect_field(L, (idx), #field_name, field_type)) { free(ranges); return 0; } \
-	ranges[i] . field_name = method(L, (idx)); \
-	lua_pop(L, 1); } while (0)
+	for (size_t i = 0; i < len; ++i) {
+		table_geti(L, 2, i + 1);
+		COPY_FIELD(start_byte, LUA_TNUMBER, lua_tonumber);
+		COPY_FIELD(end_byte, LUA_TNUMBER, lua_tonumber);
+		COPY_FIELD(start_point, LUA_TTABLE, topoint);
+		COPY_FIELD(end_point, LUA_TTABLE, topoint);
+		lua_pop(L, 1);
 
-	while (!lua_isnil(L, -1)) {
-		if (i >= actual_len) {
-			actual_len *= 2;
-			ranges = realloc(ranges, sizeof(TSRange) * actual_len);
-			if (!ranges) return ALLOC_FAIL(L);
+		if (i > 0 && ranges[i - 1].end_byte > ranges[i].start_byte) {
+			return luaL_error(L, "Error in ranges: range[%d].end_byte (%d) is greater than range[%d].start_byte (%d)", i, (int)ranges[i - 1].end_byte, i + 1, (int)ranges[i].start_byte);
 		}
-
-		COPY_FIELD(-1, start_byte, LUA_TNUMBER, lua_tonumber);
-		COPY_FIELD(-1, end_byte, LUA_TNUMBER, lua_tonumber);
-
-		if (i > 0 && ranges[i-1].end_byte > ranges[i].start_byte) {
-			return luaL_error(L, "Error in ranges: range[%d].end_byte (%u) is greater than range[%d].start_byte (%u)", i, ranges[i-1], i+1, ranges[i]);
-		}
-
-		COPY_FIELD(-1, start_point, LUA_TTABLE, topoint);
-		COPY_FIELD(-1, end_point, LUA_TTABLE, topoint);
-
-		++i;
-		table_geti(L, 2, i+1);
 	}
 
 #undef COPY_FIELD
 
 	lua_pushboolean(L, ts_parser_set_included_ranges(p->parser, ranges, len));
 	free(ranges);
+	return 1;
+}
+
+#define SET_FIELD(L, push_fn, struct_ptr, field_name) \
+	do {                                              \
+		push_fn(L, (struct_ptr)->field_name);         \
+		lua_setfield(L, -2, #field_name);             \
+	} while (0);
+
+#define SET_FIELD_P(L, push_fn, struct_ptr, field_name) \
+	do {                                                \
+		push_fn(L, &(struct_ptr)->field_name);          \
+		lua_setfield(L, -2, #field_name);               \
+	} while (0);
+
+static void push_point(lua_State *L, TSPoint const *point) {
+	lua_createtable(L, 0, 2);
+	SET_FIELD(L, pushinteger, point, row);
+	SET_FIELD(L, pushinteger, point, column);
+}
+
+static void push_range(lua_State *L, TSRange const *range) {
+	lua_createtable(L, 0, 4);
+	SET_FIELD(L, pushinteger, range, start_byte);
+	SET_FIELD(L, pushinteger, range, end_byte);
+	SET_FIELD_P(L, push_point, range, start_point);
+	SET_FIELD_P(L, push_point, range, end_point);
+}
+
+/* @teal-export Parser.get_ranges: function(Parser): {Range} [[
+   Get the ranges of text that the parser will include when parsing
+]] */
+static int parser_get_ranges(lua_State *L) {
+	struct ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
+
+	uint32_t length = 0;
+	const TSRange *ranges = ts_parser_included_ranges(p->parser, &length);
+	lua_createtable(L, (int)length, 0);
+	for (uint32_t i = 0; i < length; ++i) {
+		push_range(L, ranges + i);
+		lua_rawseti(L, -2, i + 1);
+	}
+
 	return 1;
 }
 
@@ -596,7 +645,9 @@ int make_query(lua_State *L) {
 	// lua doesn't guarantee that this string stays alive after it is popped from the stack, so dupe it
 	const char *lua_query_src = luaL_checklstring(L, 2, &len);
 	const char *query_src = str_ldup(lua_query_src, len);
-	if (!query_src) { return ALLOC_FAIL(L); }
+	if (!query_src) {
+		return ALLOC_FAIL(L);
+	}
 	uint32_t err_offset = 0;
 	TSQueryError err_type = TSQueryErrorNone;
 	// TODO: this segfaults for some reason, (:
@@ -605,8 +656,7 @@ int make_query(lua_State *L) {
 		query_src,
 		len,
 		&err_offset,
-		&err_type
-	);
+		&err_type);
 	handle_query_error(L, q, err_offset, err_type, query_src);
 
 	if (q) {
@@ -628,19 +678,18 @@ static int get_version(lua_State *L) {
 
 static const luaL_Reg parser_methods[] = {
 	{"set_timeout", ltreesitter_parser_set_timeout},
-	{"set_ranges", ltreesitter_parser_set_ranges},
+	{"set_ranges", parser_set_ranges},
+	{"get_ranges", parser_get_ranges},
 	{"get_version", get_version},
 
 	{"parse_string", ltreesitter_parser_parse_string},
 	{"parse_with", ltreesitter_parser_parse_with},
 	{"query", make_query},
 
-	{NULL, NULL}
-};
+	{NULL, NULL}};
 static const luaL_Reg parser_metamethods[] = {
 	{"__gc", parser_gc},
-	{NULL, NULL}
-};
+	{NULL, NULL}};
 
 void ltreesitter_create_parser_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_PARSER_METATABLE_NAME, parser_metamethods, parser_methods);

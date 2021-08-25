@@ -37,12 +37,13 @@ local record ltreesitter
       type: function(Node): string  -- csrc/node.c:21
    end
    record Parser
-      get_version: function(Parser): integer  -- csrc/parser.c:619
-      parse_string: function(Parser, string, Tree): Tree  -- csrc/parser.c:342
-      parse_with: function(Parser, reader: function(integer, Point): (string), old_tree: Tree): Tree  -- csrc/parser.c:439
-      query: function(Parser, string): Query  -- csrc/parser.c:588
-      set_ranges: function(Parser, {Range}): boolean  -- csrc/parser.c:528
-      set_timeout: function(Parser, integer)  -- csrc/parser.c:494
+      get_ranges: function(Parser): {Range}  -- csrc/parser.c:620
+      get_version: function(Parser): integer  -- csrc/parser.c:669
+      parse_string: function(Parser, string, Tree): Tree  -- csrc/parser.c:352
+      parse_with: function(Parser, reader: function(integer, Point): (string), old_tree: Tree): Tree  -- csrc/parser.c:450
+      query: function(Parser, string): Query  -- csrc/parser.c:637
+      set_ranges: function(Parser, {Range}): boolean  -- csrc/parser.c:541
+      set_timeout: function(Parser, integer)  -- csrc/parser.c:507
    end
    record Query
       record Match
@@ -62,7 +63,7 @@ local record ltreesitter
       root: function(Tree): Node  -- csrc/tree.c:72
    end
    load: function(file_name: string, language_name: string): Parser, string  -- csrc/parser.c:112
-   require: function(library_file_name: string, language_name: string): Parser  -- csrc/parser.c:166
+   require: function(library_file_name: string, language_name: string): Parser  -- csrc/parser.c:169
    version: string -- csrc/ltreesitter.c:16
 
    -- Inlines
@@ -88,7 +89,7 @@ local record ltreesitter
 
       start_point: Point
       end_point: Point
-   end -- csrc/parser.c:505
+   end -- csrc/parser.c:518
 end
 
 return ltreesitter

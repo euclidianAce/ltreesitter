@@ -40,6 +40,43 @@ describe("Parser", function()
 			end)
 		end)
 	end)
+	describe("get_ranges", function()
+		it("should return table", function()
+			assert.is.boolean(p:set_ranges())
+		end)
+		it("should return an array of Points", function()
+			local ranges = p:get_ranges()
+			assert(#ranges > 0)
+			for _, r in ipairs(ranges) do
+				assert.is.number(r.start_byte)
+				assert.is.number(r.end_byte)
+				assert.is.table(r.start_point)
+				assert.is.number(r.start_point.row)
+				assert.is.number(r.start_point.column)
+				assert.is.table(r.end_point)
+				assert.is.number(r.end_point.row)
+				assert.is.number(r.end_point.column)
+			end
+		end)
+		it("should return the values from set_ranges", function()
+			local ranges = {
+				{
+					start_byte = 0, end_byte = 5,
+					start_point = { row = 0, column = 0 },
+					end_point   = { row = 0, column = 5 },
+				},
+				{
+					start_byte = 6, end_byte = 10,
+					start_point = { row = 0, column = 6 },
+					end_point   = { row = 0, column = 10 },
+				}
+			}
+			assert(p:set_ranges(ranges))
+			local got = p:get_ranges()
+			p:set_ranges()
+			assert.are.same(got, ranges)
+		end)
+	end)
 	describe("parse_with", function()
 		it("should error out gracefully when the provided function errors", function()
 			assert.has.errors(function()
