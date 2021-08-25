@@ -1,15 +1,15 @@
 
-#include <string.h>
 #include <stddef.h>
+#include <string.h>
 #include <tree_sitter/api.h>
 
 #include "luautils.h"
-#include <ltreesitter/node.h>
-#include <ltreesitter/types.h>
 #include "object.h"
+#include <ltreesitter/node.h>
 #include <ltreesitter/parser.h>
 #include <ltreesitter/query_cursor.h>
 #include <ltreesitter/tree.h>
+#include <ltreesitter/types.h>
 
 static const char *default_predicate_field = "default_predicates";
 static const char *predicate_field = "predicates";
@@ -27,41 +27,46 @@ struct ltreesitter_Query *ltreesitter_check_query(lua_State *L, int idx) {
 }
 
 void handle_query_error(
-	lua_State *L,
-	TSQuery *q,
-	uint32_t err_offset,
-	TSQueryError err_type,
-	const char *query_src
-) {
-	if (q) return;
-	char slice[16] = { 0 };
-	strncpy(slice, &query_src[ err_offset >= 10 ? err_offset - 10 : err_offset ], 15);
+    lua_State *L,
+    TSQuery *q,
+    uint32_t err_offset,
+    TSQueryError err_type,
+    const char *query_src) {
+	if (q)
+		return;
+	char slice[16] = {0};
+	strncpy(slice, &query_src[err_offset >= 10 ? err_offset - 10 : err_offset], 15);
+
+#define CASE(typ, str)                                   \
+	case typ:                                            \
+		lua_pushfstring(L, str, slice, (int)err_offset); \
+		break
 
 	switch (err_type) {
-#define err(str) lua_pushfstring(L, str, slice, (int)err_offset)
-	case TSQueryErrorSyntax:    err("Query syntax error: around '%s' (at offset %d)");    break;
-	case TSQueryErrorNodeType:  err("Query node type error: around '%s' (at offset %d)"); break;
-	case TSQueryErrorField:     err("Query field error: around '%s' (at offset %d)");     break;
-	case TSQueryErrorCapture:   err("Query capture error: around '%s' (at offset %d)");   break;
-	case TSQueryErrorStructure: err("Query structure error: around '%s' (at offset %d)"); break;
-#undef err
-	default: UNREACHABLE(L);
+		CASE(TSQueryErrorSyntax, "Query syntax error: around '%s' (at offset %d)");
+		CASE(TSQueryErrorNodeType, "Query node type error: around '%s' (at offset %d)");
+		CASE(TSQueryErrorField, "Query field error: around '%s' (at offset %d)");
+		CASE(TSQueryErrorCapture, "Query capture error: around '%s' (at offset %d)");
+		CASE(TSQueryErrorStructure, "Query structure error: around '%s' (at offset %d)");
+	default:
+		UNREACHABLE(L);
 	}
+#undef CASE
 
 	lua_error(L);
 }
 
 void push_query(
-	lua_State *L,
-	const TSLanguage *const lang,
-	const char *const src,
-	const size_t src_len,
-	TSQuery *const q,
-	int parent_idx
-) {
+    lua_State *L,
+    const TSLanguage *const lang,
+    const char *const src,
+    const size_t src_len,
+    TSQuery *const q,
+    int parent_idx) {
 	struct ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query));
 	setmetatable(L, LTREESITTER_QUERY_METATABLE_NAME);
-	lua_pushvalue(L, -1); set_parent(L, parent_idx);
+	lua_pushvalue(L, -1);
+	set_parent(L, parent_idx);
 	lq->lang = lang;
 	lq->src = src;
 	lq->src_len = src_len;
@@ -75,16 +80,18 @@ static void push_query_copy(lua_State *L, int query_idx) {
 	uint32_t err_offset;
 	TSQueryError err_type;
 	TSQuery *q = ts_query_new(
-		orig->lang,
-		orig->src,
-		orig->src_len,
-		&err_offset,
-		&err_type
-	);
+	    orig->lang,
+	    orig->src,
+	    orig->src_len,
+	    &err_offset,
+	    &err_type);
 
 	handle_query_error(L, q, err_offset, err_type, orig->src);
 	const char *src_copy = str_ldup(orig->src, orig->src_len);
-	if (!src_copy) { ALLOC_FAIL(L); return; }
+	if (!src_copy) {
+		ALLOC_FAIL(L);
+		return;
+	}
 	push_query(L, orig->lang, src_copy, orig->src_len, q, -2); // <Parent>, <Query>
 
 	lua_remove(L, -2); // <Query>
@@ -115,23 +122,22 @@ static int query_string_count(lua_State *L) {
 
 static void push_query_predicates(lua_State *L, int query_idx) {
 	lua_pushvalue(L, query_idx); // <Query>
-	push_predicate_table(L); // <Query>, { <Predicates> }
-	lua_insert(L, -2); // { <Predicates> }, <Query>
-	lua_gettable(L, -2); // { <Predicates> }, <Predicate>
-	lua_remove(L, -2); // <Predicate>
+	push_predicate_table(L);     // <Query>, { <Predicates> }
+	lua_insert(L, -2);           // { <Predicates> }, <Query>
+	lua_gettable(L, -2);         // { <Predicates> }, <Predicate>
+	lua_remove(L, -2);           // <Predicate>
 	if (lua_isnil(L, -1)) {
-		lua_pop(L, 1); // (nothing)
+		lua_pop(L, 1);                   // (nothing)
 		push_default_predicate_table(L); // <Default Predicate>
 	}
 }
 
 static bool do_predicates(
-	lua_State *L,
-	const int query_idx,
-	const TSQuery *const q,
-	const struct ltreesitter_Tree *const t,
-	const TSQueryMatch *const m
-) {
+    lua_State *L,
+    const int query_idx,
+    const TSQuery *const q,
+    const struct ltreesitter_Tree *const t,
+    const TSQueryMatch *const m) {
 	const uint32_t num_patterns = ts_query_pattern_count(q);
 	for (uint32_t i = 0; i < num_patterns; ++i) {
 		uint32_t num_steps;
@@ -168,7 +174,7 @@ static bool do_predicates(
 					}
 					need_func_name = false;
 					func_name = pred_name;
-					if (func_name[len-1] == '?') {
+					if (func_name[len - 1] == '?') {
 						is_question = true;
 					}
 				} else {
@@ -233,29 +239,31 @@ static int query_match(lua_State *L) {
 	} while (!do_predicates(L, lua_upvalueindex(1), q->query, t, &m));
 
 	lua_createtable(L, 0, 5); // { <match> }
-	pushinteger(L, m.id); lua_setfield(L, -2, "id"); // { <match> }
-	pushinteger(L, m.pattern_index); lua_setfield(L, -2, "pattern_index"); // { <match> }
-	pushinteger(L, m.capture_count); lua_setfield(L, -2, "capture_count"); // { <match> }
+	pushinteger(L, m.id);
+	lua_setfield(L, -2, "id"); // { <match> }
+	pushinteger(L, m.pattern_index);
+	lua_setfield(L, -2, "pattern_index"); // { <match> }
+	pushinteger(L, m.capture_count);
+	lua_setfield(L, -2, "capture_count");                 // { <match> }
 	lua_createtable(L, m.capture_count, m.capture_count); // { <match> }, { <arraymap> }
 
 	for (uint16_t i = 0; i < m.capture_count; ++i) {
 		push_node(
-			L, parent_idx,
-			m.captures[i].node,
-			c->query->lang
-		); // {<arraymap>}, <Node>
-		lua_pushvalue(L, -1); // {<arraymap>}, <Node>, <Node>
-		lua_rawseti(L, -3, i+1); // {<arraymap> <Node>}, <Node>
+		    L, parent_idx,
+		    m.captures[i].node,
+		    c->query->lang);       // {<arraymap>}, <Node>
+		lua_pushvalue(L, -1);      // {<arraymap>}, <Node>, <Node>
+		lua_rawseti(L, -3, i + 1); // {<arraymap> <Node>}, <Node>
 		uint32_t len;
 		const char *name = ts_query_capture_name_for_id(c->query->query, m.captures[i].index, &len);
 		if (len > 0) {
 			lua_pushstring(L, name); // {<arraymap>}, <Node>, "name"
-			lua_insert(L, -2); // {<arraymap>}, "name", <Node>
-			lua_rawset(L, -3); // {<arraymap> <Node>, [name]=<Node>}
+			lua_insert(L, -2);       // {<arraymap>}, "name", <Node>
+			lua_rawset(L, -3);       // {<arraymap> <Node>, [name]=<Node>}
 		} else {
 			lua_pop(L, 1);
-		} // {<arraymap>}
-	} // { <match> }, { <arraymap> }
+		}                            // {<arraymap>}
+	}                                // { <match> }, { <arraymap> }
 	lua_setfield(L, -2, "captures"); // {<match> captures=<arraymap>}
 	return 1;
 }
@@ -276,10 +284,9 @@ static int query_capture(lua_State *L) {
 	} while (!do_predicates(L, lua_upvalueindex(1), q->query, t, &m));
 
 	push_node(
-		L, parent_idx,
-		m.captures[capture_index].node,
-		q->lang
-	);
+	    L, parent_idx,
+	    m.captures[capture_index].node,
+	    q->lang);
 	uint32_t len;
 	const char *name = ts_query_capture_name_for_id(q->query, capture_index, &len);
 	lua_pushlstring(L, name, len);
@@ -393,14 +400,14 @@ static int query_capture_factory(lua_State *L) {
 ]]*/
 
 static int query_copy_with_predicates(lua_State *L) {
-	lua_settop(L, 2); // <Orig>, <Predicates>
+	lua_settop(L, 2);        // <Orig>, <Predicates>
 	push_predicate_table(L); // <Orig>, <Predicates>, { <RegistryPredicates> }
-	push_query_copy(L, 1); // <Orig>, <Predicates>, { <RegistryPredicates> }, <Copy>
-	lua_pushvalue(L, -1); // <Orig>, <Predicates>, { <RegistryPredicates> }, <Copy>, <Copy>
-	lua_insert(L, -3); // <Orig>, <Predicates>, <Copy>, { <RegistryPredicates> }, <Copy>
-	lua_pushvalue(L, 2); // <Orig>, <Predicates>, <Copy>, { <RegistryPredicates> }, <Copy>, <Predicates>
-	lua_settable(L, -3); // <Orig>, <Predicates>, <Copy>, { <RegistryPredicates> }
-	lua_pop(L, 1); // <Orig>, <Predicates>, <Copy>
+	push_query_copy(L, 1);   // <Orig>, <Predicates>, { <RegistryPredicates> }, <Copy>
+	lua_pushvalue(L, -1);    // <Orig>, <Predicates>, { <RegistryPredicates> }, <Copy>, <Copy>
+	lua_insert(L, -3);       // <Orig>, <Predicates>, <Copy>, { <RegistryPredicates> }, <Copy>
+	lua_pushvalue(L, 2);     // <Orig>, <Predicates>, <Copy>, { <RegistryPredicates> }, <Copy>, <Predicates>
+	lua_settable(L, -3);     // <Orig>, <Predicates>, <Copy>, { <RegistryPredicates> }
+	lua_pop(L, 1);           // <Orig>, <Predicates>, <Copy>
 	return 1;
 }
 
@@ -508,11 +515,10 @@ static int find_predicate(lua_State *L) {
 }
 
 static const luaL_Reg default_query_predicates[] = {
-	{"eq?", eq_predicate},
-	{"match?", match_predicate},
-	{"find?", find_predicate},
-	{NULL, NULL}
-};
+    {"eq?", eq_predicate},
+    {"match?", match_predicate},
+    {"find?", find_predicate},
+    {NULL, NULL}};
 
 void setup_predicate_tables(lua_State *L) {
 	lua_newtable(L);
@@ -523,24 +529,20 @@ void setup_predicate_tables(lua_State *L) {
 	set_registry_field(L, predicate_field);
 }
 
-
 static const luaL_Reg query_methods[] = {
-	{"pattern_count", query_pattern_count},
-	{"capture_count", query_capture_count},
-	{"string_count", query_string_count},
-	{"match", query_match_factory},
-	{"capture", query_capture_factory},
-	{"with", query_copy_with_predicates},
-	{"exec", query_exec},
-	{NULL, NULL}
-};
+    {"pattern_count", query_pattern_count},
+    {"capture_count", query_capture_count},
+    {"string_count", query_string_count},
+    {"match", query_match_factory},
+    {"capture", query_capture_factory},
+    {"with", query_copy_with_predicates},
+    {"exec", query_exec},
+    {NULL, NULL}};
 
 static const luaL_Reg query_metamethods[] = {
-	{"__gc", query_gc},
-	{NULL, NULL}
-};
+    {"__gc", query_gc},
+    {NULL, NULL}};
 
 void ltreesitter_create_query_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_QUERY_METATABLE_NAME, query_metamethods, query_methods);
 }
-

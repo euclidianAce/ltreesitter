@@ -28,9 +28,9 @@ void push_parent(lua_State *L, int obj_idx) {
 // pops the object off of the stack
 void set_parent(lua_State *L, int parent_idx) {
 	// object
-	push_object_table(L); // object, object_table
-	lua_insert(L, -2); // object_table, object
+	push_object_table(L);         // object, object_table
+	lua_insert(L, -2);            // object_table, object
 	lua_pushvalue(L, parent_idx); // object_table, object, parent
-	lua_rawset(L, -3); // object_table
+	lua_rawset(L, -3);            // object_table
 	lua_pop(L, 1);
 }

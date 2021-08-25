@@ -4,10 +4,10 @@
 #include <lauxlib.h>
 #include <lua.h>
 
-#include <ltreesitter/dynamiclib.h>
 #include "luautils.h"
-#include <ltreesitter/node.h>
 #include "object.h"
+#include <ltreesitter/dynamiclib.h>
+#include <ltreesitter/node.h>
 #include <ltreesitter/parser.h>
 #include <ltreesitter/query.h>
 #include <ltreesitter/query_cursor.h>
@@ -18,10 +18,10 @@
 static const char version_str[] = "0.0.6+dev";
 
 static const luaL_Reg lib_funcs[] = {
-	{"load", ltreesitter_load_parser},
-	{"require", ltreesitter_require_parser},
-	{"_reg", push_registry_table},
-	{NULL, NULL},
+    {"load", ltreesitter_load_parser},
+    {"require", ltreesitter_require_parser},
+    {"_reg", push_registry_table},
+    {NULL, NULL},
 };
 
 #ifdef LTREESITTER_DEBUG

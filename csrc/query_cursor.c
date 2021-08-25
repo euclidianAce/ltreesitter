@@ -1,7 +1,7 @@
 
 #include "luautils.h"
-#include <ltreesitter/types.h>
 #include "object.h"
+#include <ltreesitter/types.h>
 
 struct ltreesitter_QueryCursor *ltreesitter_check_query_cursor(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_QUERY_CURSOR_METATABLE_NAME);
@@ -14,13 +14,11 @@ static int query_cursor_gc(lua_State *L) {
 }
 
 static const luaL_Reg query_cursor_methods[] = {
-	{NULL, NULL}
-};
+    {NULL, NULL}};
 
 static const luaL_Reg query_cursor_metamethods[] = {
-	{"__gc", query_cursor_gc},
-	{NULL, NULL}
-};
+    {"__gc", query_cursor_gc},
+    {NULL, NULL}};
 
 void ltreesitter_create_query_cursor_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_QUERY_CURSOR_METATABLE_NAME, query_cursor_metamethods, query_cursor_methods);

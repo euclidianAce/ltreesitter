@@ -1,17 +1,17 @@
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
+#include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
-#include <lauxlib.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "luautils.h"
 #include "object.h"
-#include <ltreesitter/types.h>
 #include <ltreesitter/node.h>
 #include <ltreesitter/tree.h>
 #include <ltreesitter/tree_cursor.h>
+#include <ltreesitter/types.h>
 
 #include <tree_sitter/api.h>
 
@@ -136,10 +136,9 @@ static int node_child(lua_State *L) {
 	} else {
 		push_parent(L, 1);
 		push_node(
-			L, -1,
-			ts_node_child(parent->node, (uint32_t)luaL_checknumber(L, 2)),
-			parent->lang
-		);
+		    L, -1,
+		    ts_node_child(parent->node, (uint32_t)luaL_checknumber(L, 2)),
+		    parent->lang);
 	}
 	return 1;
 }
@@ -179,7 +178,9 @@ static int node_named_child_count(lua_State *L) {
 
 static int node_children_iterator(lua_State *L) {
 	const bool b = lua_toboolean(L, lua_upvalueindex(2));
-	if (!b) { return 0; }
+	if (!b) {
+		return 0;
+	}
 
 	lua_settop(L, 0);
 	struct ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, lua_upvalueindex(1));
@@ -207,10 +208,9 @@ static int node_named_children_iterator(lua_State *L) {
 	} else {
 		lua_pushvalue(L, lua_upvalueindex(2));
 		push_node(
-			L, -1,
-			ts_node_named_child(n->node, idx),
-			n->lang
-		);
+		    L, -1,
+		    ts_node_named_child(n->node, idx),
+		    n->lang);
 	}
 
 	return 1;
@@ -249,7 +249,10 @@ static int node_next_sibling(lua_State *L) {
 	struct ltreesitter_Node *const n = ltreesitter_check_node(L, 1);
 	push_parent(L, 1);
 	TSNode sibling = ts_node_next_sibling(n->node);
-	if (ts_node_is_null(sibling)) { lua_pushnil(L); return 1; }
+	if (ts_node_is_null(sibling)) {
+		lua_pushnil(L);
+		return 1;
+	}
 	push_node(L, -1, sibling, n->lang);
 	return 1;
 }
@@ -261,7 +264,10 @@ static int node_prev_sibling(lua_State *L) {
 	struct ltreesitter_Node *const n = ltreesitter_check_node(L, 1);
 	push_parent(L, 1);
 	TSNode sibling = ts_node_prev_sibling(n->node);
-	if (ts_node_is_null(sibling)) { lua_pushnil(L); return 1; }
+	if (ts_node_is_null(sibling)) {
+		lua_pushnil(L);
+		return 1;
+	}
 	push_node(L, -1, sibling, n->lang);
 	return 1;
 }
@@ -273,7 +279,10 @@ static int node_next_named_sibling(lua_State *L) {
 	struct ltreesitter_Node *const n = ltreesitter_check_node(L, 1);
 	push_parent(L, 1);
 	TSNode sibling = ts_node_next_named_sibling(n->node);
-	if (ts_node_is_null(sibling)) { lua_pushnil(L); return 1; }
+	if (ts_node_is_null(sibling)) {
+		lua_pushnil(L);
+		return 1;
+	}
 	push_node(L, -1, sibling, n->lang);
 	return 1;
 }
@@ -285,7 +294,10 @@ static int node_prev_named_sibling(lua_State *L) {
 	struct ltreesitter_Node *const n = ltreesitter_check_node(L, 1);
 	push_parent(L, 1);
 	TSNode sibling = ts_node_prev_named_sibling(n->node);
-	if (ts_node_is_null(sibling)) { lua_pushnil(L); return 1; }
+	if (ts_node_is_null(sibling)) {
+		lua_pushnil(L);
+		return 1;
+	}
 	push_node(L, -1, sibling, n->lang);
 	return 1;
 }
@@ -315,7 +327,10 @@ static int node_eq(lua_State *L) {
 
 static int node_name(lua_State *L) {
 	struct ltreesitter_Node *n = ltreesitter_check_node(L, 1);
-	if (ts_node_is_null(n->node) || !ts_node_is_named(n->node)) { lua_pushnil(L); return 1; }
+	if (ts_node_is_null(n->node) || !ts_node_is_named(n->node)) {
+		lua_pushnil(L);
+		return 1;
+	}
 	TSSymbol sym = ts_node_symbol(n->node);
 	const char *name = ts_language_symbol_name(n->lang, sym);
 	lua_pushstring(L, name);
@@ -359,7 +374,7 @@ static int node_get_source_str(lua_State *L) {
    Create a new cursor at the given node
 ]] */
 static int node_tree_cursor_create(lua_State *L) {
-	lua_settop(L ,1);
+	lua_settop(L, 1);
 	struct ltreesitter_Node *const n = ltreesitter_check_node(L, 1);
 	push_parent(L, 1);
 	ltreesitter_push_tree_cursor(L, 2, n->lang, n->node);
@@ -367,35 +382,33 @@ static int node_tree_cursor_create(lua_State *L) {
 }
 
 static const luaL_Reg node_methods[] = {
-	{"child", node_child},
-	{"child_by_field_name", node_child_by_field_name},
-	{"child_count", node_child_count},
-	{"children", node_children},
-	{"create_cursor", node_tree_cursor_create},
-	{"end_byte", node_end_byte},
-	{"end_point", node_end_point},
-	{"is_extra", node_is_extra},
-	{"is_missing", node_is_missing},
-	{"is_named", node_is_named},
-	{"name", node_name},
-	{"named_child", node_named_child},
-	{"named_child_count", node_named_child_count},
-	{"named_children", node_named_children},
-	{"next_named_sibling", node_next_named_sibling},
-	{"next_sibling", node_next_sibling},
-	{"prev_named_sibling", node_prev_named_sibling},
-	{"prev_sibling", node_prev_sibling},
-	{"source", node_get_source_str},
-	{"start_byte", node_start_byte},
-	{"start_point", node_start_point},
-	{"type", node_type},
-	{NULL, NULL}
-};
+    {"child", node_child},
+    {"child_by_field_name", node_child_by_field_name},
+    {"child_count", node_child_count},
+    {"children", node_children},
+    {"create_cursor", node_tree_cursor_create},
+    {"end_byte", node_end_byte},
+    {"end_point", node_end_point},
+    {"is_extra", node_is_extra},
+    {"is_missing", node_is_missing},
+    {"is_named", node_is_named},
+    {"name", node_name},
+    {"named_child", node_named_child},
+    {"named_child_count", node_named_child_count},
+    {"named_children", node_named_children},
+    {"next_named_sibling", node_next_named_sibling},
+    {"next_sibling", node_next_sibling},
+    {"prev_named_sibling", node_prev_named_sibling},
+    {"prev_sibling", node_prev_sibling},
+    {"source", node_get_source_str},
+    {"start_byte", node_start_byte},
+    {"start_point", node_start_point},
+    {"type", node_type},
+    {NULL, NULL}};
 static const luaL_Reg node_metamethods[] = {
-	{"__eq", node_eq},
-	{"__tostring", node_string},
-	{NULL, NULL}
-};
+    {"__eq", node_eq},
+    {"__tostring", node_string},
+    {NULL, NULL}};
 
 void ltreesitter_create_node_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_NODE_METATABLE_NAME, node_metamethods, node_methods);

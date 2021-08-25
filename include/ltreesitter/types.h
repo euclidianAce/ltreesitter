@@ -1,8 +1,8 @@
 #ifndef LTREESITTER_TYPES_H
 #define LTREESITTER_TYPES_H
 
-#include <tree_sitter/api.h>
 #include "dynamiclib.h"
+#include <tree_sitter/api.h>
 
 struct ltreesitter_Parser {
 	const TSLanguage *lang;

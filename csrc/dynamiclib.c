@@ -61,4 +61,3 @@ const char *dynamic_lib_error(dl_handle *handle) {
 	return dlerror();
 #endif
 }
-

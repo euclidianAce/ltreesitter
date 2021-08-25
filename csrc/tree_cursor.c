@@ -1,8 +1,8 @@
 
 #include "luautils.h"
+#include "object.h"
 #include <ltreesitter/node.h>
 #include <ltreesitter/tree.h>
-#include "object.h"
 #include <ltreesitter/types.h>
 
 struct ltreesitter_TreeCursor *ltreesitter_check_tree_cursor(lua_State *L, int idx) {
@@ -11,7 +11,8 @@ struct ltreesitter_TreeCursor *ltreesitter_check_tree_cursor(lua_State *L, int i
 
 struct ltreesitter_TreeCursor *ltreesitter_push_tree_cursor(lua_State *L, int parent_idx, const TSLanguage *lang, TSNode n) {
 	struct ltreesitter_TreeCursor *c = lua_newuserdata(L, sizeof(struct ltreesitter_TreeCursor));
-	lua_pushvalue(L, -1); set_parent(L, parent_idx);
+	lua_pushvalue(L, -1);
+	set_parent(L, parent_idx);
 	c->cursor = ts_tree_cursor_new(n);
 	c->lang = lang;
 	setmetatable(L, LTREESITTER_TREE_CURSOR_METATABLE_NAME);
@@ -25,10 +26,9 @@ static int tree_cursor_current_node(lua_State *L) {
 	struct ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
 	push_parent(L, 1);
 	push_node(
-		L, -1,
-		ts_tree_cursor_current_node(&c->cursor),
-		c->lang
-	);
+	    L, -1,
+	    ts_tree_cursor_current_node(&c->cursor),
+	    c->lang);
 	return 1;
 }
 
@@ -111,19 +111,17 @@ static int tree_cursor_gc(lua_State *L) {
 }
 
 static const luaL_Reg tree_cursor_methods[] = {
-	{"current_node", tree_cursor_current_node},
-	{"current_field_name", tree_cursor_current_field_name},
-	{"goto_parent", tree_cursor_goto_parent},
-	{"goto_first_child", tree_cursor_goto_first_child},
-	{"goto_first_child_for_byte", tree_cursor_goto_first_child_for_byte},
-	{"goto_next_sibling", tree_cursor_goto_next_sibling},
-	{"reset", tree_cursor_reset},
-	{NULL, NULL}
-};
+    {"current_node", tree_cursor_current_node},
+    {"current_field_name", tree_cursor_current_field_name},
+    {"goto_parent", tree_cursor_goto_parent},
+    {"goto_first_child", tree_cursor_goto_first_child},
+    {"goto_first_child_for_byte", tree_cursor_goto_first_child_for_byte},
+    {"goto_next_sibling", tree_cursor_goto_next_sibling},
+    {"reset", tree_cursor_reset},
+    {NULL, NULL}};
 static const luaL_Reg tree_cursor_metamethods[] = {
-	{"__gc", tree_cursor_gc},
-	{NULL, NULL}
-};
+    {"__gc", tree_cursor_gc},
+    {NULL, NULL}};
 
 void ltreesitter_create_tree_cursor_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_TREE_CURSOR_METATABLE_NAME, tree_cursor_metamethods, tree_cursor_methods);

@@ -1,17 +1,17 @@
 
+#include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
-#include <lauxlib.h>
 
 #include <tree_sitter/api.h>
 
 #include <stdlib.h>
 #include <string.h>
 
+#include "luautils.h"
 #include "object.h"
 #include <ltreesitter/node.h>
 #include <ltreesitter/types.h>
-#include "luautils.h"
 
 #ifdef LOG_GC
 #include <stdio.h>
@@ -53,13 +53,12 @@ struct ltreesitter_Tree *ltreesitter_check_tree_arg(lua_State *L, int idx) {
 }
 
 void push_tree(
-	lua_State *L,
-	const TSLanguage *lang,
-	TSTree *t,
-	bool own_str,
-	const char *src,
-	size_t src_len
-) {
+    lua_State *L,
+    const TSLanguage *lang,
+    TSTree *t,
+    bool own_str,
+    const char *src,
+    size_t src_len) {
 	struct ltreesitter_Tree *tree = lua_newuserdata(L, sizeof(struct ltreesitter_Tree));
 	tree->lang = lang;
 	tree->tree = t;
@@ -68,7 +67,6 @@ void push_tree(
 	tree->src_len = src_len;
 	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
 }
-
 
 /* @teal-export Tree.root: function(Tree): Node [[
    Returns the root node of the given parse tree
@@ -98,7 +96,8 @@ static int tree_copy(lua_State *L) {
 	const char *src_copy;
 	if (t->own_str) {
 		src_copy = malloc(sizeof(char) * t->src_len);
-		if (!src_copy) return ALLOC_FAIL(L);
+		if (!src_copy)
+			return ALLOC_FAIL(L);
 		memcpy((char *)src_copy, t->src, t->src_len);
 	} else {
 		src_copy = t->src;
@@ -114,7 +113,9 @@ static int tree_copy(lua_State *L) {
 	return 1;
 }
 
-static inline bool is_non_negative(lua_State *L, int i) { return lua_tonumber(L, i) >= 0; }
+static inline bool is_non_negative(lua_State *L, int i) {
+	return lua_tonumber(L, i) >= 0;
+}
 
 // Maybe make this Tree.Edit?
 /* @teal-inline [[
@@ -172,14 +173,14 @@ static int tree_edit(lua_State *L) {
 	// 14.  new_end_point.col (u32)
 
 	ts_tree_edit(t->tree, &(const TSInputEdit){
-		.start_byte    = lua_tonumber(L, 3),
-		.old_end_byte  = lua_tonumber(L, 4),
-		.new_end_byte  = lua_tonumber(L, 5),
+	                          .start_byte = lua_tonumber(L, 3),
+	                          .old_end_byte = lua_tonumber(L, 4),
+	                          .new_end_byte = lua_tonumber(L, 5),
 
-		.start_point   = { .row = lua_tonumber(L, 7),  .column = lua_tonumber(L, 8)  },
-		.old_end_point = { .row = lua_tonumber(L, 10), .column = lua_tonumber(L, 11) },
-		.new_end_point = { .row = lua_tonumber(L, 13), .column = lua_tonumber(L, 14) },
-	});
+	                          .start_point = {.row = lua_tonumber(L, 7), .column = lua_tonumber(L, 8)},
+	                          .old_end_point = {.row = lua_tonumber(L, 10), .column = lua_tonumber(L, 11)},
+	                          .new_end_point = {.row = lua_tonumber(L, 13), .column = lua_tonumber(L, 14)},
+	                      });
 	return 0;
 }
 
@@ -199,18 +200,15 @@ static int tree_gc(lua_State *L) {
 }
 
 static const luaL_Reg tree_methods[] = {
-	{"root", tree_push_root},
-	{"copy", tree_copy},
-	{"edit", tree_edit},
-	{NULL, NULL}
-};
+    {"root", tree_push_root},
+    {"copy", tree_copy},
+    {"edit", tree_edit},
+    {NULL, NULL}};
 static const luaL_Reg tree_metamethods[] = {
-	{"__gc", tree_gc},
-	{"__tostring", tree_to_string},
-	{NULL, NULL}
-};
+    {"__gc", tree_gc},
+    {"__tostring", tree_to_string},
+    {NULL, NULL}};
 
 void ltreesitter_create_tree_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_TREE_METATABLE_NAME, tree_metamethods, tree_methods);
 }
-

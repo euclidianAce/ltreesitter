@@ -91,15 +91,15 @@ static inline void push_parser_cache_key(lua_State *L, const char *dl_file, cons
 
 static void cache_parser(lua_State *L, const char *dl_file, const char *lang_name) {
 	const int parser_idx = lua_gettop(L);
-	push_parser_cache(L);						  // cache
+	push_parser_cache(L);                         // cache
 	push_parser_cache_key(L, dl_file, lang_name); // parser, cache, "thing.so\1blah"
-	lua_pushvalue(L, parser_idx);				  // cache, "thing.so\1blah", parser
-	lua_rawset(L, -3);							  // cache
+	lua_pushvalue(L, parser_idx);                 // cache, "thing.so\1blah", parser
+	lua_rawset(L, -3);                            // cache
 	lua_pop(L, 1);
 }
 
 static bool push_cached_parser(lua_State *L, const char *dl_file, const char *lang_name) {
-	push_parser_cache(L);						  // cache
+	push_parser_cache(L);                         // cache
 	push_parser_cache_key(L, dl_file, lang_name); // cache, "dl_file\1lang_name"
 
 	if (table_rawget(L, -2) != LUA_TNIL) { // cache, nil | parser
@@ -130,9 +130,9 @@ int ltreesitter_load_parser(lua_State *L) {
 		return 1;
 
 	struct ltreesitter_Parser proxy = {
-		.dl = NULL,
-		.parser = NULL,
-		.lang = NULL,
+	    .dl = NULL,
+	    .parser = NULL,
+	    .lang = NULL,
 	};
 	switch (try_dlopen(&proxy, parser_file, lang_name)) {
 	case PARSE_LOAD_ERR_NONE:
@@ -207,7 +207,7 @@ int ltreesitter_require_parser(lua_State *L) {
 	// prepend ~/.tree-sitter/bin/?.so to package.cpath
 	lua_getglobal(L, "package");  // lang_name, <ts path>, package
 	lua_getfield(L, -1, "cpath"); // lang_name, <ts path>, package, package.cpath
-	lua_remove(L, -2);			  // lang_name, <ts path>, package.cpath
+	lua_remove(L, -2);            // lang_name, <ts path>, package.cpath
 
 	if (user_home) {
 		lua_concat(L, 2);
@@ -257,9 +257,9 @@ int ltreesitter_require_parser(lua_State *L) {
 			}
 
 			struct ltreesitter_Parser proxy = (struct ltreesitter_Parser){
-				.dl = NULL,
-				.parser = NULL,
-				.lang = NULL,
+			    .dl = NULL,
+			    .parser = NULL,
+			    .lang = NULL,
 			};
 			switch (try_dlopen(&proxy, buf, lang_name)) {
 			case PARSE_LOAD_ERR_NONE: {
@@ -404,11 +404,11 @@ static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, T
 	lua_pushvalue(L, -1); // grab a copy of the function
 	pushinteger(L, byte_index);
 
-	lua_newtable(L);				 // byte_index, {}
-	pushinteger(L, position.row);	 // byte_index, {}, row
-	lua_setfield(L, -2, "row");		 // byte_index, { row = row }
+	lua_newtable(L);                 // byte_index, {}
+	pushinteger(L, position.row);    // byte_index, {}, row
+	lua_setfield(L, -2, "row");      // byte_index, { row = row }
 	pushinteger(L, position.column); // byte_index, { row = row }, column
-	lua_setfield(L, -2, "column");	 // byte_index, { row = row, column = column }
+	lua_setfield(L, -2, "column");   // byte_index, { row = row, column = column }
 
 	if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
 		i->read_error = READERR_PCALL;
@@ -466,22 +466,22 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 	}
 	lua_pop(L, 1);
 	struct CallInfo payload = {
-		.L = L,
-		.read_error = READERR_NONE,
-		.string_builder = {
-			.len = 0,
-			.real_len = 64,
-			.str = malloc(sizeof(char) * 64),
-		},
+	    .L = L,
+	    .read_error = READERR_NONE,
+	    .string_builder = {
+	        .len = 0,
+	        .real_len = 64,
+	        .str = malloc(sizeof(char) * 64),
+	    },
 	};
 	if (!payload.string_builder.str) {
 		return ALLOC_FAIL(L);
 	}
 
 	TSInput input = (TSInput){
-		.read = ltreesitter_parser_read,
-		.payload = &payload,
-		.encoding = TSInputEncodingUTF8,
+	    .read = ltreesitter_parser_read,
+	    .payload = &payload,
+	    .encoding = TSInputEncodingUTF8,
 	};
 
 	TSTree *t = ts_parser_parse(p->parser, old_tree, input);
@@ -534,8 +534,8 @@ static TSPoint topoint(lua_State *L, const int idx) {
 	const uint32_t col = lua_tonumber(L, -1);
 	lua_pop(L, 2);
 	return (TSPoint){
-		.row = row,
-		.column = col,
+	    .row = row,
+	    .column = col,
 	};
 }
 
@@ -652,11 +652,11 @@ int make_query(lua_State *L) {
 	TSQueryError err_type = TSQueryErrorNone;
 	// TODO: this segfaults for some reason, (:
 	TSQuery *q = ts_query_new(
-		p->lang,
-		query_src,
-		len,
-		&err_offset,
-		&err_type);
+	    p->lang,
+	    query_src,
+	    len,
+	    &err_offset,
+	    &err_type);
 	handle_query_error(L, q, err_offset, err_type, query_src);
 
 	if (q) {
@@ -677,19 +677,19 @@ static int get_version(lua_State *L) {
 }
 
 static const luaL_Reg parser_methods[] = {
-	{"set_timeout", ltreesitter_parser_set_timeout},
-	{"set_ranges", parser_set_ranges},
-	{"get_ranges", parser_get_ranges},
-	{"get_version", get_version},
+    {"set_timeout", ltreesitter_parser_set_timeout},
+    {"set_ranges", parser_set_ranges},
+    {"get_ranges", parser_get_ranges},
+    {"get_version", get_version},
 
-	{"parse_string", ltreesitter_parser_parse_string},
-	{"parse_with", ltreesitter_parser_parse_with},
-	{"query", make_query},
+    {"parse_string", ltreesitter_parser_parse_string},
+    {"parse_with", ltreesitter_parser_parse_with},
+    {"query", make_query},
 
-	{NULL, NULL}};
+    {NULL, NULL}};
 static const luaL_Reg parser_metamethods[] = {
-	{"__gc", parser_gc},
-	{NULL, NULL}};
+    {"__gc", parser_gc},
+    {NULL, NULL}};
 
 void ltreesitter_create_parser_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_PARSER_METATABLE_NAME, parser_metamethods, parser_methods);

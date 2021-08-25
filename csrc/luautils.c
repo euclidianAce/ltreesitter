@@ -50,17 +50,16 @@ void create_libtable(lua_State *L, const luaL_Reg l[]) {
 }
 
 void create_metatable(
-	lua_State *L,
-	const char *name,
-	const luaL_Reg metamethods[],
-	const luaL_Reg index[]
-) {
-	luaL_newmetatable(L, name); // metatable
-	setfuncs(L, metamethods); // metatable
-	lua_newtable(L); // metatable, table
-	setfuncs(L, index); // metatable, table
+    lua_State *L,
+    const char *name,
+    const luaL_Reg metamethods[],
+    const luaL_Reg index[]) {
+	luaL_newmetatable(L, name);     // metatable
+	setfuncs(L, metamethods);       // metatable
+	lua_newtable(L);                // metatable, table
+	setfuncs(L, index);             // metatable, table
 	lua_setfield(L, -2, "__index"); // metatable
-	// lua <=5.2 doesn't set the __name field which we rely upon for the tests to pass
+	                                // lua <=5.2 doesn't set the __name field which we rely upon for the tests to pass
 #if LUA_VERSION_NUM < 503
 	lua_pushstring(L, name);
 	lua_setfield(L, -2, "__name");
@@ -83,12 +82,11 @@ bool expect_field(lua_State *L, int idx, const char *field_name, int expected_ty
 	const int actual_type = getfield_type(L, idx, field_name);
 	if (actual_type != expected_type) {
 		luaL_error(
-			L,
-			"expected field `%s' to be of type %s (got %s)",
-			field_name,
-			lua_typename(L, expected_type),
-			lua_typename(L, actual_type)
-		);
+		    L,
+		    "expected field `%s' to be of type %s (got %s)",
+		    field_name,
+		    lua_typename(L, expected_type),
+		    lua_typename(L, actual_type));
 		return false;
 	}
 	return true;
@@ -98,21 +96,20 @@ bool expect_nested_field(lua_State *L, int idx, const char *parent_name, const c
 	const int actual_type = getfield_type(L, idx, field_name);
 	if (actual_type != expected_type) {
 		luaL_error(
-			L,
-			"expected field `%s.%s' to be of type %s (got %s)",
-			parent_name,
-			field_name,
-			lua_typename(L, expected_type),
-			lua_typename(L, actual_type)
-		);
+		    L,
+		    "expected field `%s.%s' to be of type %s (got %s)",
+		    parent_name,
+		    field_name,
+		    lua_typename(L, expected_type),
+		    lua_typename(L, actual_type));
 		return false;
 	}
 	return true;
 }
 
 // This should only be used for only true indexes, i.e. no lua_upvalueindex, registry stuff, etc.
-int absindex (lua_State *L, int idx) {
-  return idx > 0 ? idx : lua_gettop(L) + 1 + idx;
+int absindex(lua_State *L, int idx) {
+	return idx > 0 ? idx : lua_gettop(L) + 1 + idx;
 }
 
 void setmetatable(lua_State *L, const char *mt_name) {
@@ -123,17 +120,17 @@ void setmetatable(lua_State *L, const char *mt_name) {
 static const char ltreesitter_registry_index = 'k';
 
 void setup_registry_index(lua_State *L) {
-	lua_pushvalue(L, LUA_REGISTRYINDEX); // registry
+	lua_pushvalue(L, LUA_REGISTRYINDEX);                           // registry
 	lua_pushlightuserdata(L, (void *)&ltreesitter_registry_index); // registry, void *
-	lua_newtable(L); // registry, void *, {}
-	lua_rawset(L, -3); // registry
+	lua_newtable(L);                                               // registry, void *, {}
+	lua_rawset(L, -3);                                             // registry
 }
 
 int push_registry_table(lua_State *L) {
-	lua_pushvalue(L, LUA_REGISTRYINDEX); // { <Registry> }
+	lua_pushvalue(L, LUA_REGISTRYINDEX);                           // { <Registry> }
 	lua_pushlightuserdata(L, (void *)&ltreesitter_registry_index); // { <Registry> }, <void *>
-	lua_rawget(L, -2); //  { <Registry> }, { <ltreesitter Registry> }
-	lua_remove(L, -2); // { <ltreesitter Registry> }
+	lua_rawget(L, -2);                                             //  { <Registry> }, { <ltreesitter Registry> }
+	lua_remove(L, -2);                                             // { <ltreesitter Registry> }
 	return 1;
 }
 
@@ -155,7 +152,7 @@ void newtable_with_mode(lua_State *L, const char *mode) {
 	lua_newtable(L); // {}, {}
 	lua_pushstring(L, mode);
 	lua_setfield(L, -2, "__mode"); // {}, { __mode = mode }
-	lua_setmetatable(L, -2); // { <metatable> = { __mode = mode } }
+	lua_setmetatable(L, -2);       // { <metatable> = { __mode = mode } }
 }
 
 size_t length_of(lua_State *L, int index) {
