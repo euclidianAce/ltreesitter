@@ -127,10 +127,10 @@ static inline bool is_non_negative(lua_State *L, int i) {
       new_end_point: Point
    end
 ]]*/
-/* @teal-export Tree.edit: function(Tree, TreeEdit) [[
+/* @teal-export Tree.edit_s: function(Tree, TreeEdit) [[
    Create an edit to the given tree
 ]] */
-static int tree_edit(lua_State *L) {
+static int tree_edit_s(lua_State *L) {
 	lua_settop(L, 2);
 	lua_checkstack(L, 15);
 	ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1);
@@ -180,6 +180,34 @@ static int tree_edit(lua_State *L) {
 	                          .new_end_point = {.row = lua_tonumber(L, 13), .column = lua_tonumber(L, 14)},
 	                      });
 	return 0;
+}
+
+/* @teal-export Tree.edit: function(
+         Tree,
+         start_byte: integer,
+         old_end_byte: integer,
+         new_end_byte: integer,
+         start_point_row: integer,
+         start_point_col: integer,
+         old_end_point_row: integer,
+         old_end_point_col: integer,
+         new_end_point_row: integer,
+         new_end_point_col: integer
+      ) [[
+   Create an edit to the given tree
+]] */
+static int tree_edit(lua_State *L) {
+	ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1);
+	TSInputEdit edit = (TSInputEdit){
+		.start_byte = luaL_checkinteger(L, 2),
+		.old_end_byte = luaL_checkinteger(L, 3),
+		.new_end_byte = luaL_checkinteger(L, 4),
+		.start_point = {.row = luaL_checkinteger(L, 5), .column = luaL_checkinteger(L, 6)},
+		.old_end_point = {.row = luaL_checkinteger(L, 7), .column = luaL_checkinteger(L, 8)},
+		.new_end_point = {.row = luaL_checkinteger(L, 9), .column = luaL_checkinteger(L, 10)},
+	};
+
+	ts_tree_edit(t->tree, &edit);
 }
 
 static int tree_gc(lua_State *L) {

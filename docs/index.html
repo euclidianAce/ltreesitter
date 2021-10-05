@@ -136,6 +136,8 @@ h2 {
 <br>
 <a href="index.html#Tree.edit">Tree.edit</a>
 <br>
+<a href="index.html#Tree.edit_s">Tree.edit_s</a>
+<br>
 <a href="index.html#Tree.root">Tree.root</a>
 <br>
 </p></td></tr></tbody></table>
@@ -231,7 +233,20 @@ h2 {
 <br>
 <h2><a name="Tree.copy"><code>Tree.copy: function(Tree): Tree </code></a></h2>
 <p>Creates a copy of the tree. Tree-sitter recommends to create copies if you are going to use multithreading since tree accesses are not thread-safe, but copying them is cheap and quick</p><br>
-<h2><a name="Tree.edit"><code>Tree.edit: function(Tree, TreeEdit) </code></a></h2>
+<h2><a name="Tree.edit"><code>Tree.edit: function(
+         Tree,
+         start_byte: integer,
+         old_end_byte: integer,
+         new_end_byte: integer,
+         start_point_row: integer,
+         start_point_col: integer,
+         old_end_point_row: integer,
+         old_end_point_col: integer,
+         new_end_point_row: integer,
+         new_end_point_col: integer
+      ) </code></a></h2>
+<p>Create an edit to the given tree</p><br>
+<h2><a name="Tree.edit_s"><code>Tree.edit_s: function(Tree, TreeEdit) </code></a></h2>
 <p>Create an edit to the given tree</p><br>
 <h2><a name="Tree.root"><code>Tree.root: function(Tree): Node </code></a></h2>
 <p>Returns the root node of the given parse tree</p><br>
