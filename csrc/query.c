@@ -217,11 +217,14 @@ static bool do_predicates(
 	return true;
 }
 
-// TODO: find a better way to do this, @teal-inline wont work since it needs to be nested
-/* @teal-export Query.Match.id : integer */
-/* @teal-export Query.Match.pattern_index : integer */
-/* @teal-export Query.Match.capture_count : integer */
-/* @teal-export Query.Match.captures : {string|integer:Node} */
+/* @teal-inline [[
+   record Match
+      id: integer
+      pattern_index: integer
+      capture_count: integer
+      captures: {string|integer:Node}
+   end
+]] */
 
 static int query_match(lua_State *L) {
 	// upvalues: Query, Node, Cursor

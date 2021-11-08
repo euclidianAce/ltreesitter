@@ -3,7 +3,7 @@
 local record ltreesitter
    -- Exports
 
-   record Cursor
+   record Cursor userdata
       current_field_name: function(Cursor): string  -- csrc/tree_cursor.c:32
       current_node: function(Cursor): Node  -- csrc/tree_cursor.c:20
       goto_first_child: function(Cursor): boolean  -- csrc/tree_cursor.c:74
@@ -12,7 +12,7 @@ local record ltreesitter
       goto_parent: function(Cursor): boolean  -- csrc/tree_cursor.c:56
       reset: function(Cursor, Node)  -- csrc/tree_cursor.c:46
    end
-   record Node
+   record Node userdata
       child: function(Node, idx: integer): Node  -- csrc/node.c:126
       child_by_field_name: function(Node, string): Node  -- csrc/node.c:336
       child_count: function(Node): integer  -- csrc/node.c:143
@@ -36,7 +36,7 @@ local record ltreesitter
       start_point: function(Node): Point  -- csrc/node.c:55
       type: function(Node): string  -- csrc/node.c:21
    end
-   record Parser
+   record Parser userdata
       get_ranges: function(Parser): {Range}  -- csrc/parser.c:616
       get_version: function(Parser): integer  -- csrc/parser.c:665
       parse_string: function(Parser, string, Tree): Tree  -- csrc/parser.c:348
@@ -45,19 +45,13 @@ local record ltreesitter
       set_ranges: function(Parser, {Range}): boolean  -- csrc/parser.c:537
       set_timeout: function(Parser, integer)  -- csrc/parser.c:503
    end
-   record Query
-      record Match
-         capture_count: integer  -- csrc/query.c:222
-         captures: {string|integer:Node}  -- csrc/query.c:223
-         id: integer  -- csrc/query.c:220
-         pattern_index: integer  -- csrc/query.c:221
-      end
-      capture: function(Query, Node): function(): Node, string  -- csrc/query.c:331
-      exec: function(Query, Node)  -- csrc/query.c:414
-      match: function(Query, Node): function(): Match  -- csrc/query.c:296
-      with: function(Query, {string:function(...: string): any...}): Query  -- csrc/query.c:355
+   record Query userdata
+      capture: function(Query, Node): function(): Node, string  -- csrc/query.c:334
+      exec: function(Query, Node)  -- csrc/query.c:417
+      match: function(Query, Node): function(): Match  -- csrc/query.c:299
+      with: function(Query, {string:function(...: string): any...}): Query  -- csrc/query.c:358
    end
-   record Tree
+   record Tree userdata
       copy: function(Tree): Tree  -- csrc/tree.c:87
       edit: function(
          Tree,
@@ -89,6 +83,13 @@ local record ltreesitter
       old_end_point: Point
       new_end_point: Point
    end -- csrc/tree.c:118
+
+   record Match
+      id: integer
+      pattern_index: integer
+      capture_count: integer
+      captures: {string|integer:Node}
+   end -- csrc/query.c:219
 
    record Point
       row: integer
