@@ -9,9 +9,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define TODO(L) luaL_error(L, "TODO: %s %s:%d", __FUNCTION__, __FILE__, __LINE__)
-#define ALLOC_FAIL(L) luaL_error(L, "%s %s:%d Memory allocation failed!", __FUNCTION__, __FILE__, __LINE__)
-#define UNREACHABLE(L) luaL_error(L, "%s %s:%d Unreachable code reached!", __FUNCTION__, __FILE__, __LINE__)
+#define TODO(L) luaL_error(L, "TODO: %s:%d", __FILE__, __LINE__)
+#define ALLOC_FAIL(L) luaL_error(L, "%s:%d Memory allocation failed!", __FILE__, __LINE__)
+#define UNREACHABLE(L) luaL_error(L, "%s:%d Unreachable code reached!", __FILE__, __LINE__)
 
 char *str_ldup(const char *s, const size_t len);
 void table_geti(lua_State *L, int idx, int i);

@@ -47,7 +47,8 @@ static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_f
 	}
 
 	// ISO C is not a fan of void * -> function pointer
-	TSLanguage *(*tree_sitter_lang)(void) = (TSLanguage * (*)(void)) dynamic_sym(p->dl, buf);
+	TSLanguage *(*tree_sitter_lang)(void);
+	*(void**)(&tree_sitter_lang) = dynamic_sym(p->dl, buf);
 
 	if (!tree_sitter_lang) {
 		close_dynamic_lib(p->dl);
@@ -227,8 +228,8 @@ int ltreesitter_require_parser(lua_State *L) {
 	// Do an imitation of a package.searchpath
 	//	Searchpath will just return the first path which we may be able to open,
 	//	but it may not have the symbol we want, so we should keep searching afterward
-	ssize_t j = 0;
-	for (size_t i = 0; i <= buf_size; ++i, ++j) {
+	size_t j = 0;
+	for (size_t i = 0; i <= buf_size; ++i) {
 		// cpath doesn't necessarily end with a ; so lets pretend it does
 		char c;
 		if (i == buf_size)
@@ -241,7 +242,6 @@ int ltreesitter_require_parser(lua_State *L) {
 			for (size_t k = 0; k < so_len; ++k, ++j) {
 				buf[j] = so_name[k];
 			}
-			--j;
 			break;
 		case ';': {
 			buf[j] = '\0';
@@ -314,11 +314,11 @@ int ltreesitter_require_parser(lua_State *L) {
 				goto err_cleanup;
 			}
 
-			j = -1;
+			j = 0;
 			break;
 		}
 		default:
-			buf[j] = cpath[i];
+			buf[j++] = cpath[i];
 			break;
 		}
 	}

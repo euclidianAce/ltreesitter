@@ -29,7 +29,6 @@ build = {
             "csrc/object.c",
             "csrc/query.c",
             "csrc/tree.c",
-            "csrc/types.c",
             "csrc/ltreesitter.c",
             "csrc/node.c",
             "csrc/parser.c",
