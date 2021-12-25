@@ -2,6 +2,7 @@ luarocks
 lua
 lua_modules
 .luarocks
+*.a
 *.o
 *.so
 tl*
