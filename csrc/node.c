@@ -220,7 +220,7 @@ static int node_children(lua_State *L) {
 	lua_settop(L, 1);
 	ltreesitter_Node *n = ltreesitter_check_node(L, 1);
 	push_parent(L, 1);
-	ltreesitter_TreeCursor *const c = ltreesitter_push_tree_cursor(L, 2, ts_tree_language(n->node.tree), n->node);
+	ltreesitter_TreeCursor *const c = ltreesitter_push_tree_cursor(L, 2, n->node);
 	const bool b = ts_tree_cursor_goto_first_child(&c->cursor);
 	lua_pushboolean(L, b);
 	lua_pushcclosure(L, node_children_iterator, 2);
@@ -374,7 +374,7 @@ static int node_tree_cursor_create(lua_State *L) {
 	lua_settop(L, 1);
 	ltreesitter_Node *const n = ltreesitter_check_node(L, 1);
 	push_parent(L, 1);
-	ltreesitter_push_tree_cursor(L, 2, ts_tree_language(n->node.tree), n->node);
+	ltreesitter_push_tree_cursor(L, 2, n->node);
 	return 1;
 }
 

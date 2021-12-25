@@ -9,7 +9,7 @@ ltreesitter_TreeCursor *ltreesitter_check_tree_cursor(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_TREE_CURSOR_METATABLE_NAME);
 }
 
-ltreesitter_TreeCursor *ltreesitter_push_tree_cursor(lua_State *L, int parent_idx, const TSLanguage *lang, TSNode n) {
+ltreesitter_TreeCursor *ltreesitter_push_tree_cursor(lua_State *L, int parent_idx, TSNode n) {
 	ltreesitter_TreeCursor *c = lua_newuserdata(L, sizeof(struct ltreesitter_TreeCursor));
 	lua_pushvalue(L, -1);
 	set_parent(L, parent_idx);

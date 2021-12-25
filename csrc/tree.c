@@ -208,6 +208,7 @@ static int tree_edit(lua_State *L) {
 	};
 
 	ts_tree_edit(t->tree, &edit);
+	return 0;
 }
 
 static int tree_gc(lua_State *L) {
@@ -229,6 +230,7 @@ static const luaL_Reg tree_methods[] = {
     {"root", tree_push_root},
     {"copy", tree_copy},
     {"edit", tree_edit},
+    {"edit_s", tree_edit_s},
     {NULL, NULL}};
 static const luaL_Reg tree_metamethods[] = {
     {"__gc", tree_gc},
