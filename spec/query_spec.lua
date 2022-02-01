@@ -109,6 +109,26 @@ describe("Query", function()
 				assert.are.equal(name, "a")
 			end
 		end)
+		it("should return the correct @name for each capture", function()
+			local tree = assert(p:parse_string[[
+				int main(void) {
+					return 0;
+				}
+			]])
+			local q_iter = p:query[[
+				(translation_unit
+					(function_definition
+						declarator: (function_declarator
+							declarator: (identifier) @inner) @outer))
+			]]:capture(tree:root())
+			local expected = {
+				["inner"] = "main",
+				["outer"] = "main(void)",
+			}
+			for capture, name in q_iter do
+				assert.are.equal(expected[name], capture:source())
+			end
+		end)
 	end)
 	describe("predicates", function()
 		describe("eq?", function()

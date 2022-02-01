@@ -292,7 +292,8 @@ static int query_capture(lua_State *L) {
 	    L, parent_idx,
 	    m.captures[capture_index].node);
 	uint32_t len;
-	const char *name = ts_query_capture_name_for_id(q->query, capture_index, &len);
+	const char *name = ts_query_capture_name_for_id(
+			q->query, m.captures[capture_index].index, &len);
 	lua_pushlstring(L, name, len);
 	return 2;
 }
