@@ -44,7 +44,10 @@ void push_registry_field(lua_State *L, const char *f);
 void set_registry_field(lua_State *L, const char *f);
 void newtable_with_mode(lua_State *L, const char *mode);
 size_t length_of(lua_State *L, int index);
+
+#if LUA_VERSION_NUM > 501
 void dump_stack(lua_State *L, int from);
+#endif
 
 #ifndef LUA_OK
 #define LUA_OK 0
