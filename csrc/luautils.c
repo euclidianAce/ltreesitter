@@ -165,3 +165,66 @@ size_t length_of(lua_State *L, int index) {
 	return len;
 #endif
 }
+
+void dump_stack(lua_State *L, int from) {
+	int top = lua_gettop(L);
+	fprintf(stderr, "Lua Stack:\n");
+	for (int i = from; i <= top; ++i) {
+		fprintf(stderr, "   %s\n", luaL_tolstring(L, i, NULL));
+		lua_pop(L, 1);
+	}
+	fprintf(stderr, "==============\n");
+}
+
+bool sb_ensure_cap(StringBuilder *sb, size_t n) {
+	if (sb->capacity >= n) {
+		return true;
+	}
+	size_t new_cap = sb->capacity * 2;
+	if (n > new_cap)
+		new_cap = n;
+	char *new_data = realloc(sb->data, new_cap);
+	if (new_data) {
+		sb->capacity = new_cap;
+		sb->data = new_data;
+		return true;
+	}
+	return false;
+}
+
+void sb_push_str(StringBuilder *sb, const char *str) {
+	size_t len = strlen(str);
+	sb_ensure_cap(sb, sb->length + len);
+	memcpy(sb->data + sb->length, str, len);
+	sb->length += len;
+}
+
+void sb_push_lstr(StringBuilder *sb, size_t len, const char *str) {
+	sb_ensure_cap(sb, sb->length + len);
+	memcpy(sb->data + sb->length, str, len);
+	sb->length += len;
+}
+
+void sb_push_fmt(StringBuilder *sb, const char *fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	int n;
+	{
+		va_list copy;
+		va_copy(copy, args);
+		n = vsnprintf(NULL, 0, fmt, copy);
+		va_end(copy);
+	}
+	sb_ensure_cap(sb, sb->length + n + 1);
+	vsnprintf(sb->data + sb->length, n + 1, fmt, args);
+	va_end(args);
+}
+
+void sb_free(StringBuilder *sb) {
+	free(sb->data);
+	*sb = (StringBuilder){0};
+}
+
+void sb_push_to_lua(lua_State *L, StringBuilder *sb) {
+	lua_pushlstring(L, sb->data, sb->length);
+}

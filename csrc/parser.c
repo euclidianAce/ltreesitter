@@ -219,11 +219,9 @@ int ltreesitter_require_parser(lua_State *L) {
 		return ALLOC_FAIL(L);
 
 	// buffer to build up search paths in error message
-	luaL_Buffer b;
-
-	luaL_buffinit(L, &b);
-	buf_add_str(&b, "Unable to load parser for ");
-	buf_add_str(&b, lang_name);
+	StringBuilder b = {0};
+	sb_push_str(&b, "Unable to load parser for ");
+	sb_push_str(&b, lang_name);
 
 	// Do an imitation of a package.searchpath
 	//	Searchpath will just return the first path which we may be able to open,
@@ -247,8 +245,7 @@ int ltreesitter_require_parser(lua_State *L) {
 			buf[j] = '\0';
 
 			if (push_cached_parser(L, buf, lang_name)) {
-				luaL_pushresult(&b);
-				lua_pop(L, 1);
+				sb_free(&b);
 				free(buf);
 				return 1;
 			}
@@ -260,57 +257,53 @@ int ltreesitter_require_parser(lua_State *L) {
 			uint32_t version = 0;
 			switch (try_dlopen(&proxy, buf, lang_name, &version)) {
 			case PARSE_LOAD_ERR_NONE: {
-				luaL_pushresult(&b);
 				ltreesitter_Parser *const p = new_parser(L);
 				p->dl = proxy.dl;
 				p->parser = proxy.parser;
 
 				cache_parser(L, buf, lang_name);
+				sb_free(&b);
 				free(buf);
 				return 1;
 			}
 			case PARSE_LOAD_ERR_DLSYM:
-				buf_add_str(&b, "\n\tFound ");
-				luaL_addlstring(&b, buf, j);
-				buf_add_str(&b, ":\n\t\tunable to find symbol " TREE_SITTER_SYM);
-				buf_add_str(&b, lang_name);
+				sb_push_str(&b, "\n\tFound ");
+				sb_push_lstr(&b, j, buf);
+				sb_push_str(&b, ":\n\t\tunable to find symbol " TREE_SITTER_SYM);
+				sb_push_str(&b, lang_name);
 				break;
 			case PARSE_LOAD_ERR_DLOPEN:
-				buf_add_str(&b, "\n\tTried ");
-				luaL_addlstring(&b, buf, j);
-				buf_add_str(&b, ": ");
-				buf_add_str(&b, dynamic_lib_error(proxy.dl));
+				sb_push_str(&b, "\n\tTried ");
+				sb_push_lstr(&b, j, buf);
+				sb_push_str(&b, ": ");
+				sb_push_str(&b, dynamic_lib_error(proxy.dl));
 				break;
 			case PARSE_LOAD_ERR_BUFLEN:
-				buf_add_str(&b, "\n\tUnable to copy langauge name '");
-				buf_add_str(&b, lang_name);
-				buf_add_str(&b, "' into buffer");
+				sb_push_str(&b, "\n\tUnable to copy langauge name '");
+				sb_push_str(&b, lang_name);
+				sb_push_str(&b, "' into buffer");
 				goto err_cleanup;
 			case PARSE_LOAD_ERR_LANG_VERSION_TOO_OLD:
-				buf_add_str(&b, "\n\tthe found ");
-				buf_add_str(&b, lang_name);
-				buf_add_str(&b, " parser (at ");
-				buf_add_str(&b, buf);
-				buf_add_str(&b, ") is too old, parser version: ");
-				lua_pushfstring(L, "%d", version);
-				luaL_addvalue(&b);
-				buf_add_str(&b, ", minimum version: ");
-				lua_pushfstring(L, "%d", TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION);
-				luaL_addvalue(&b);
-				buf_add_str(&b, ". Either find a newer parser or recompile ltreesitter with an older tree-sitter api version");
+				sb_push_str(&b, "\n\tthe found ");
+				sb_push_str(&b, lang_name);
+				sb_push_str(&b, " parser (at ");
+				sb_push_str(&b, buf);
+				sb_push_str(&b, ") is too old, parser version: ");
+				sb_push_fmt(&b, "%d", version);
+				sb_push_str(&b, ", minimum version: ");
+				sb_push_fmt(&b, "%d", TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION);
+				sb_push_str(&b, ". Either find a newer parser or recompile ltreesitter with an older tree-sitter api version");
 				goto err_cleanup;
 			case PARSE_LOAD_ERR_LANG_VERSION_TOO_NEW:
-				buf_add_str(&b, "\n\tthe found ");
-				buf_add_str(&b, lang_name);
-				buf_add_str(&b, " parser (at ");
-				buf_add_str(&b, buf);
-				buf_add_str(&b, ") is too new, parser version: ");
-				lua_pushfstring(L, "%d", version);
-				luaL_addvalue(&b);
-				buf_add_str(&b, ", maximum version: ");
-				lua_pushfstring(L, "%d", TREE_SITTER_LANGUAGE_VERSION);
-				luaL_addvalue(&b);
-				buf_add_str(&b, ". Either find an older parser or recompile ltreesitter with a newer tree-sitter api version");
+				sb_push_str(&b, "\n\tthe found ");
+				sb_push_str(&b, lang_name);
+				sb_push_str(&b, " parser (at ");
+				sb_push_str(&b, buf);
+				sb_push_str(&b, ") is too new, parser version: ");
+				sb_push_fmt(&b, "%d", version);
+				sb_push_str(&b, ", maximum version: ");
+				sb_push_fmt(&b, "%d", TREE_SITTER_LANGUAGE_VERSION);
+				sb_push_str(&b, ". Either find an older parser or recompile ltreesitter with a newer tree-sitter api version");
 				goto err_cleanup;
 			}
 
@@ -325,8 +318,8 @@ int ltreesitter_require_parser(lua_State *L) {
 
 err_cleanup:
 	free(buf);
-
-	luaL_pushresult(&b);
+	sb_push_to_lua(L, &b);
+	sb_free(&b);
 	return lua_error(L);
 }
 
@@ -387,11 +380,7 @@ enum ReadError {
 };
 struct CallInfo {
 	lua_State *L;
-	struct {
-		size_t len;
-		size_t real_len;
-		char *str;
-	} string_builder;
+	StringBuilder string_builder;
 	enum ReadError read_error;
 };
 static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, TSPoint position, uint32_t *bytes_read) {
@@ -424,23 +413,22 @@ static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, T
 		return NULL;
 	}
 
-	const char *read_str = lua_tolstring(L, -1, (size_t *)bytes_read);
-	while (i->string_builder.real_len < byte_index + *bytes_read) {
-		i->string_builder.real_len *= 2;
-		i->string_builder.str = realloc(i->string_builder.str, i->string_builder.real_len);
-		if (!i->string_builder.str) {
+	size_t n = 0;
+	const char *read_str = lua_tolstring(L, -1, &n);
+	if (!sb_ensure_cap(&i->string_builder, byte_index + n)) {
 			ALLOC_FAIL(L);
 			*bytes_read = 0;
 			return NULL;
-		}
 	}
-	memcpy(&i->string_builder.str[byte_index], read_str, *bytes_read);
-	if (byte_index + *bytes_read > i->string_builder.len) {
-		i->string_builder.len = byte_index + *bytes_read;
+
+	memcpy(&i->string_builder.data[byte_index], read_str, n);
+	if (byte_index + *bytes_read > i->string_builder.length) {
+		i->string_builder.length = byte_index + n;
 	}
 
 	lua_pop(L, 1);
 
+	*bytes_read = n;
 	return read_str;
 }
 
@@ -464,15 +452,8 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 	struct CallInfo payload = {
 	    .L = L,
 	    .read_error = READERR_NONE,
-	    .string_builder = {
-	        .len = 0,
-	        .real_len = 64,
-	        .str = malloc(sizeof(char) * 64),
-	    },
+	    .string_builder = {0},
 	};
-	if (!payload.string_builder.str) {
-		return ALLOC_FAIL(L);
-	}
 
 	TSInput input = (TSInput){
 	    .read = ltreesitter_parser_read,
@@ -496,7 +477,7 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 		lua_pushnil(L);
 		return 1;
 	}
-	ltreesitter_push_tree(L, t, true, payload.string_builder.str, payload.string_builder.len);
+	ltreesitter_push_tree(L, t, true, payload.string_builder.data, payload.string_builder.length);
 
 	return 1;
 }
