@@ -25,7 +25,7 @@ ltreesitter.so: $(OBJ)
 clean:
 	rm -f $(OBJ) ltreesitter.a
 
-all: clean ltreesitter.a
+all: clean ltreesitter.a ltreesitter.so
 
 install: ltreesitter.a ltreesitter.so
 	cp ltreesitter.a $(INSTALL_PREFIX)/
