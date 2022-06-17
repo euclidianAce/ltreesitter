@@ -59,13 +59,16 @@ void ltreesitter_push_tree(
 	const char *src) {
 	ltreesitter_Tree *tree = lua_newuserdata(L, sizeof(struct ltreesitter_Tree));
 	tree->tree = t;
+	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
 	tree->source = malloc(sizeof(ltreesitter_SourceText));
+	if (!tree->source) {
+		ALLOC_FAIL(L);
+	}
 	*tree->source = (ltreesitter_SourceText){
 		.refs = 1,
 		.length = src_len,
 		.text = src,
 	};
-	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
 }
 
 /* @teal-export Tree.root: function(Tree): Node [[
