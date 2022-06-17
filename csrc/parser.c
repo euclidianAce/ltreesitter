@@ -369,7 +369,7 @@ int ltreesitter_parser_parse_string(lua_State *L) {
 		return 1;
 	}
 
-	ltreesitter_push_tree(L, tree, true, copy, len);
+	ltreesitter_push_tree(L, tree, len, copy);
 	return 1;
 }
 
@@ -477,7 +477,7 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 		lua_pushnil(L);
 		return 1;
 	}
-	ltreesitter_push_tree(L, t, true, payload.string_builder.data, payload.string_builder.length);
+	ltreesitter_push_tree(L, t, payload.string_builder.length, payload.string_builder.data);
 
 	return 1;
 }

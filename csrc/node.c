@@ -363,7 +363,7 @@ static int node_get_source_str(lua_State *L) {
 
 	push_parent(L, 1);
 	ltreesitter_Tree *const t = ltreesitter_check_tree(L, 2, "Internal error: node parent was not a tree");
-	lua_pushlstring(L, t->src + start, end - start);
+	lua_pushlstring(L, t->source->text + start, end - start);
 	return 1;
 }
 

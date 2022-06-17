@@ -53,16 +53,19 @@ ltreesitter_Tree *ltreesitter_check_tree_arg(lua_State *L, int idx) {
 }
 
 void ltreesitter_push_tree(
-    lua_State *L,
-    TSTree *t,
-    bool own_str,
-    const char *src,
-    size_t src_len) {
+	lua_State *L,
+	TSTree *t,
+	size_t src_len,
+	const char *src
+) {
 	ltreesitter_Tree *tree = lua_newuserdata(L, sizeof(struct ltreesitter_Tree));
 	tree->tree = t;
-	tree->own_str = own_str;
-	tree->src = src;
-	tree->src_len = src_len;
+	tree->source = malloc(sizeof(ltreesitter_SourceText));
+	*tree->source = (ltreesitter_SourceText){
+		.refs = 1,
+		.length = src_len,
+		.text = src,
+	};
 	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
 }
 
@@ -90,23 +93,10 @@ static int tree_to_string(lua_State *L) {
 ]] */
 static int tree_copy(lua_State *L) {
 	ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1);
-
-	const char *src_copy;
-	if (t->own_str) {
-		src_copy = malloc(sizeof(char) * t->src_len);
-		if (!src_copy)
-			return ALLOC_FAIL(L);
-		memcpy((char *)src_copy, t->src, t->src_len);
-	} else {
-		src_copy = t->src;
-	}
-
 	ltreesitter_Tree *const t_copy = lua_newuserdata(L, sizeof(struct ltreesitter_Tree));
 	t_copy->tree = ts_tree_copy(t->tree);
-	t_copy->src = src_copy;
-	t_copy->src_len = t->src_len;
-	t_copy->own_str = t->own_str;
-
+	++t->source->refs;
+	t_copy->source = t->source;
 	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
 	return 1;
 }
@@ -216,11 +206,11 @@ static int tree_gc(lua_State *L) {
 #ifdef LOG_GC
 	printf("Tree %p is being garbage collected\n", t);
 #endif
-	if (t->own_str) {
+	if (--t->source->refs == 0) {
 #ifdef LOG_GC
-		printf("Tree %p owns its string %p, collecting that too...\n", t, t->src);
+		printf("   Tree %p source refcount is 0, collecting that too\n", t);
 #endif
-		free((char *)t->src);
+		free((void*)t->source->text);
 	}
 	ts_tree_delete(t->tree);
 	return 0;

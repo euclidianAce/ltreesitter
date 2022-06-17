@@ -190,7 +190,7 @@ static bool do_predicates(
 				const TSNode n = m->captures[s[j].value_id].node;
 				const uint32_t start = ts_node_start_byte(n);
 				const uint32_t end = ts_node_end_byte(n);
-				lua_pushlstring(L, t->src + start, end - start);
+				lua_pushlstring(L, t->source->text + start, end - start);
 
 				++num_args;
 				break;
