@@ -180,9 +180,6 @@ int ltreesitter_load_parser(lua_State *L) {
    -- etc.
    </pre>
 ]] */
-static inline void buf_add_str(luaL_Buffer *b, const char *s) {
-	luaL_addlstring(b, s, strlen(s));
-}
 
 #ifdef _WIN32
 #define PATH_SEP "\\"
