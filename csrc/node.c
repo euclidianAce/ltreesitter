@@ -135,8 +135,8 @@ static int node_child(lua_State *L) {
 	} else {
 		push_parent(L, 1);
 		ltreesitter_push_node(
-		    L, -1,
-		    ts_node_child(parent->node, (uint32_t)luaL_checknumber(L, 2)));
+			L, -1,
+			ts_node_child(parent->node, (uint32_t)luaL_checknumber(L, 2)));
 	}
 	return 1;
 }
@@ -206,8 +206,8 @@ static int node_named_children_iterator(lua_State *L) {
 	} else {
 		lua_pushvalue(L, lua_upvalueindex(2));
 		ltreesitter_push_node(
-		    L, -1,
-		    ts_node_named_child(n->node, idx));
+			L, -1,
+			ts_node_named_child(n->node, idx));
 	}
 
 	return 1;
@@ -379,33 +379,33 @@ static int node_tree_cursor_create(lua_State *L) {
 }
 
 static const luaL_Reg node_methods[] = {
-    {"child", node_child},
-    {"child_by_field_name", node_child_by_field_name},
-    {"child_count", node_child_count},
-    {"children", node_children},
-    {"create_cursor", node_tree_cursor_create},
-    {"end_byte", node_end_byte},
-    {"end_point", node_end_point},
-    {"is_extra", node_is_extra},
-    {"is_missing", node_is_missing},
-    {"is_named", node_is_named},
-    {"name", node_name},
-    {"named_child", node_named_child},
-    {"named_child_count", node_named_child_count},
-    {"named_children", node_named_children},
-    {"next_named_sibling", node_next_named_sibling},
-    {"next_sibling", node_next_sibling},
-    {"prev_named_sibling", node_prev_named_sibling},
-    {"prev_sibling", node_prev_sibling},
-    {"source", node_get_source_str},
-    {"start_byte", node_start_byte},
-    {"start_point", node_start_point},
-    {"type", node_type},
-    {NULL, NULL}};
+	{"child", node_child},
+	{"child_by_field_name", node_child_by_field_name},
+	{"child_count", node_child_count},
+	{"children", node_children},
+	{"create_cursor", node_tree_cursor_create},
+	{"end_byte", node_end_byte},
+	{"end_point", node_end_point},
+	{"is_extra", node_is_extra},
+	{"is_missing", node_is_missing},
+	{"is_named", node_is_named},
+	{"name", node_name},
+	{"named_child", node_named_child},
+	{"named_child_count", node_named_child_count},
+	{"named_children", node_named_children},
+	{"next_named_sibling", node_next_named_sibling},
+	{"next_sibling", node_next_sibling},
+	{"prev_named_sibling", node_prev_named_sibling},
+	{"prev_sibling", node_prev_sibling},
+	{"source", node_get_source_str},
+	{"start_byte", node_start_byte},
+	{"start_point", node_start_point},
+	{"type", node_type},
+	{NULL, NULL}};
 static const luaL_Reg node_metamethods[] = {
-    {"__eq", node_eq},
-    {"__tostring", node_string},
-    {NULL, NULL}};
+	{"__eq", node_eq},
+	{"__tostring", node_string},
+	{NULL, NULL}};
 
 void ltreesitter_create_node_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_NODE_METATABLE_NAME, node_metamethods, node_methods);

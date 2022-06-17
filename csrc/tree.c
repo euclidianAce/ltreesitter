@@ -56,8 +56,7 @@ void ltreesitter_push_tree(
 	lua_State *L,
 	TSTree *t,
 	size_t src_len,
-	const char *src
-) {
+	const char *src) {
 	ltreesitter_Tree *tree = lua_newuserdata(L, sizeof(struct ltreesitter_Tree));
 	tree->tree = t;
 	tree->source = malloc(sizeof(ltreesitter_SourceText));
@@ -160,15 +159,17 @@ static int tree_edit_s(lua_State *L) {
 	// 13.  new_end_point.row (u32)
 	// 14.  new_end_point.col (u32)
 
-	ts_tree_edit(t->tree, &(const TSInputEdit){
-	                          .start_byte = lua_tonumber(L, 3),
-	                          .old_end_byte = lua_tonumber(L, 4),
-	                          .new_end_byte = lua_tonumber(L, 5),
+	ts_tree_edit(
+		t->tree,
+		&(const TSInputEdit){
+			.start_byte = lua_tonumber(L, 3),
+			.old_end_byte = lua_tonumber(L, 4),
+			.new_end_byte = lua_tonumber(L, 5),
 
-	                          .start_point = {.row = lua_tonumber(L, 7), .column = lua_tonumber(L, 8)},
-	                          .old_end_point = {.row = lua_tonumber(L, 10), .column = lua_tonumber(L, 11)},
-	                          .new_end_point = {.row = lua_tonumber(L, 13), .column = lua_tonumber(L, 14)},
-	                      });
+			.start_point = {.row = lua_tonumber(L, 7), .column = lua_tonumber(L, 8)},
+			.old_end_point = {.row = lua_tonumber(L, 10), .column = lua_tonumber(L, 11)},
+			.new_end_point = {.row = lua_tonumber(L, 13), .column = lua_tonumber(L, 14)},
+		});
 	return 0;
 }
 
@@ -210,22 +211,22 @@ static int tree_gc(lua_State *L) {
 #ifdef LOG_GC
 		printf("   Tree %p source refcount is 0, collecting that too\n", t);
 #endif
-		free((void*)t->source->text);
+		free((void *)t->source->text);
 	}
 	ts_tree_delete(t->tree);
 	return 0;
 }
 
 static const luaL_Reg tree_methods[] = {
-    {"root", tree_push_root},
-    {"copy", tree_copy},
-    {"edit", tree_edit},
-    {"edit_s", tree_edit_s},
-    {NULL, NULL}};
+	{"root", tree_push_root},
+	{"copy", tree_copy},
+	{"edit", tree_edit},
+	{"edit_s", tree_edit_s},
+	{NULL, NULL}};
 static const luaL_Reg tree_metamethods[] = {
-    {"__gc", tree_gc},
-    {"__tostring", tree_to_string},
-    {NULL, NULL}};
+	{"__gc", tree_gc},
+	{"__tostring", tree_to_string},
+	{NULL, NULL}};
 
 void ltreesitter_create_tree_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_TREE_METATABLE_NAME, tree_metamethods, tree_methods);

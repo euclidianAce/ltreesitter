@@ -15,10 +15,10 @@
 static const char version_str[] = "0.0.6+dev";
 
 static const luaL_Reg lib_funcs[] = {
-    {"load", ltreesitter_load_parser},
-    {"require", ltreesitter_require_parser},
-    {"_reg", push_registry_table},
-    {NULL, NULL},
+	{"load", ltreesitter_load_parser},
+	{"require", ltreesitter_require_parser},
+	{"_reg", push_registry_table},
+	{NULL, NULL},
 };
 
 LUA_API int luaopen_ltreesitter(lua_State *L) {

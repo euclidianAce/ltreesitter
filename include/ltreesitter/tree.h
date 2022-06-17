@@ -12,7 +12,6 @@ void ltreesitter_push_tree(
 	lua_State *,
 	TSTree *,
 	size_t src_len,
-	const char *src
-);
+	const char *src);
 
 #endif
