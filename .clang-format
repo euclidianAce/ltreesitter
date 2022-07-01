@@ -4,7 +4,7 @@ IndentWidth: 4
 TabWidth: 4
 AccessModifierOffset: -4
 
-UseTab: ForIndentation
+UseTab: AlignWithSpaces
 
 BreakBeforeBinaryOperators: true
 BreakConstructorInitializers: AfterColon

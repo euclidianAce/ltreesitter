@@ -17,6 +17,13 @@ struct ltreesitter_Parser {
 };
 #define LTREESITTER_PARSER_METATABLE_NAME "ltreesitter.Parser"
 
+// reference counted source text for trees to hold on to
+typedef struct {
+	size_t refs;
+	size_t length;
+	const char *text;
+} ltreesitter_SourceText;
+
 struct ltreesitter_Tree {
 	TSTree *tree;
 
@@ -25,9 +32,7 @@ struct ltreesitter_Tree {
 	// so we just keep a copy for ourselves here.
 	// Not the most memory efficient, but I'd argue having Node:source()
 	// is worth it
-	bool own_str;
-	const char *src;
-	size_t src_len;
+	ltreesitter_SourceText *source;
 };
 #define LTREESITTER_TREE_METATABLE_NAME "ltreesitter.Tree"
 

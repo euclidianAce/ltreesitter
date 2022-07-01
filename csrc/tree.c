@@ -53,17 +53,22 @@ ltreesitter_Tree *ltreesitter_check_tree_arg(lua_State *L, int idx) {
 }
 
 void ltreesitter_push_tree(
-    lua_State *L,
-    TSTree *t,
-    bool own_str,
-    const char *src,
-    size_t src_len) {
+	lua_State *L,
+	TSTree *t,
+	size_t src_len,
+	const char *src) {
 	ltreesitter_Tree *tree = lua_newuserdata(L, sizeof(struct ltreesitter_Tree));
 	tree->tree = t;
-	tree->own_str = own_str;
-	tree->src = src;
-	tree->src_len = src_len;
 	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
+	tree->source = malloc(sizeof(ltreesitter_SourceText));
+	if (!tree->source) {
+		ALLOC_FAIL(L);
+	}
+	*tree->source = (ltreesitter_SourceText){
+		.refs = 1,
+		.length = src_len,
+		.text = src,
+	};
 }
 
 /* @teal-export Tree.root: function(Tree): Node [[
@@ -90,23 +95,10 @@ static int tree_to_string(lua_State *L) {
 ]] */
 static int tree_copy(lua_State *L) {
 	ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1);
-
-	const char *src_copy;
-	if (t->own_str) {
-		src_copy = malloc(sizeof(char) * t->src_len);
-		if (!src_copy)
-			return ALLOC_FAIL(L);
-		memcpy((char *)src_copy, t->src, t->src_len);
-	} else {
-		src_copy = t->src;
-	}
-
 	ltreesitter_Tree *const t_copy = lua_newuserdata(L, sizeof(struct ltreesitter_Tree));
 	t_copy->tree = ts_tree_copy(t->tree);
-	t_copy->src = src_copy;
-	t_copy->src_len = t->src_len;
-	t_copy->own_str = t->own_str;
-
+	++t->source->refs;
+	t_copy->source = t->source;
 	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
 	return 1;
 }
@@ -170,15 +162,17 @@ static int tree_edit_s(lua_State *L) {
 	// 13.  new_end_point.row (u32)
 	// 14.  new_end_point.col (u32)
 
-	ts_tree_edit(t->tree, &(const TSInputEdit){
-	                          .start_byte = lua_tonumber(L, 3),
-	                          .old_end_byte = lua_tonumber(L, 4),
-	                          .new_end_byte = lua_tonumber(L, 5),
+	ts_tree_edit(
+		t->tree,
+		&(const TSInputEdit){
+			.start_byte = lua_tonumber(L, 3),
+			.old_end_byte = lua_tonumber(L, 4),
+			.new_end_byte = lua_tonumber(L, 5),
 
-	                          .start_point = {.row = lua_tonumber(L, 7), .column = lua_tonumber(L, 8)},
-	                          .old_end_point = {.row = lua_tonumber(L, 10), .column = lua_tonumber(L, 11)},
-	                          .new_end_point = {.row = lua_tonumber(L, 13), .column = lua_tonumber(L, 14)},
-	                      });
+			.start_point = {.row = lua_tonumber(L, 7), .column = lua_tonumber(L, 8)},
+			.old_end_point = {.row = lua_tonumber(L, 10), .column = lua_tonumber(L, 11)},
+			.new_end_point = {.row = lua_tonumber(L, 13), .column = lua_tonumber(L, 14)},
+		});
 	return 0;
 }
 
@@ -216,26 +210,26 @@ static int tree_gc(lua_State *L) {
 #ifdef LOG_GC
 	printf("Tree %p is being garbage collected\n", t);
 #endif
-	if (t->own_str) {
+	if (--t->source->refs == 0) {
 #ifdef LOG_GC
-		printf("Tree %p owns its string %p, collecting that too...\n", t, t->src);
+		printf("   Tree %p source refcount is 0, collecting that too\n", t);
 #endif
-		free((char *)t->src);
+		free((void *)t->source->text);
 	}
 	ts_tree_delete(t->tree);
 	return 0;
 }
 
 static const luaL_Reg tree_methods[] = {
-    {"root", tree_push_root},
-    {"copy", tree_copy},
-    {"edit", tree_edit},
-    {"edit_s", tree_edit_s},
-    {NULL, NULL}};
+	{"root", tree_push_root},
+	{"copy", tree_copy},
+	{"edit", tree_edit},
+	{"edit_s", tree_edit_s},
+	{NULL, NULL}};
 static const luaL_Reg tree_metamethods[] = {
-    {"__gc", tree_gc},
-    {"__tostring", tree_to_string},
-    {NULL, NULL}};
+	{"__gc", tree_gc},
+	{"__tostring", tree_to_string},
+	{NULL, NULL}};
 
 void ltreesitter_create_tree_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_TREE_METATABLE_NAME, tree_metamethods, tree_methods);

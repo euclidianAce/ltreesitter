@@ -50,16 +50,17 @@ void create_libtable(lua_State *L, const luaL_Reg l[]) {
 }
 
 void create_metatable(
-    lua_State *L,
-    const char *name,
-    const luaL_Reg metamethods[],
-    const luaL_Reg index[]) {
+	lua_State *L,
+	const char *name,
+	const luaL_Reg metamethods[],
+	const luaL_Reg index[]) {
 	luaL_newmetatable(L, name);     // metatable
 	setfuncs(L, metamethods);       // metatable
 	lua_newtable(L);                // metatable, table
 	setfuncs(L, index);             // metatable, table
 	lua_setfield(L, -2, "__index"); // metatable
-	                                // lua <=5.2 doesn't set the __name field which we rely upon for the tests to pass
+
+	// lua <=5.2 doesn't set the __name field which we rely upon for the tests to pass
 #if LUA_VERSION_NUM < 503
 	lua_pushstring(L, name);
 	lua_setfield(L, -2, "__name");
@@ -82,11 +83,11 @@ bool expect_field(lua_State *L, int idx, const char *field_name, int expected_ty
 	const int actual_type = getfield_type(L, idx, field_name);
 	if (actual_type != expected_type) {
 		luaL_error(
-		    L,
-		    "expected field `%s' to be of type %s (got %s)",
-		    field_name,
-		    lua_typename(L, expected_type),
-		    lua_typename(L, actual_type));
+			L,
+			"expected field `%s' to be of type %s (got %s)",
+			field_name,
+			lua_typename(L, expected_type),
+			lua_typename(L, actual_type));
 		return false;
 	}
 	return true;
@@ -96,12 +97,12 @@ bool expect_nested_field(lua_State *L, int idx, const char *parent_name, const c
 	const int actual_type = getfield_type(L, idx, field_name);
 	if (actual_type != expected_type) {
 		luaL_error(
-		    L,
-		    "expected field `%s.%s' to be of type %s (got %s)",
-		    parent_name,
-		    field_name,
-		    lua_typename(L, expected_type),
-		    lua_typename(L, actual_type));
+			L,
+			"expected field `%s.%s' to be of type %s (got %s)",
+			parent_name,
+			field_name,
+			lua_typename(L, expected_type),
+			lua_typename(L, actual_type));
 		return false;
 	}
 	return true;
