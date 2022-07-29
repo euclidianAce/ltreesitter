@@ -215,6 +215,7 @@ static int tree_gc(lua_State *L) {
 		printf("   Tree %p source refcount is 0, collecting that too\n", t);
 #endif
 		free((void *)t->source->text);
+		free(t->source);
 	}
 	ts_tree_delete(t->tree);
 	return 0;
