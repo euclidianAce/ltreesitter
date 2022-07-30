@@ -3,7 +3,7 @@
 
 #include "luautils.h"
 #include "object.h"
-#include <ltreesitter/dynamiclib.h>
+#include "dynamiclib.h"
 #include <ltreesitter/node.h>
 #include <ltreesitter/parser.h>
 #include <ltreesitter/query.h>

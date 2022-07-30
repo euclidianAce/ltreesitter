@@ -1,7 +1,7 @@
 
 #include <stddef.h>
 
-#include <ltreesitter/dynamiclib.h>
+#include "dynamiclib.h"
 
 #ifdef _WIN32
 #define DL_EXT "dll"

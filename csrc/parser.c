@@ -11,7 +11,7 @@
 #include <string.h>
 
 #include "luautils.h"
-#include <ltreesitter/dynamiclib.h>
+#include "dynamiclib.h"
 #include <ltreesitter/query.h>
 #include <ltreesitter/tree.h>
 
