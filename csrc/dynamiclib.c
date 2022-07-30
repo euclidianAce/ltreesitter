@@ -51,9 +51,17 @@ void close_dynamic_lib(dl_handle *handle) {
 
 const char *dynamic_lib_error(dl_handle *handle) {
 #ifdef _WIN32
-	// Does windows have an equivalent dlerror?
 	UNUSED(handle);
-	return "Error in LoadLibrary";
+
+	static char err_buf[256];
+	FormatMessageA(
+		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ARGUMENT_ARRAY,
+		NULL,
+		GetLastError(),
+		err_buf,
+		sizeof err_buf,
+		NULL);
+	return err_buf;
 #elif LTREESITTER_USE_LIBUV
 	return uv_dlerror(handle);
 #else
