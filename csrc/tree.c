@@ -205,6 +205,41 @@ static int tree_edit(lua_State *L) {
 	return 0;
 }
 
+/* @teal-export Tree.get_changed_ranges: function(old: Tree, new: Tree): {Range} [[
+   Compare an old syntax tree to a new syntax tree.
+   This would usually be called right after a set of calls to <code>Tree.edit(_s)</code> and <code>Parser.parse_{string,with}</code>
+]] */
+static int tree_get_changed_ranges(lua_State *L) {
+	ltreesitter_Tree *old = ltreesitter_check_tree_arg(L, 1);
+	ltreesitter_Tree *new = ltreesitter_check_tree_arg(L, 2);
+	uint32_t len;
+	TSRange *ranges = ts_tree_get_changed_ranges(old->tree, new->tree, &len);
+
+	lua_createtable(L, len, 0); // { range }
+	for (uint32_t i = 0; i < len; i++) {
+		lua_createtable(L, 0, 4); // { range }, range
+		pushinteger(L, ranges[i].start_byte);
+		lua_setfield(L, -2, "start_byte");
+		pushinteger(L, ranges[i].end_byte);
+		lua_setfield(L, -2, "end_byte");
+		lua_createtable(L, 0, 2); // { range }, range, start_point
+		pushinteger(L, ranges[i].start_point.row);
+		lua_setfield(L, -2, "row");
+		pushinteger(L, ranges[i].start_point.column);
+		lua_setfield(L, -2, "column");
+		lua_setfield(L, -2, "start_point"); // { range }, range
+		lua_createtable(L, 0, 2); // { range }, range, end_point
+		pushinteger(L, ranges[i].end_point.row);
+		lua_setfield(L, -2, "row");
+		pushinteger(L, ranges[i].end_point.column);
+		lua_setfield(L, -2, "column");
+		lua_setfield(L, -2, "end_point"); // { range }, range
+		lua_rawseti(L, -2, i + 1); // { range }
+	}
+
+	return 1;
+}
+
 static int tree_gc(lua_State *L) {
 	ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1);
 #ifdef LOG_GC
@@ -226,6 +261,7 @@ static const luaL_Reg tree_methods[] = {
 	{"copy", tree_copy},
 	{"edit", tree_edit},
 	{"edit_s", tree_edit_s},
+	{"get_changed_ranges", tree_get_changed_ranges},
 	{NULL, NULL}};
 static const luaL_Reg tree_metamethods[] = {
 	{"__gc", tree_gc},
