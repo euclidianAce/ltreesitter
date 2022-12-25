@@ -298,8 +298,34 @@ static int query_capture(lua_State *L) {
 	return 2;
 }
 
-/* @teal-export Query.match: function(Query, Node): function(): Match [[
-   Iterate over the matches of a given query
+static void query_cursor_set_range(lua_State *L, TSQueryCursor *c) {
+	if (lua_isnumber(L, 3)) {
+		ts_query_cursor_set_byte_range(
+			c,
+			luaL_checkinteger(L, 3),
+			luaL_checkinteger(L, 4));
+	} else {
+		luaL_argcheck(L, lua_type(L, 3) == LUA_TTABLE, 3, "expected number or table");
+		luaL_argcheck(L, lua_type(L, 4) == LUA_TTABLE, 4, "expected table");
+		expect_field(L, 3, "row", LUA_TNUMBER);
+		expect_field(L, 3, "column", LUA_TNUMBER);
+		expect_field(L, 4, "row", LUA_TNUMBER);
+		expect_field(L, 4, "column", LUA_TNUMBER);
+
+		ts_query_cursor_set_point_range(
+			c,
+			(TSPoint){.row = lua_tonumber(L, 5), .column = lua_tonumber(L, 6)},
+			(TSPoint){.row = lua_tonumber(L, 7), .column = lua_tonumber(L, 8)}
+		);
+	}
+}
+
+/* @teal-export Query.match: function(Query, Node, start: integer|Point, end: integer|Point): function(): Match [[
+   Iterate over the matches of a given query.
+   <code>start</code> and <code>end</code> are optional.
+   They must be passed together with the same type, describing either two bytes or two points.
+   If passed, the query will be executed within the range denoted.
+   If not passed, the default behaviour is to execute the query through the entire range of the node.
 
    The match object is a record populated with all the information given by treesitter
    <pre>
@@ -320,10 +346,11 @@ static int query_capture(lua_State *L) {
    </pre>
 ]]*/
 static int query_match_factory(lua_State *L) {
-	lua_settop(L, 2);
 	ltreesitter_Query *const q = ltreesitter_check_query(L, 1);
 	TSNode n = ltreesitter_check_node(L, 2)->node;
 	TSQueryCursor *c = ts_query_cursor_new();
+	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
+	lua_settop(L, 2);
 	ltreesitter_QueryCursor *lc = lua_newuserdata(L, sizeof(struct ltreesitter_QueryCursor));
 	setmetatable(L, LTREESITTER_QUERY_CURSOR_METATABLE_NAME);
 	lc->query_cursor = c;
@@ -333,8 +360,12 @@ static int query_match_factory(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Query.capture: function(Query, Node): function(): Node, string [[
-   Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs
+/* @teal-export Query.capture: function(Query, Node, start: integer|Point, end: integer|Point): function(): Node, string [[
+   Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs.
+   <code>start</code> and <code>end</code> are optional.
+   They must be passed together with the same type, describing either two bytes or two points.
+   If passed, the query will be executed within the range denoted.
+   If not passed, the default behaviour is to execute the query through the entire range of the node.
 
    <pre>
    local q = parser:query[[ (comment) @my_match ]]
@@ -344,10 +375,11 @@ static int query_match_factory(lua_State *L) {
    </pre>
 ]]*/
 static int query_capture_factory(lua_State *L) {
-	lua_settop(L, 2);
 	ltreesitter_Query *const q = ltreesitter_check_query(L, 1);
 	TSNode n = ltreesitter_check_node(L, 2)->node;
 	TSQueryCursor *c = ts_query_cursor_new();
+	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
+	lua_settop(L, 2);
 	ltreesitter_QueryCursor *lc = lua_newuserdata(L, sizeof(struct ltreesitter_QueryCursor));
 	setmetatable(L, LTREESITTER_QUERY_CURSOR_METATABLE_NAME);
 	lc->query_cursor = c;
@@ -416,10 +448,14 @@ static int query_copy_with_predicates(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Query.exec: function(Query, Node) [[
+/* @teal-export Query.exec: function(Query, Node, start: integer|Point, end: integer|Point) [[
    Runs a query. That's it. Nothing more, nothing less.
    This is intended to be used with the <code>Query.with</code> method and predicates that have side effects,
    i.e. for when you would use Query.match or Query.capture, but do nothing in the for loop.
+   <code>start</code> and <code>end</code> are optional.
+   They must be passed together with the same type, describing either two bytes or two points.
+   If passed, the query will be executed within the range denoted.
+   If not passed, the default behaviour is to execute the query through the entire range of the node.
 
    <pre>
    local parser = ltreesitter.require("teal")
@@ -452,6 +488,7 @@ static int query_exec(lua_State *L) {
 	TSNode n = ltreesitter_check_node(L, 2)->node;
 
 	TSQueryCursor *c = ts_query_cursor_new();
+	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
 
 	push_parent(L, 2);
 	ltreesitter_Tree *const t = ltreesitter_check_tree_arg(L, -1);
