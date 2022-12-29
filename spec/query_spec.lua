@@ -62,6 +62,49 @@ describe("Query", function()
 				collectgarbage()
 			end
 		end)
+		it("should only iterate through requested byte range", function()
+			local tree = assert(p:parse_string[[
+				// hello
+				// world
+				// hello
+				// world
+				// hello
+				// world
+			]])
+			local count = 0
+			for match in p
+				:query[[ (comment) @a ]]
+				:match(tree:root(), 4, 11)
+			do
+				count = count + 1
+				assert.are.equal(1, match.capture_count)
+				assert.are.equal("// hello", match.captures[1]:source())
+			end
+			assert.are.equal(1, count)
+		end)
+		it("should only iterate through requested point range", function()
+			local tree = assert(p:parse_string[[
+				// hello
+				// world
+				// hello
+				// world
+				// hello
+				// world
+			]])
+			local count = 0
+			for match in p
+				:query[[ (comment) @a ]]
+				:match(
+					tree:root(),
+					{ row = 1, column = 4 },
+					{ row = 1, column = 11 })
+			do
+				count = count + 1
+				assert.are.equal(1, match.capture_count)
+				assert.are.equal("// world", match.captures[1]:source())
+			end
+			assert.are.equal(1, count)
+		end)
 	end)
 	describe("capture", function()
 		it("should return a function", function()
@@ -128,6 +171,47 @@ describe("Query", function()
 			for capture, name in q_iter do
 				assert.are.equal(expected[name], capture:source())
 			end
+		end)
+		it("should only iterate through requested byte range", function()
+			local tree = assert(p:parse_string[[
+				// hello
+				// world
+				// hello
+				// world
+				// hello
+				// world
+			]])
+			local count = 0
+			for node, name in p
+				:query[[ (comment) @a ]]
+				:capture(tree:root(), 4, 11)
+			do
+				count = count + 1
+				assert.are.equal("// hello", node:source())
+			end
+			assert.are.equal(1, count)
+		end)
+		it("should only iterate through requested point range", function()
+			local tree = assert(p:parse_string[[
+				// hello
+				// world
+				// hello
+				// world
+				// hello
+				// world
+			]])
+			local count = 0
+			for node, name in p
+				:query[[ (comment) @a ]]
+				:capture(
+					tree:root(),
+					{ row = 1, column = 4 },
+					{ row = 1, column = 11 })
+			do
+				count = count + 1
+				assert.are.equal("// world", node:source())
+			end
+			assert.are.equal(1, count)
 		end)
 	end)
 	describe("predicates", function()
@@ -330,6 +414,44 @@ describe("Query", function()
 				"// bang",
 				"// blah",
 				"// hoop",
+			})
+		end)
+		it("should only iterate through requested byte range", function()
+			local root_node = assert(p:parse_string[[
+				// foo
+				// bar
+				// baz
+				// bang
+				// blah
+				// hoop
+				]]):root()
+			local res = {}
+			p:query[[ ((comment) @a (#insert! @a)) ]]
+				:with{["insert!"] = function(a) table.insert(res, a) end}
+				:exec(root_node, 4, 20)
+			assert.are.same(res, {
+				"// foo",
+				"// bar"
+			})
+		end)
+		it("should only iterate through requested point range", function()
+			local root_node = assert(p:parse_string[[
+				// foo
+				// bar
+				// baz
+				// bang
+				// blah
+				// hoop
+				]]):root()
+			local res = {}
+			p:query[[ ((comment) @a (#insert! @a)) ]]
+				:with{["insert!"] = function(a) table.insert(res, a) end}
+				:exec(root_node,
+					{ row = 1, column = 4 },
+					{ row = 2, column = 11 })
+			assert.are.same(res, {
+				"// bar",
+				"// baz"
 			})
 		end)
 	end)
