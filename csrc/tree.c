@@ -237,6 +237,8 @@ static int tree_get_changed_ranges(lua_State *L) {
 		lua_rawseti(L, -2, i + 1); // { range }
 	}
 
+	free(ranges);
+
 	return 1;
 }
 
