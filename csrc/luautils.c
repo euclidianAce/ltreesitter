@@ -197,9 +197,7 @@ bool sb_ensure_cap(StringBuilder *sb, size_t n) {
 
 void sb_push_str(StringBuilder *sb, const char *str) {
 	size_t len = strlen(str);
-	sb_ensure_cap(sb, sb->length + len);
-	memcpy(sb->data + sb->length, str, len);
-	sb->length += len;
+	sb_push_lstr(sb, len, str);
 }
 
 void sb_push_lstr(StringBuilder *sb, size_t len, const char *str) {
