@@ -217,7 +217,7 @@ void sb_push_fmt(StringBuilder *sb, const char *fmt, ...) {
 		va_end(copy);
 	}
 	sb_ensure_cap(sb, sb->length + n + 1);
-	vsnprintf(sb->data + sb->length, n + 1, fmt, args);
+	sb->length += vsnprintf(sb->data + sb->length, n + 1, fmt, args);
 	va_end(args);
 }
 
