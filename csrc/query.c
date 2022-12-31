@@ -149,9 +149,40 @@ static bool do_predicates(
 			So if a question comes after something with a side effect,
 			the side effect happens even if the query doesn't match
 			*/
+
+		{
+			// count the max number of args we need to prep for
+			int current_args = 0;
+			bool need_func_name = true;
+			int max_args = 0;
+			for (uint32_t j = 0; j < num_steps; ++j) {
+				switch (s[j].type) {
+				case TSQueryPredicateStepTypeString:
+					if (need_func_name)
+						need_func_name = false;
+					else
+						current_args += 1;
+					break;
+
+				case TSQueryPredicateStepTypeCapture:
+					current_args += 1;
+					break;
+
+				case TSQueryPredicateStepTypeDone:
+					if (current_args > max_args)
+						max_args = current_args;
+					need_func_name = true;
+					current_args = 0;
+					break;
+				}
+			}
+			if (!lua_checkstack(L, max_args))
+				return luaL_error(L, "Internal lua error, unable to handle %d arguments to predicate", max_args);
+		}
+
+		int num_args = 0;
 		bool need_func_name = true;
 		const char *func_name = NULL;
-		size_t num_args = 0;
 		for (uint32_t j = 0; j < num_steps; ++j) {
 			uint32_t len;
 			switch (s[j].type) {
