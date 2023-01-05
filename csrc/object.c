@@ -16,7 +16,7 @@ static void push_object_table(lua_State *L) {
 void push_parent(lua_State *L, int obj_idx) {
 	lua_pushvalue(L, obj_idx); // object_copy
 	push_object_table(L);      // object_copy, object_table
-	lua_rotate(L, -2, 1);      // object_table, object_copy
+	lua_insert(L, -2);         // object_table, object_copy
 	lua_gettable(L, -2);       // object_table, object_table[object_copy]
 	lua_remove(L, -2);         // object_table[object_copy]
 	if (lua_isnil(L, -1)) {
@@ -29,10 +29,8 @@ void push_parent(lua_State *L, int obj_idx) {
 void set_parent(lua_State *L, int parent_idx) {
 	// object
 	lua_pushvalue(L, parent_idx); // object, parent
-	lua_insert(L, -2);            // parent, object
-	push_object_table(L);         // parent, object, object_table
-	lua_insert(L, -2);            // parent, object_table, object
-	lua_rotate(L, -3, -1);        // object_table, object, parent
+	push_object_table(L);         // object, parent, object_table
+	lua_insert(L, -3);            // object_table, object, parent
 	lua_rawset(L, -3);            // object_table
 	lua_pop(L, 1);
 }
