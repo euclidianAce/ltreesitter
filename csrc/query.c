@@ -43,13 +43,13 @@ void handle_query_error(
 		break
 
 	switch (err_type) {
+		case TSQueryErrorNone: return; // unreachable
 		CASE(TSQueryErrorSyntax, "Query syntax error: around '%s' (at offset %d)");
 		CASE(TSQueryErrorNodeType, "Query node type error: around '%s' (at offset %d)");
 		CASE(TSQueryErrorField, "Query field error: around '%s' (at offset %d)");
 		CASE(TSQueryErrorCapture, "Query capture error: around '%s' (at offset %d)");
 		CASE(TSQueryErrorStructure, "Query structure error: around '%s' (at offset %d)");
-	default:
-		UNREACHABLE(L);
+		CASE(TSQueryErrorLanguage, "Query language error: around '%s' (at offset %d)");
 	}
 #undef CASE
 
