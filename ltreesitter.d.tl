@@ -13,46 +13,46 @@ local record ltreesitter
       reset: function(Cursor, Node)  -- csrc/tree_cursor.c:46
    end
    record Node userdata
-      child: function(Node, idx: integer): Node  -- csrc/node.c:126
-      child_by_field_name: function(Node, string): Node  -- csrc/node.c:336
-      child_count: function(Node): integer  -- csrc/node.c:143
-      children: function(Node): function(): Node  -- csrc/node.c:215
-      create_cursor: function(Node): Cursor  -- csrc/node.c:369
+      child: function(Node, idx: integer): Node  -- csrc/node.c:129
+      child_by_field_name: function(Node, string): Node  -- csrc/node.c:339
+      child_count: function(Node): integer  -- csrc/node.c:146
+      children: function(Node): function(): Node  -- csrc/node.c:218
+      create_cursor: function(Node): Cursor  -- csrc/node.c:372
       end_byte: function(Node): integer  -- csrc/node.c:39
       end_point: function(Node): Point  -- csrc/node.c:72
       is_extra: function(Node): boolean  -- csrc/node.c:106
       is_missing: function(Node): boolean  -- csrc/node.c:97
       is_named: function(Node): boolean  -- csrc/node.c:88
-      name: function(Node): string  -- csrc/node.c:316
-      named_child: function(Node, idx: integer): Node  -- csrc/node.c:152
-      named_child_count: function(Node): integer  -- csrc/node.c:167
-      named_children: function(Node): function(): Node  -- csrc/node.c:229
-      next_named_sibling: function(Node): Node  -- csrc/node.c:271
-      next_sibling: function(Node): Node  -- csrc/node.c:241
-      prev_named_sibling: function(Node): Node  -- csrc/node.c:286
-      prev_sibling: function(Node): Node  -- csrc/node.c:256
-      source: function(Node): string  -- csrc/node.c:354
+      name: function(Node): string  -- csrc/node.c:319
+      named_child: function(Node, idx: integer): Node  -- csrc/node.c:155
+      named_child_count: function(Node): integer  -- csrc/node.c:170
+      named_children: function(Node): function(): Node  -- csrc/node.c:232
+      next_named_sibling: function(Node): Node  -- csrc/node.c:274
+      next_sibling: function(Node): Node  -- csrc/node.c:244
+      prev_named_sibling: function(Node): Node  -- csrc/node.c:289
+      prev_sibling: function(Node): Node  -- csrc/node.c:259
+      source: function(Node): string  -- csrc/node.c:357
       start_byte: function(Node): integer  -- csrc/node.c:30
       start_point: function(Node): Point  -- csrc/node.c:55
       type: function(Node): string  -- csrc/node.c:21
    end
    record Parser userdata
-      get_ranges: function(Parser): {Range}  -- csrc/parser.c:616
-      get_version: function(Parser): integer  -- csrc/parser.c:665
-      parse_string: function(Parser, string, Tree): Tree  -- csrc/parser.c:348
-      parse_with: function(Parser, reader: function(integer, Point): (string), old_tree: Tree): Tree  -- csrc/parser.c:446
-      query: function(Parser, string): Query  -- csrc/parser.c:633
-      set_ranges: function(Parser, {Range}): boolean  -- csrc/parser.c:537
-      set_timeout: function(Parser, integer)  -- csrc/parser.c:503
+      get_ranges: function(Parser): {Range}  -- csrc/parser.c:594
+      get_version: function(Parser): integer  -- csrc/parser.c:643
+      parse_string: function(Parser, string, Tree): Tree  -- csrc/parser.c:338
+      parse_with: function(Parser, reader: function(integer, Point): (string), old_tree: Tree): Tree  -- csrc/parser.c:431
+      query: function(Parser, string): Query  -- csrc/parser.c:611
+      set_ranges: function(Parser, {Range}): boolean  -- csrc/parser.c:515
+      set_timeout: function(Parser, integer)  -- csrc/parser.c:481
    end
    record Query userdata
-      capture: function(Query, Node): function(): Node, string  -- csrc/query.c:334
-      exec: function(Query, Node)  -- csrc/query.c:417
-      match: function(Query, Node): function(): Match  -- csrc/query.c:299
-      with: function(Query, {string:function(...: string): any...}): Query  -- csrc/query.c:358
+      capture: function(Query, Node, start: integer | Point, end_: integer | Point): function(): (Node, string)  -- csrc/query.c:495
+      exec: function(Query, Node, start: integer | Point, end_: integer | Point)  -- csrc/query.c:583
+      match: function(Query, Node, start: integer | Point, end_: integer | Point): function(): Match  -- csrc/query.c:455
+      with: function(Query, {string:function(...: string | Node | {Node}): any...}): Query  -- csrc/query.c:524
    end
    record Tree userdata
-      copy: function(Tree): Tree  -- csrc/tree.c:87
+      copy: function(Tree): Tree  -- csrc/tree.c:92
       edit: function(
          Tree,
          start_byte: integer,
@@ -64,13 +64,14 @@ local record ltreesitter
          old_end_point_col: integer,
          new_end_point_row: integer,
          new_end_point_col: integer
-      )  -- csrc/tree.c:184
-      edit_s: function(Tree, TreeEdit)  -- csrc/tree.c:129
-      root: function(Tree): Node  -- csrc/tree.c:68
+      )  -- csrc/tree.c:178
+      edit_s: function(Tree, TreeEdit)  -- csrc/tree.c:121
+      get_changed_ranges: function(old: Tree, new: Tree): {Range}  -- csrc/tree.c:207
+      root: function(Tree): Node  -- csrc/tree.c:73
    end
-   load: function(file_name: string, language_name: string): Parser, string  -- csrc/parser.c:110
-   require: function(library_file_name: string, language_name: string): Parser  -- csrc/parser.c:166
-   version: string -- csrc/ltreesitter.c:16
+   load: function(file_name: string, language_name: string): Parser, string  -- csrc/parser.c:111
+   require: function(library_file_name: string, language_name: string): Parser  -- csrc/parser.c:167
+   version: string -- csrc/ltreesitter.c:13
 
    -- Inlines
 
@@ -82,14 +83,14 @@ local record ltreesitter
       start_point: Point
       old_end_point: Point
       new_end_point: Point
-   end -- csrc/tree.c:118
+   end -- csrc/tree.c:110
 
    record Match
       id: integer
       pattern_index: integer
       capture_count: integer
       captures: {string|integer:Node}
-   end -- csrc/query.c:219
+   end -- csrc/query.c:352
 
    record Point
       row: integer
@@ -102,7 +103,7 @@ local record ltreesitter
 
       start_point: Point
       end_point: Point
-   end -- csrc/parser.c:514
+   end -- csrc/parser.c:492
 end
 
 return ltreesitter

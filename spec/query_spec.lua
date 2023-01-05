@@ -357,7 +357,8 @@ describe("Query", function()
 						(#starts_with? @the-comment "b"))]]
 					:with{
 						["starts_with?"] = function(a, b)
-							return a:match("^//%s*" .. b)
+							util.assert_userdata_type(a, "ltreesitter.Node")
+							return a:source():match("^//%s*" .. b)
 						end
 					}
 					:match(root_node)
@@ -380,7 +381,8 @@ describe("Query", function()
 						(#starts_with? @the-comment "b"))]]
 					:with{
 						["starts_with?"] = function(a, b)
-							return a:match("^//%s*" .. b)
+							util.assert_userdata_type(a, "ltreesitter.Node")
+							return a:source():match("^//%s*" .. b)
 						end
 					}
 					:match(root_node)
@@ -405,7 +407,10 @@ describe("Query", function()
 				]]):root()
 			local res = {}
 			p:query[[ ((comment) @a (#insert! @a)) ]]
-				:with{["insert!"] = function(a) table.insert(res, a) end}
+				:with{["insert!"] = function(a)
+					util.assert_userdata_type(a, "ltreesitter.Node")
+					table.insert(res, a:source())
+				end}
 				:exec(root_node)
 			assert.are.same(res, {
 				"// foo",
@@ -427,7 +432,10 @@ describe("Query", function()
 				]]):root()
 			local res = {}
 			p:query[[ ((comment) @a (#insert! @a)) ]]
-				:with{["insert!"] = function(a) table.insert(res, a) end}
+				:with{["insert!"] = function(a)
+					util.assert_userdata_type(a, "ltreesitter.Node")
+					table.insert(res, a:source())
+				end}
 				:exec(root_node, 4, 20)
 			assert.are.same(res, {
 				"// foo",
@@ -445,7 +453,10 @@ describe("Query", function()
 				]]):root()
 			local res = {}
 			p:query[[ ((comment) @a (#insert! @a)) ]]
-				:with{["insert!"] = function(a) table.insert(res, a) end}
+				:with{["insert!"] = function(a)
+					util.assert_userdata_type(a, "ltreesitter.Node")
+					table.insert(res, a:source())
+				end}
 				:exec(root_node,
 					{ row = 1, column = 4 },
 					{ row = 2, column = 11 })
