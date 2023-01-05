@@ -712,7 +712,8 @@ static int match_predicate(lua_State *L) {
 	if (num_args != 2) {
 		luaL_error(L, "predicate match? expects exactly 2 arguments, got %d", num_args);
 	}
-	luaopen_string(L); // string|Node, pattern, string lib
+
+	luaL_requiref(L, "string", luaopen_string, false); // string|Node, pattern, string lib
 	lua_getfield(L, -1, "match"); // string|Node, pattern, string lib, string.match
 	lua_remove(L, -2); // string|Node, pattern, string.match
 
@@ -734,7 +735,8 @@ static int find_predicate(lua_State *L) {
 	if (num_args != 2) {
 		return luaL_error(L, "predicate find? expects exactly 2 arguments, got %d", num_args);
 	}
-	luaopen_string(L); // string|Node, pattern, string lib
+
+	luaL_requiref(L, "string", luaopen_string, false); // string|Node, pattern, string lib
 	lua_getfield(L, -1, "find"); // string|Node, pattern, string lib, string.find
 	lua_remove(L, -2); // string|Node, pattern, string.find
 
