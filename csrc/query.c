@@ -351,7 +351,7 @@ static void query_cursor_set_range(lua_State *L, TSQueryCursor *c) {
 	}
 }
 
-/* @teal-export Query.match: function(Query, Node, start: integer|Point, end: integer|Point): function(): Match [[
+/* @teal-export Query.match: function(Query, Node, start: integer | Point, end_: integer | Point): function(): Match [[
    Iterate over the matches of a given query.
    <code>start</code> and <code>end</code> are optional.
    They must be passed together with the same type, describing either two bytes or two points.
@@ -391,7 +391,7 @@ static int query_match_factory(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Query.capture: function(Query, Node, start: integer|Point, end: integer|Point): function(): Node, string [[
+/* @teal-export Query.capture: function(Query, Node, start: integer | Point, end_: integer | Point): function(): (Node, string) [[
    Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs.
    <code>start</code> and <code>end</code> are optional.
    They must be passed together with the same type, describing either two bytes or two points.
@@ -479,7 +479,7 @@ static int query_copy_with_predicates(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Query.exec: function(Query, Node, start: integer|Point, end: integer|Point) [[
+/* @teal-export Query.exec: function(Query, Node, start: integer | Point, end_: integer | Point) [[
    Runs a query. That's it. Nothing more, nothing less.
    This is intended to be used with the <code>Query.with</code> method and predicates that have side effects,
    i.e. for when you would use Query.match or Query.capture, but do nothing in the for loop.
