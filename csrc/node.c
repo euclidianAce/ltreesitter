@@ -113,15 +113,18 @@ static int node_is_extra(lua_State *L) {
 	return 1;
 }
 
-void ltreesitter_push_node(lua_State *L, int rel_parent_idx, TSNode n) {
-	const int parent_idx = absindex(L, rel_parent_idx);
+void ltreesitter_push_node(lua_State *L, int parent_idx_, TSNode n) {
+	lua_pushvalue(L, parent_idx_); // parent_copy
+	const int parent_idx = lua_gettop(L);
+
 	ltreesitter_check_tree(L, parent_idx, "Internal error: node parent is not a tree");
-	ltreesitter_Node *node = lua_newuserdata(L, sizeof(ltreesitter_Node));
+	ltreesitter_Node *node = lua_newuserdata(L, sizeof(ltreesitter_Node)); // parent_copy, node
 	node->node = n;
 
-	lua_pushvalue(L, -1);
-	set_parent(L, parent_idx);
-	setmetatable(L, LTREESITTER_NODE_METATABLE_NAME);
+	lua_pushvalue(L, -1); // parent_copy, node, node
+	set_parent(L, parent_idx); // parent_copy, node
+	setmetatable(L, LTREESITTER_NODE_METATABLE_NAME); // parent_copy, node
+	lua_remove(L, -2); // node
 }
 
 /* @teal-export Node.child: function(Node, idx: integer): Node [[
