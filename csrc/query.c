@@ -133,16 +133,117 @@ static void push_query_predicates(lua_State *L, int query_idx) {
 	}
 }
 
+// TODO: I have not been able to figure out if captures like `(comment)+ @c`
+// will actually get multiple nodes, so this macro is here to keep both impls around
+//
+// #define CAN_CAPTURE_MULTIPLE_NODES
+
+// the capture table is just a map of @name -> Node
+static void add_capture_to_table(
+	lua_State *L,
+	int table_index,
+
+	const char *key,
+	size_t key_len,
+
+	int parent_index,
+	TSNode value
+) {
+	lua_pushlstring(L, key, key_len);
+	ltreesitter_push_node(L, parent_index, value);
+
+#ifdef CAN_CAPTURE_MULTIPLE_NODES
+	lua_rawget(L, table_index);
+	if (lua_isnil(L, -1)) {
+		lua_pop(L, 1);
+		lua_createtable(L, 1, 0); // { array }
+		lua_pushlstring(L, key, key_len); // { array }, key
+		lua_pushvalue(L, -2); // { <1> array }, key, { <1> array }
+		lua_rawset(L, table_index); // { <1> array }
+	}
+
+	lua_Unsigned len = lua_rawlen(L, -1);
+	ltreesitter_push_node(L, parent_index, value);
+	lua_rawseti(L, -2, len + 1);
+	lua_pop(L, 1);
+#else
+	lua_rawset(L, table_index);
+#endif
+}
+
+static void get_capture_from_table(
+	lua_State *L,
+	int table_index,
+	const char *key,
+	size_t key_len
+) {
+	lua_pushlstring(L, key, key_len);
+	lua_rawget(L, table_index);
+
+#ifdef CAN_CAPTURE_MULTIPLE_NODES
+	lua_Unsigned len = lua_rawlen(L, -1);
+	switch (len) {
+	case 0:
+		lua_pushnil(L);
+		lua_remove(L, -2);
+		break;
+
+	case 1: // if there is only one capture, push just that one
+		lua_rawgeti(L, -1, 1);
+		lua_remove(L, -2);
+		break;
+
+	default: // otherwise make a copy to prevent shenanigans
+		lua_createtable(L, len, 0);
+		// { matches }, { copy dest }
+		for (lua_Unsigned i = 1; i <= len; ++i) {
+			lua_rawgeti(L, -2, i); // matches, dest, str
+			lua_rawseti(L, -2, i); // matches, dest
+		}
+		lua_remove(L, -2);
+		break;
+	}
+#endif
+}
+
 static bool do_predicates(
 	lua_State *L,
 	const int query_idx,
 	const TSQuery *const q,
+	int tree_idx,
 	const ltreesitter_Tree *const t,
 	const TSQueryMatch *const m) {
+	bool result = true;
+
+	(void)t;
+
+#define RETURN(value) do { result = (value); goto deferred; } while (0)
+#define return plz use "RETURN" macro
+
+	const int initial_stack_top = lua_gettop(L);
+
+	// store captures as a map of {string:{string}} where the keys are the
+	// "@name"s and the values are the matched source text
+	lua_createtable(L, 0, m->capture_count);
+	int capture_table_index = initial_stack_top + 1;
+	for (uint32_t i = 0; i < m->capture_count; ++i) {
+		TSQueryCapture capture = m->captures[i];
+		uint32_t name_len;
+		const char *name = ts_query_capture_name_for_id(q, capture.index, &name_len);
+
+		add_capture_to_table(L, capture_table_index, name, name_len, tree_idx, capture.node);
+	}
+
+	// {
+		// lua_pushvalue(L, capture_table_index);
+		// lua_setglobal(L, "__captures");
+		// luaL_dostring(L, "print(require'inspect'(__captures))");
+	// }
+
 	const uint32_t num_patterns = ts_query_pattern_count(q);
 	for (uint32_t i = 0; i < num_patterns; ++i) {
 		uint32_t num_steps;
-		const TSQueryPredicateStep *const s = ts_query_predicates_for_pattern(q, i, &num_steps);
+		const TSQueryPredicateStep *const predicate_step = ts_query_predicates_for_pattern(q, i, &num_steps);
 		bool is_question = false; // if a predicate is a question then the query should only match if it results in a truthy value
 		/* TODO:
 			Currently queries are evaluated in order
@@ -156,7 +257,7 @@ static bool do_predicates(
 			bool need_func_name = true;
 			int max_args = 0;
 			for (uint32_t j = 0; j < num_steps; ++j) {
-				switch (s[j].type) {
+				switch (predicate_step[j].type) {
 				case TSQueryPredicateStepTypeString:
 					if (need_func_name)
 						need_func_name = false;
@@ -177,19 +278,19 @@ static bool do_predicates(
 				}
 			}
 			if (!lua_checkstack(L, max_args))
-				return luaL_error(L, "Internal lua error, unable to handle %d arguments to predicate", max_args);
+				luaL_error(L, "Internal lua error, unable to handle %d arguments to predicate", max_args);
 		}
 
 		int num_args = 0;
 		bool need_func_name = true;
 		const char *func_name = NULL;
 		for (uint32_t j = 0; j < num_steps; ++j) {
-			uint32_t len;
-			switch (s[j].type) {
+			switch (predicate_step[j].type) {
 			case TSQueryPredicateStepTypeString: {
 				// literal strings
 
-				const char *pred_name = ts_query_string_value_for_id(q, s[j].value_id, &len);
+				uint32_t len;
+				const char *pred_name = ts_query_string_value_for_id(q, predicate_step[j].value_id, &len);
 				if (need_func_name) {
 					// Find predicate
 					push_query_predicates(L, query_idx);
@@ -200,9 +301,8 @@ static bool do_predicates(
 						push_default_predicate_table(L);
 						lua_getfield(L, -1, pred_name);
 						lua_remove(L, -2);
-						if (lua_isnil(L, -1)) {
-							return luaL_error(L, "Query doesn't have predicate '%s'", pred_name);
-						}
+						if (lua_isnil(L, -1))
+							luaL_error(L, "Query doesn't have predicate '%s'", pred_name);
 					}
 					need_func_name = false;
 					func_name = pred_name;
@@ -216,14 +316,11 @@ static bool do_predicates(
 				break;
 			}
 			case TSQueryPredicateStepTypeCapture: {
-				// The name of a capture
-
-				const TSNode n = m->captures[s[j].value_id].node;
-				const uint32_t start = ts_node_start_byte(n);
-				const uint32_t end = ts_node_end_byte(n);
-				lua_pushlstring(L, t->source->text + start, end - start);
-
+				uint32_t len;
+				const char *name = ts_query_capture_name_for_id(q, predicate_step[j].value_id, &len);
+				get_capture_from_table(L, capture_table_index, name, len);
 				++num_args;
+
 				break;
 			}
 			case TSQueryPredicateStepTypeDone:
@@ -235,7 +332,7 @@ static bool do_predicates(
 				}
 
 				if (is_question && !lua_toboolean(L, -1)) {
-					return false;
+					RETURN(false);
 				}
 
 				num_args = 0;
@@ -245,7 +342,12 @@ static bool do_predicates(
 			}
 		}
 	}
-	return true;
+
+#undef RETURN
+#undef return
+deferred:
+	lua_settop(L, initial_stack_top);
+	return result;
 }
 
 /* @teal-inline [[
@@ -272,7 +374,7 @@ static int query_match(lua_State *L) {
 	do {
 		if (!ts_query_cursor_next_match(c->query_cursor, &m))
 			return 0;
-	} while (!do_predicates(L, query_idx, q->query, t, &m));
+	} while (!do_predicates(L, query_idx, q->query, parent_idx, t, &m));
 
 	lua_createtable(L, 0, 5); // { <match> }
 	pushinteger(L, m.id);
@@ -317,7 +419,7 @@ static int query_capture(lua_State *L) {
 	do {
 		if (!ts_query_cursor_next_capture(c, &m, &capture_index))
 			return 0;
-	} while (!do_predicates(L, query_idx, q->query, t, &m));
+	} while (!do_predicates(L, query_idx, q->query, parent_idx, t, &m));
 
 	ltreesitter_push_node(
 		L, parent_idx,
@@ -420,7 +522,7 @@ static int query_capture_factory(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Query.with: function(Query, {string:function(...: string): any...}): Query [[
+/* @teal-export Query.with: function(Query, {string:function(...: string | Node | {Node}): any...}): Query [[
    Creates a new query equipped with predicates defined in the <code>{string:function}</code> map given
 
    Predicates that end in a <code>'?'</code> character will be seen as conditions that must be met for the pattern to be matched.
@@ -522,15 +624,55 @@ static int query_exec(lua_State *L) {
 	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
 
 	push_parent(L, 2);
-	ltreesitter_Tree *const t = ltreesitter_check_tree_arg(L, -1);
+	const int parent_idx = absindex(L, -1);
+	ltreesitter_Tree *const t = ltreesitter_check_tree_arg(L, parent_idx);
 
 	TSQueryMatch m;
 	ts_query_cursor_exec(c, q, n);
 	while (ts_query_cursor_next_match(c, &m)) {
-		do_predicates(L, 1, q, t, &m);
+		do_predicates(L, 1, q, parent_idx, t, &m);
 	}
 
 	return 0;
+}
+
+static bool predicate_arg_to_string(
+	lua_State *L,
+	int index,
+	const char **out_ptr,
+	size_t *out_len
+) {
+	if (lua_isnil(L, index))
+		return false;
+
+	if (lua_type(L, index) == LUA_TSTRING) {
+		*out_ptr = luaL_checklstring(L, index, out_len);
+		return true;
+	} else {
+		const ltreesitter_Node *node = ltreesitter_check_node(L, index);
+		push_parent(L, index);
+		const ltreesitter_Tree *tree = ltreesitter_check_tree(L, -1, "Internal error: node parent is not a tree");
+		uint32_t start = ts_node_start_byte(node->node);
+		uint32_t end = ts_node_end_byte(node->node);
+		*out_ptr = tree->source->text + start;
+		*out_len = end - start;
+		lua_remove(L, -1);
+		return true;
+	}
+}
+
+static bool ensure_predicate_arg_string(
+	lua_State *L,
+	int index
+) {
+	index = absindex(L, index);
+	size_t len;
+	const char *str;
+	if (!predicate_arg_to_string(L, index, &str, &len))
+		return false;
+	lua_pushlstring(L, str, len);
+	lua_replace(L, index);
+	return true;
 }
 
 // Predicates
@@ -539,16 +681,26 @@ static int eq_predicate(lua_State *L) {
 	if (num_args < 2) {
 		luaL_error(L, "predicate eq? expects 2 or more arguments, got %d", num_args);
 	}
-	const char *a = luaL_checkstring(L, 1);
+	const char *a;
+	size_t a_len;
+	if (!predicate_arg_to_string(L, 1, &a, &a_len)) {
+		lua_pushboolean(L, false);
+		return 1;
+	}
 	const char *b;
+	size_t b_len;
 
 	for (int i = 2; i <= num_args; ++i) {
-		b = luaL_checkstring(L, i);
-		if (strcmp(a, b) != 0) {
+		if (!predicate_arg_to_string(L, i, &b, &b_len)) {
+			lua_pushboolean(L, false);
+			return 1;
+		}
+		if (a_len != b_len || strncmp(a, b, a_len) != 0) {
 			lua_pushboolean(L, false);
 			return 1;
 		};
 		a = b;
+		a_len = b_len;
 	}
 
 	lua_pushboolean(L, true);
@@ -560,11 +712,18 @@ static int match_predicate(lua_State *L) {
 	if (num_args != 2) {
 		luaL_error(L, "predicate match? expects exactly 2 arguments, got %d", num_args);
 	}
-	luaopen_string(L);
-	lua_getfield(L, -1, "match");
-	lua_remove(L, -2);
+	luaopen_string(L); // string|Node, pattern, string lib
+	lua_getfield(L, -1, "match"); // string|Node, pattern, string lib, string.match
+	lua_remove(L, -2); // string|Node, pattern, string.match
 
-	lua_insert(L, -3);
+	lua_insert(L, -3); // string.match, string|Node, pattern
+	lua_rotate(L, -2, 1); // string.match, pattern, string|Node
+	if (!ensure_predicate_arg_string(L, -1)) {
+		lua_pushboolean(L, false);
+		return 1;
+	}
+	// string.match, pattern, string
+	lua_rotate(L, -2, 1); // string.match, string, pattern
 	lua_call(L, 2, 1);
 
 	return 1;
@@ -573,15 +732,22 @@ static int match_predicate(lua_State *L) {
 static int find_predicate(lua_State *L) {
 	const int num_args = lua_gettop(L);
 	if (num_args != 2) {
-		luaL_error(L, "predicate find? expects exactly 2 arguments, got %d", num_args);
+		return luaL_error(L, "predicate find? expects exactly 2 arguments, got %d", num_args);
 	}
-	luaopen_string(L);
-	lua_getfield(L, -1, "find");
-	lua_remove(L, -2);
+	luaopen_string(L); // string|Node, pattern, string lib
+	lua_getfield(L, -1, "find"); // string|Node, pattern, string lib, string.find
+	lua_remove(L, -2); // string|Node, pattern, string.find
 
-	lua_insert(L, -3);
-	pushinteger(L, 0);
-	lua_pushboolean(L, true);
+	lua_insert(L, -3); // string.find, string|Node, pattern
+	lua_rotate(L, -2, 1); // string.find, pattern, string|Node
+	if (!ensure_predicate_arg_string(L, -1)) {
+		lua_pushboolean(L, false);
+		return 1;
+	}
+	lua_rotate(L, -2, 1); // string.find, string, pattern
+
+	pushinteger(L, 0); // string.find, string, pattern, 0
+	lua_pushboolean(L, true); // string.find, string, pattern, 0, true
 	lua_call(L, 4, 1);
 
 	return 1;
