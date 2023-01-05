@@ -718,13 +718,13 @@ static int match_predicate(lua_State *L) {
 	lua_remove(L, -2); // string|Node, pattern, string.match
 
 	lua_insert(L, -3); // string.match, string|Node, pattern
-	lua_rotate(L, -2, 1); // string.match, pattern, string|Node
+	lua_insert(L, -2); // string.match, pattern, string|Node
 	if (!ensure_predicate_arg_string(L, -1)) {
 		lua_pushboolean(L, false);
 		return 1;
 	}
 	// string.match, pattern, string
-	lua_rotate(L, -2, 1); // string.match, string, pattern
+	lua_insert(L, -2); // string.match, string, pattern
 	lua_call(L, 2, 1);
 
 	return 1;
@@ -741,12 +741,12 @@ static int find_predicate(lua_State *L) {
 	lua_remove(L, -2); // string|Node, pattern, string.find
 
 	lua_insert(L, -3); // string.find, string|Node, pattern
-	lua_rotate(L, -2, 1); // string.find, pattern, string|Node
+	lua_insert(L, -2); // string.find, pattern, string|Node
 	if (!ensure_predicate_arg_string(L, -1)) {
 		lua_pushboolean(L, false);
 		return 1;
 	}
-	lua_rotate(L, -2, 1); // string.find, string, pattern
+	lua_insert(L, -2); // string.find, string, pattern
 
 	pushinteger(L, 0); // string.find, string, pattern, 0
 	lua_pushboolean(L, true); // string.find, string, pattern, 0, true
