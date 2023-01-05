@@ -105,7 +105,7 @@ static int node_is_missing(lua_State *L) {
 }
 
 /* @teal-export Node.is_extra: function(Node): boolean [[
-   Get whether or not the current node is missing
+   Get whether or not the current node is extra
 ]] */
 static int node_is_extra(lua_State *L) {
 	TSNode n = ltreesitter_check_node(L, 1)->node;
