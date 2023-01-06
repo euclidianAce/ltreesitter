@@ -133,11 +133,6 @@ static void push_query_predicates(lua_State *L, int query_idx) {
 	}
 }
 
-// TODO: I have not been able to figure out if captures like `(comment)+ @c`
-// will actually get multiple nodes, so this macro is here to keep both impls around
-//
-// #define CAN_CAPTURE_MULTIPLE_NODES
-
 // the capture table is just a map of @name -> Node
 static void add_capture_to_table(
 	lua_State *L,
@@ -151,24 +146,7 @@ static void add_capture_to_table(
 ) {
 	lua_pushlstring(L, key, key_len);
 	ltreesitter_push_node(L, parent_index, value);
-
-#ifdef CAN_CAPTURE_MULTIPLE_NODES
-	lua_rawget(L, table_index);
-	if (lua_isnil(L, -1)) {
-		lua_pop(L, 1);
-		lua_createtable(L, 1, 0); // { array }
-		lua_pushlstring(L, key, key_len); // { array }, key
-		lua_pushvalue(L, -2); // { <1> array }, key, { <1> array }
-		lua_rawset(L, table_index); // { <1> array }
-	}
-
-	lua_Unsigned len = lua_rawlen(L, -1);
-	ltreesitter_push_node(L, parent_index, value);
-	lua_rawseti(L, -2, len + 1);
-	lua_pop(L, 1);
-#else
 	lua_rawset(L, table_index);
-#endif
 }
 
 static void get_capture_from_table(
@@ -179,31 +157,6 @@ static void get_capture_from_table(
 ) {
 	lua_pushlstring(L, key, key_len);
 	lua_rawget(L, table_index);
-
-#ifdef CAN_CAPTURE_MULTIPLE_NODES
-	lua_Unsigned len = lua_rawlen(L, -1);
-	switch (len) {
-	case 0:
-		lua_pushnil(L);
-		lua_remove(L, -2);
-		break;
-
-	case 1: // if there is only one capture, push just that one
-		lua_rawgeti(L, -1, 1);
-		lua_remove(L, -2);
-		break;
-
-	default: // otherwise make a copy to prevent shenanigans
-		lua_createtable(L, len, 0);
-		// { matches }, { copy dest }
-		for (lua_Unsigned i = 1; i <= len; ++i) {
-			lua_rawgeti(L, -2, i); // matches, dest, str
-			lua_rawseti(L, -2, i); // matches, dest
-		}
-		lua_remove(L, -2);
-		break;
-	}
-#endif
 }
 
 static bool do_predicates(
