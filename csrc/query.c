@@ -164,11 +164,8 @@ static bool do_predicates(
 	const int query_idx,
 	const TSQuery *const q,
 	int tree_idx,
-	const ltreesitter_Tree *const t,
 	const TSQueryMatch *const m) {
 	bool result = true;
-
-	(void)t;
 
 #define RETURN(value) do { result = (value); goto deferred; } while (0)
 #define return plz use "RETURN" macro
@@ -312,6 +309,8 @@ deferred:
    end
 ]] */
 
+#define INTERNAL_PARENT_CHECK_ERR_MSG "Internal error: node parent is not a tree"
+
 static int query_match(lua_State *L) {
 	// upvalues: Query, Node, Cursor
 	const int query_idx = lua_upvalueindex(1);
@@ -320,14 +319,12 @@ static int query_match(lua_State *L) {
 	TSQueryMatch m;
 	push_parent(L, lua_upvalueindex(2));
 	const int parent_idx = lua_gettop(L);
-	/* printf("checking if parent is tree\n"); */
-	ltreesitter_Tree *const t = ltreesitter_check_tree(L, parent_idx, "check failed");
-	/* printf("   ptr: %p\n", t); */
+	(void)ltreesitter_check_tree(L, parent_idx, INTERNAL_PARENT_CHECK_ERR_MSG);
 
 	do {
 		if (!ts_query_cursor_next_match(c->query_cursor, &m))
 			return 0;
-	} while (!do_predicates(L, query_idx, q->query, parent_idx, t, &m));
+	} while (!do_predicates(L, query_idx, q->query, parent_idx, &m));
 
 	lua_createtable(L, 0, 5); // { <match> }
 	pushinteger(L, m.id);
@@ -365,14 +362,14 @@ static int query_capture(lua_State *L) {
 	TSQueryCursor *c = ltreesitter_check_query_cursor(L, lua_upvalueindex(3))->query_cursor;
 	push_parent(L, lua_upvalueindex(2));
 	const int parent_idx = lua_gettop(L);
-	ltreesitter_Tree *const t = ltreesitter_check_tree(L, -1, "parent check fail");
+	(void)ltreesitter_check_tree(L, -1, INTERNAL_PARENT_CHECK_ERR_MSG);
 	TSQueryMatch m;
 	uint32_t capture_index;
 
 	do {
 		if (!ts_query_cursor_next_capture(c, &m, &capture_index))
 			return 0;
-	} while (!do_predicates(L, query_idx, q->query, parent_idx, t, &m));
+	} while (!do_predicates(L, query_idx, q->query, parent_idx, &m));
 
 	ltreesitter_push_node(
 		L, parent_idx,
@@ -578,12 +575,12 @@ static int query_exec(lua_State *L) {
 
 	push_parent(L, 2);
 	const int parent_idx = absindex(L, -1);
-	ltreesitter_Tree *const t = ltreesitter_check_tree_arg(L, parent_idx);
+	(void)ltreesitter_check_tree(L, parent_idx, INTERNAL_PARENT_CHECK_ERR_MSG);
 
 	TSQueryMatch m;
 	ts_query_cursor_exec(c, q, n);
 	while (ts_query_cursor_next_match(c, &m)) {
-		do_predicates(L, 1, q, parent_idx, t, &m);
+		do_predicates(L, 1, q, parent_idx, &m);
 	}
 
 	return 0;
@@ -604,7 +601,7 @@ static bool predicate_arg_to_string(
 	} else {
 		const ltreesitter_Node *node = ltreesitter_check_node(L, index);
 		push_parent(L, index);
-		const ltreesitter_Tree *tree = ltreesitter_check_tree(L, -1, "Internal error: node parent is not a tree");
+		const ltreesitter_Tree *tree = ltreesitter_check_tree(L, -1, INTERNAL_PARENT_CHECK_ERR_MSG);
 		uint32_t start = ts_node_start_byte(node->node);
 		uint32_t end = ts_node_end_byte(node->node);
 		*out_ptr = tree->source->text + start;
