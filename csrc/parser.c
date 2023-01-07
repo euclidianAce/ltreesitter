@@ -186,138 +186,177 @@ int ltreesitter_load_parser(lua_State *L) {
 #else
 #define PATH_SEP "/"
 #endif
+
+static bool try_load_from_path(
+	lua_State *L,
+	const char *dl_file,
+	const char *lang_name,
+	StringBuilder *err_buf
+) {
+	if (push_cached_parser(L, dl_file, lang_name))
+		return true;
+
+	ltreesitter_Parser proxy = {
+		.dl = NULL,
+		.parser = NULL,
+	};
+	uint32_t version = 0;
+	switch (try_dlopen(&proxy, dl_file, lang_name, &version)) {
+	case PARSE_LOAD_ERR_NONE: {
+		ltreesitter_Parser *const p = new_parser(L);
+		p->dl = proxy.dl;
+		p->parser = proxy.parser;
+
+		cache_parser(L, dl_file, lang_name);
+		return true;
+	}
+
+	case PARSE_LOAD_ERR_BUFLEN:
+		sb_push_fmt(err_buf, "\n\tLanguage name '%s' is too long");
+		break;
+
+	case PARSE_LOAD_ERR_DLOPEN:
+		sb_push_fmt(err_buf, "\n\tTried %s: %s", dl_file, dynamic_lib_error(proxy.dl));
+		break;
+
+	case PARSE_LOAD_ERR_DLSYM:
+		sb_push_fmt(err_buf, "\n\tFound %s, but unable to find symbol " TREE_SITTER_SYM "%s", dl_file, lang_name);
+		break;
+
+	case PARSE_LOAD_ERR_LANG_VERSION_TOO_OLD:
+		sb_push_fmt(
+			err_buf,
+			"\n\tFound %s, but the version is too old, parser version: %d, minimum version: %d",
+			dl_file,
+			version,
+			TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION
+		);
+		break;
+
+	case PARSE_LOAD_ERR_LANG_VERSION_TOO_NEW:
+		sb_push_fmt(
+			err_buf,
+			"\n\tFound %s, but the version is too new, parser version: %d, maximum version: %d",
+			dl_file,
+			version,
+			TREE_SITTER_LANGUAGE_VERSION
+		);
+		break;
+	}
+
+	return false;
+}
+
+static size_t find_char(const char *str, size_t len, char c) {
+	const char *ptr = memchr(str, c, len);
+	if (!ptr)
+		return len;
+	return (intptr_t)(ptr - str);
+}
+
+static void substitute_question_marks(
+	StringBuilder *buf,
+	const char *path_pattern,
+	size_t path_pattern_len,
+	const char *to_replace_with
+) {
+	size_t i = 0;
+	while (i < path_pattern_len) {
+		const size_t prev_i = i;
+		i += find_char(path_pattern + i, path_pattern_len - i, '?');
+
+		if (i > prev_i + 1)
+			sb_push_lstr(buf, i - prev_i, path_pattern + prev_i);
+
+		if (i < path_pattern_len)
+			sb_push_str(buf, to_replace_with);
+
+		i += 1;
+	}
+
+	sb_push_char(buf, 0);
+
+	// fprintf(
+		// stderr,
+		// "substitute_question_marks(buf=%p,\n"
+		// "                          path_pattern=\"%.*s\",\n"
+		// "                          path_pattern_len=%zu,\n"
+		// "                          to_replace_with=\"%s\") -> \"%s\"\n"
+		// ,
+		// (void *)buf,
+		// (int)path_pattern_len, path_pattern,
+		// path_pattern_len,
+		// to_replace_with,
+		// buf->data
+	// );
+}
+
+// load from a package.path style list
+static bool try_load_from_path_list(
+	lua_State *L,
+	const char *path_list,
+	size_t path_list_len,
+	const char *dl_name,
+	const char *lang_name,
+	StringBuilder *err_buf
+) {
+	size_t start = 0;
+	size_t end = 0;
+
+	StringBuilder buf = {0};
+	while (end < path_list_len) {
+		buf.length = 0;
+		start = end;
+		end += find_char(path_list + start, path_list_len, ';');
+		const size_t len = end - start;
+		substitute_question_marks(&buf, path_list + start, len, dl_name);
+
+		if (try_load_from_path(L, buf.data, lang_name, err_buf)) {
+			sb_free(&buf);
+			return true;
+		}
+		end += 1;
+	}
+
+	sb_free(&buf);
+	return false;
+}
+
 int ltreesitter_require_parser(lua_State *L) {
 	// grab args
 	lua_settop(L, 2);
 	const char *so_name = luaL_checkstring(L, 1);
-	const size_t so_len = strlen(so_name);
 	const char *lang_name = luaL_optstring(L, 2, so_name);
-	const size_t lang_len = strlen(lang_name);
 
-	const char *user_home = getenv("HOME");
-	if (user_home) {
-		lua_pushfstring(L, "%s" PATH_SEP ".tree-sitter" PATH_SEP "bin" PATH_SEP "?." DL_EXT ";", user_home);
-	}
-
-	// prepend ~/.tree-sitter/bin/?.so to package.cpath
 	lua_getglobal(L, "package");  // lang_name, <ts path>, package
 	lua_getfield(L, -1, "cpath"); // lang_name, <ts path>, package, package.cpath
 	lua_remove(L, -2);            // lang_name, <ts path>, package.cpath
-
-	if (user_home) {
-		lua_concat(L, 2);
-	}
-
-	// lang_name, package.cpath
-	const char *cpath = lua_tostring(L, -1);
-	const size_t buf_size = strlen(cpath);
-	char *buf = malloc(sizeof(char) * (buf_size + lang_len));
-	if (!buf)
-		return ALLOC_FAIL(L);
+	size_t cpath_len;
+	const char *cpath = lua_tolstring(L, -1, &cpath_len);
 
 	// buffer to build up search paths in error message
-	StringBuilder b = {0};
-	sb_push_str(&b, "Unable to load parser for ");
-	sb_push_str(&b, lang_name);
+	StringBuilder err_buf = {0};
+	sb_push_str(&err_buf, "Unable to load parser for ");
+	sb_push_str(&err_buf, lang_name);
+	bool ok;
 
-	// Do an imitation of a package.searchpath
-	//	Searchpath will just return the first path which we may be able to open,
-	//	but it may not have the symbol we want, so we should keep searching afterward
-	size_t j = 0;
-	for (size_t i = 0; i <= buf_size; ++i) {
-		// cpath doesn't necessarily end with a ; so lets pretend it does
-		char c;
-		if (i == buf_size)
-			c = ';';
-		else
-			c = cpath[i];
+#define CHECK(x) do { \
+	ok = (x); \
+	if (!ok) break; \
+	sb_free(&err_buf); \
+	return 1; \
+} while (0)
 
-		switch (c) {
-		case '?':
-			for (size_t k = 0; k < so_len; ++k, ++j) {
-				buf[j] = so_name[k];
-			}
-			break;
-		case ';': {
-			buf[j] = '\0';
+	CHECK(try_load_from_path_list(L, cpath, cpath_len, so_name, lang_name, &err_buf));
 
-			if (push_cached_parser(L, buf, lang_name)) {
-				sb_free(&b);
-				free(buf);
-				return 1;
-			}
+#undef CHECK
 
-			ltreesitter_Parser proxy = (struct ltreesitter_Parser){
-				.dl = NULL,
-				.parser = NULL,
-			};
-			uint32_t version = 0;
-			switch (try_dlopen(&proxy, buf, lang_name, &version)) {
-			case PARSE_LOAD_ERR_NONE: {
-				ltreesitter_Parser *const p = new_parser(L);
-				p->dl = proxy.dl;
-				p->parser = proxy.parser;
-
-				cache_parser(L, buf, lang_name);
-				sb_free(&b);
-				free(buf);
-				return 1;
-			}
-			case PARSE_LOAD_ERR_DLSYM:
-				sb_push_str(&b, "\n\tFound ");
-				sb_push_lstr(&b, j, buf);
-				sb_push_str(&b, ":\n\t\tunable to find symbol " TREE_SITTER_SYM);
-				sb_push_str(&b, lang_name);
-				break;
-			case PARSE_LOAD_ERR_DLOPEN:
-				sb_push_str(&b, "\n\tTried ");
-				sb_push_lstr(&b, j, buf);
-				sb_push_str(&b, ": ");
-				sb_push_str(&b, dynamic_lib_error(proxy.dl));
-				break;
-			case PARSE_LOAD_ERR_BUFLEN:
-				sb_push_str(&b, "\n\tUnable to copy langauge name '");
-				sb_push_str(&b, lang_name);
-				sb_push_str(&b, "' into buffer");
-				goto err_cleanup;
-			case PARSE_LOAD_ERR_LANG_VERSION_TOO_OLD:
-				sb_push_str(&b, "\n\tthe found ");
-				sb_push_str(&b, lang_name);
-				sb_push_str(&b, " parser (at ");
-				sb_push_str(&b, buf);
-				sb_push_str(&b, ") is too old, parser version: ");
-				sb_push_fmt(&b, "%d", version);
-				sb_push_str(&b, ", minimum version: ");
-				sb_push_fmt(&b, "%d", TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION);
-				sb_push_str(&b, ". Either find a newer parser or recompile ltreesitter with an older tree-sitter api version");
-				goto err_cleanup;
-			case PARSE_LOAD_ERR_LANG_VERSION_TOO_NEW:
-				sb_push_str(&b, "\n\tthe found ");
-				sb_push_str(&b, lang_name);
-				sb_push_str(&b, " parser (at ");
-				sb_push_str(&b, buf);
-				sb_push_str(&b, ") is too new, parser version: ");
-				sb_push_fmt(&b, "%d", version);
-				sb_push_str(&b, ", maximum version: ");
-				sb_push_fmt(&b, "%d", TREE_SITTER_LANGUAGE_VERSION);
-				sb_push_str(&b, ". Either find an older parser or recompile ltreesitter with a newer tree-sitter api version");
-				goto err_cleanup;
-			}
-
-			j = 0;
-			break;
-		}
-		default:
-			buf[j++] = cpath[i];
-			break;
-		}
+	if (!ok) {
+		sb_push_to_lua(L, &err_buf);
+		sb_free(&err_buf);
+		return lua_error(L);
 	}
-
-err_cleanup:
-	free(buf);
-	sb_push_to_lua(L, &b);
-	sb_free(&b);
-	return lua_error(L);
+	return 1;
 }
 
 static int parser_gc(lua_State *L) {
