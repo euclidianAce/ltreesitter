@@ -20,6 +20,7 @@ typedef struct {
 } StringBuilder;
 
 bool sb_ensure_cap(StringBuilder *sb, size_t n);
+void sb_push_char(StringBuilder *sb, char);
 void sb_push_str(StringBuilder *sb, const char *str);
 void sb_push_lstr(StringBuilder *sb, size_t len, const char *str);
 void sb_push_fmt(StringBuilder *sb, const char *fmt, ...);
