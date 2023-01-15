@@ -156,7 +156,7 @@ static int node_child_count(lua_State *L) {
 static int node_named_child(lua_State *L) {
 	ltreesitter_Node *parent = ltreesitter_check_node(L, 1);
 	const uint32_t idx = luaL_checknumber(L, 2);
-	if (idx >= ts_node_child_count(parent->node)) {
+	if (idx >= ts_node_named_child_count(parent->node)) {
 		lua_pushnil(L);
 	} else {
 		push_parent(L, 1);
