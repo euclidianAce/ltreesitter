@@ -4,6 +4,7 @@
 # !!! This is mostly for quick and dirty testing
 # !!!
 
+HEADERS=$(wildcard csrc/*.h) $(wildcard include/ltreesitter/*.h)
 SRC=$(wildcard csrc/*.c)
 OBJ=$(SRC:.c=.o)
 
@@ -16,11 +17,11 @@ INSTALL_PREFIX:=/usr/local/lib
 static: ltreesitter.a
 dynamic: ltreesitter.so
 
-ltreesitter.a: $(OBJ)
+ltreesitter.a: $(OBJ) $(HEADERS)
 	$(AR) r $@ $(OBJ)
 
-ltreesitter.so: $(OBJ)
-	$(CC) -shared $^ -o $@ $(LIBS)
+ltreesitter.so: $(OBJ) $(HEADERS)
+	$(CC) -shared $(OBJ) -o $@ $(LIBS)
 
 clean:
 	rm -f $(OBJ) ltreesitter.a
