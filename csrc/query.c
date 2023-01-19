@@ -1,6 +1,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include <inttypes.h>
 #include <tree_sitter/api.h>
 
 #include "luautils.h"
@@ -27,7 +28,18 @@ ltreesitter_Query *ltreesitter_check_query(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_QUERY_METATABLE_NAME);
 }
 
-void handle_query_error(
+static inline void offset_to_pos(const char *src, uint32_t offset, uint32_t *row, uint32_t *col) {
+	*row = *col = 1;
+	for (uint32_t i = 0; i <= offset; ++i) {
+		if (src[i] == '\n') {
+			++*row;
+			*col = 1;
+		} else {
+			++*col;
+		}
+	}
+}
+
 void ltreesitter_handle_query_error(
 	lua_State *L,
 	TSQuery *q,
@@ -38,20 +50,24 @@ void ltreesitter_handle_query_error(
 		return;
 	char slice[16] = {0};
 	strncpy(slice, &query_src[err_offset >= 10 ? err_offset - 10 : err_offset], 15);
+	uint32_t row, col;
+	offset_to_pos(query_src, err_offset, &row, &col);
+	char buf[128];
 
-#define CASE(typ, str)                                   \
-	case typ:                                            \
-		lua_pushfstring(L, str, slice, (int)err_offset); \
+#define CASE(typ, str) \
+	case typ: \
+		snprintf(buf, sizeof buf, "Query " str " error %" PRIu32 ":%" PRIu32 ": around '%s' (at byte offset %" PRIu32 ")", row, col, slice, err_offset); \
+		lua_pushstring(L, buf); \
 		break
 
 	switch (err_type) {
 		case TSQueryErrorNone: return; // unreachable
-		CASE(TSQueryErrorSyntax, "Query syntax error: around '%s' (at offset %d)");
-		CASE(TSQueryErrorNodeType, "Query node type error: around '%s' (at offset %d)");
-		CASE(TSQueryErrorField, "Query field error: around '%s' (at offset %d)");
-		CASE(TSQueryErrorCapture, "Query capture error: around '%s' (at offset %d)");
-		CASE(TSQueryErrorStructure, "Query structure error: around '%s' (at offset %d)");
-		CASE(TSQueryErrorLanguage, "Query language error: around '%s' (at offset %d)");
+		CASE(TSQueryErrorSyntax, "syntax");
+		CASE(TSQueryErrorNodeType, "node");
+		CASE(TSQueryErrorField, "field");
+		CASE(TSQueryErrorCapture, "capture");
+		CASE(TSQueryErrorStructure, "structure");
+		CASE(TSQueryErrorLanguage, "language");
 	}
 #undef CASE
 
@@ -174,8 +190,8 @@ static bool do_predicates(
 
 	const int initial_stack_top = lua_gettop(L);
 
-	// store captures as a map of {string:{string}} where the keys are the
-	// "@name"s and the values are the matched source text
+	// store captures as a map of {string:Node} where the keys are the
+	// "@name"s and the values are the matched nodes
 	lua_createtable(L, 0, m->capture_count);
 	int capture_table_index = initial_stack_top + 1;
 	for (uint32_t i = 0; i < m->capture_count; ++i) {
@@ -192,106 +208,101 @@ static bool do_predicates(
 		// luaL_dostring(L, "print(require'inspect'(__captures))");
 	// }
 
-	const uint32_t num_patterns = ts_query_pattern_count(q);
-	for (uint32_t i = 0; i < num_patterns; ++i) {
-		uint32_t num_steps;
-		const TSQueryPredicateStep *const predicate_step = ts_query_predicates_for_pattern(q, i, &num_steps);
-		bool is_question = false; // if a predicate is a question then the query should only match if it results in a truthy value
-		/* TODO:
-			Currently queries are evaluated in order
-			So if a question comes after something with a side effect,
-			the side effect happens even if the query doesn't match
-			*/
+	uint32_t num_steps;
+	const TSQueryPredicateStep *const predicate_step = ts_query_predicates_for_pattern(q, m->pattern_index, &num_steps);
+	bool is_question = false; // if a predicate is a question then the query should only match if it results in a truthy value
+	/* TODO:
+		Currently queries are evaluated in order
+		So if a question comes after something with a side effect,
+		the side effect happens even if the query doesn't match
+		*/
 
-		{
-			// count the max number of args we need to prep for
-			int current_args = 0;
-			bool need_func_name = true;
-			int max_args = 0;
-			for (uint32_t j = 0; j < num_steps; ++j) {
-				switch (predicate_step[j].type) {
-				case TSQueryPredicateStepTypeString:
-					if (need_func_name)
-						need_func_name = false;
-					else
-						current_args += 1;
-					break;
-
-				case TSQueryPredicateStepTypeCapture:
-					current_args += 1;
-					break;
-
-				case TSQueryPredicateStepTypeDone:
-					if (current_args > max_args)
-						max_args = current_args;
-					need_func_name = true;
-					current_args = 0;
-					break;
-				}
-			}
-			if (!lua_checkstack(L, max_args))
-				luaL_error(L, "Internal lua error, unable to handle %d arguments to predicate", max_args);
-		}
-
-		int num_args = 0;
+	{
+		// count the max number of args we need to prep for
+		int current_args = 0;
 		bool need_func_name = true;
-		const char *func_name = NULL;
+		int max_args = 0;
 		for (uint32_t j = 0; j < num_steps; ++j) {
 			switch (predicate_step[j].type) {
-			case TSQueryPredicateStepTypeString: {
-				// literal strings
-
-				uint32_t len;
-				const char *pred_name = ts_query_string_value_for_id(q, predicate_step[j].value_id, &len);
-				if (need_func_name) {
-					// Find predicate
-					push_query_predicates(L, query_idx);
-					lua_getfield(L, -1, pred_name);
-					if (lua_isnil(L, -1)) {
-						lua_pop(L, 1);
-						// try to grab default value
-						push_default_predicate_table(L);
-						lua_getfield(L, -1, pred_name);
-						lua_remove(L, -2);
-						if (lua_isnil(L, -1))
-							luaL_error(L, "Query doesn't have predicate '%s'", pred_name);
-					}
+			case TSQueryPredicateStepTypeString:
+				if (need_func_name)
 					need_func_name = false;
-					func_name = pred_name;
-					if (func_name[len - 1] == '?') {
-						is_question = true;
-					}
-				} else {
-					lua_pushlstring(L, pred_name, len);
-					++num_args;
-				}
+				else
+					current_args += 1;
 				break;
-			}
-			case TSQueryPredicateStepTypeCapture: {
-				uint32_t len;
-				const char *name = ts_query_capture_name_for_id(q, predicate_step[j].value_id, &len);
-				get_capture_from_table(L, capture_table_index, name, len);
-				++num_args;
 
+			case TSQueryPredicateStepTypeCapture:
+				current_args += 1;
 				break;
-			}
+
 			case TSQueryPredicateStepTypeDone:
-				if (lua_pcall(L, num_args, 1, 0) != LUA_OK) {
-					lua_pushfstring(L, "Error calling predicate '%s': ", func_name);
-					lua_insert(L, -2);
-					lua_concat(L, 2);
-					lua_error(L);
-				}
-
-				if (is_question && !lua_toboolean(L, -1)) {
-					RETURN(false);
-				}
-
-				num_args = 0;
+				if (current_args > max_args)
+					max_args = current_args;
 				need_func_name = true;
-				is_question = false;
+				current_args = 0;
 				break;
 			}
+		}
+		if (!lua_checkstack(L, max_args))
+			luaL_error(L, "Internal lua error, unable to handle %d arguments to predicate", max_args);
+	}
+
+	int num_args = 0;
+	const char *func_name = NULL;
+	for (uint32_t j = 0; j < num_steps; ++j) {
+		switch (predicate_step[j].type) {
+		case TSQueryPredicateStepTypeString: {
+			// literal strings
+
+			uint32_t len;
+			const char *pred_name = ts_query_string_value_for_id(q, predicate_step[j].value_id, &len);
+			if (!func_name) {
+				// Find predicate
+				push_query_predicates(L, query_idx);
+				lua_getfield(L, -1, pred_name);
+				if (lua_isnil(L, -1)) {
+					lua_pop(L, 1);
+					// try to grab default value
+					push_default_predicate_table(L);
+					lua_getfield(L, -1, pred_name);
+					lua_remove(L, -2);
+					if (lua_isnil(L, -1))
+						luaL_error(L, "Query doesn't have predicate '%s'", pred_name);
+				}
+				func_name = pred_name;
+				if (func_name[len - 1] == '?') {
+					is_question = true;
+				}
+			} else {
+				lua_pushlstring(L, pred_name, len);
+				++num_args;
+			}
+			break;
+		}
+		case TSQueryPredicateStepTypeCapture: {
+			uint32_t len;
+			const char *name = ts_query_capture_name_for_id(q, predicate_step[j].value_id, &len);
+			get_capture_from_table(L, capture_table_index, name, len);
+			++num_args;
+
+			break;
+		}
+		case TSQueryPredicateStepTypeDone:
+			if (lua_pcall(L, num_args, 1, 0) != LUA_OK) {
+				lua_pushfstring(L, "Error calling predicate '%s': ", func_name);
+				lua_insert(L, -2);
+				lua_concat(L, 2);
+				lua_error(L);
+			}
+
+			if (is_question && !lua_toboolean(L, -1)) {
+				RETURN(false);
+			}
+
+			num_args = 0;
+			func_name = NULL;
+			is_question = false;
+			break;
 		}
 	}
 
@@ -313,7 +324,7 @@ deferred:
 
 #define INTERNAL_PARENT_CHECK_ERR_MSG "Internal error: node parent is not a tree"
 
-static int query_match(lua_State *L) {
+static int query_iterator_next_match(lua_State *L) {
 	// upvalues: Query, Node, Cursor
 	const int query_idx = lua_upvalueindex(1);
 	ltreesitter_Query *const q = ltreesitter_check_query(L, query_idx);
@@ -357,7 +368,7 @@ static int query_match(lua_State *L) {
 	return 1;
 }
 
-static int query_capture(lua_State *L) {
+static int query_iterator_next_capture(lua_State *L) {
 	// upvalues: Query, Node, Cursor
 	const int query_idx = lua_upvalueindex(1);
 	ltreesitter_Query *const q = ltreesitter_check_query(L, query_idx);
@@ -441,7 +452,7 @@ static int query_match_factory(lua_State *L) {
 	lc->query_cursor = c;
 	lc->query = q;
 	ts_query_cursor_exec(c, q->query, n);
-	lua_pushcclosure(L, query_match, 3);
+	lua_pushcclosure(L, query_iterator_next_match, 3);
 	return 1;
 }
 
@@ -470,7 +481,7 @@ static int query_capture_factory(lua_State *L) {
 	lc->query_cursor = c;
 	lc->query = q;
 	ts_query_cursor_exec(c, q->query, n);
-	lua_pushcclosure(L, query_capture, 3); // prevent the node + query from being gc'ed
+	lua_pushcclosure(L, query_iterator_next_capture, 3); // prevent the node + query from being gc'ed
 	return 1;
 }
 
