@@ -42,16 +42,16 @@ static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_f
 		return PARSE_LOAD_ERR_BUFLEN;
 	}
 
-	if (!open_dynamic_lib(parser_file, &p->dl)) {
+	if (!ltreesitter_open_dynamic_lib(parser_file, &p->dl)) {
 		return PARSE_LOAD_ERR_DLOPEN;
 	}
 
 	// ISO C is not a fan of void * -> function pointer
 	TSLanguage *(*tree_sitter_lang)(void);
-	*(void **)(&tree_sitter_lang) = dynamic_sym(p->dl, buf);
+	*(void **)(&tree_sitter_lang) = ltreesitter_dynamic_sym(p->dl, buf);
 
 	if (!tree_sitter_lang) {
-		close_dynamic_lib(p->dl);
+		ltreesitter_close_dynamic_lib(p->dl);
 		return PARSE_LOAD_ERR_DLSYM;
 	}
 	TSParser *parser = ts_parser_new();
@@ -61,10 +61,10 @@ static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_f
 	p->parser = parser;
 
 	if (version < TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION) {
-		close_dynamic_lib(p->dl);
+		ltreesitter_close_dynamic_lib(p->dl);
 		return PARSE_LOAD_ERR_LANG_VERSION_TOO_OLD;
 	} else if (version > TREE_SITTER_LANGUAGE_VERSION) {
-		close_dynamic_lib(p->dl);
+		ltreesitter_close_dynamic_lib(p->dl);
 		return PARSE_LOAD_ERR_LANG_VERSION_TOO_NEW;
 	}
 
@@ -142,7 +142,7 @@ int ltreesitter_load_parser(lua_State *L) {
 		return 2;
 	case PARSE_LOAD_ERR_DLOPEN:
 		lua_pushnil(L);
-		lua_pushstring(L, dynamic_lib_error(proxy.dl));
+		lua_pushstring(L, ltreesitter_dynamic_lib_error(proxy.dl));
 		return 2;
 	case PARSE_LOAD_ERR_BUFLEN:
 		lua_pushnil(L);
@@ -216,7 +216,7 @@ static bool try_load_from_path(
 		break;
 
 	case PARSE_LOAD_ERR_DLOPEN:
-		sb_push_fmt(err_buf, "\n\tTried %s: %s", dl_file, dynamic_lib_error(proxy.dl));
+		sb_push_fmt(err_buf, "\n\tTried %s: %s", dl_file, ltreesitter_dynamic_lib_error(proxy.dl));
 		break;
 
 	case PARSE_LOAD_ERR_DLSYM:
@@ -366,7 +366,7 @@ static int parser_gc(lua_State *L) {
 	printf("   p->dl: %p\n", lp->dl);
 #endif
 	ts_parser_delete(lp->parser);
-	close_dynamic_lib(lp->dl);
+	ltreesitter_close_dynamic_lib(lp->dl);
 
 	return 0;
 }

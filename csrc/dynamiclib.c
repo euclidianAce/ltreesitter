@@ -3,18 +3,12 @@
 
 #include <ltreesitter/dynamiclib.h>
 
-#ifdef _WIN32
-#define DL_EXT "dll"
-#else
-#define DL_EXT "so"
-#endif
-
-bool open_dynamic_lib(const char *name, dl_handle **handle) {
+bool ltreesitter_open_dynamic_lib(const char *name, ltreesitter_Dynlib **handle) {
 #ifdef _WIN32
 	*handle = LoadLibrary(name);
 	return *handle != NULL;
 #elif LTREESITTER_USE_LIBUV
-	*handle = malloc(sizeof(dl_handle));
+	*handle = malloc(sizeof(ltreesitter_Dynlib));
 	return uv_dlopen(name, *handle) == 0;
 #else
 	*handle = dlopen(name, RTLD_NOW | RTLD_LOCAL);
@@ -22,7 +16,7 @@ bool open_dynamic_lib(const char *name, dl_handle **handle) {
 #endif
 }
 
-void *dynamic_sym(dl_handle *handle, const char *sym_name) {
+void *ltreesitter_dynamic_sym(ltreesitter_Dynlib *handle, const char *sym_name) {
 #ifdef _WIN32
 	return GetProcAddress(handle, sym_name);
 #elif LTREESITTER_USE_LIBUV
@@ -36,7 +30,7 @@ void *dynamic_sym(dl_handle *handle, const char *sym_name) {
 #endif
 }
 
-void close_dynamic_lib(dl_handle *handle) {
+void ltreesitter_close_dynamic_lib(ltreesitter_Dynlib *handle) {
 #ifdef _WIN32
 	FreeLibrary(handle);
 #elif LTREESITTER_USE_LIBUV
@@ -49,7 +43,7 @@ void close_dynamic_lib(dl_handle *handle) {
 
 #define UNUSED(x) ((void)(x))
 
-const char *dynamic_lib_error(dl_handle *handle) {
+const char *ltreesitter_dynamic_lib_error(ltreesitter_Dynlib *handle) {
 #ifdef _WIN32
 	// Does windows have an equivalent dlerror?
 	UNUSED(handle);

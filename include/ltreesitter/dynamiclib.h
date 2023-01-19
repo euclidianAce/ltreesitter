@@ -3,9 +3,9 @@
 
 #ifdef LTREESITTER_USE_LIBUV
 #include <uv.h>
-typedef uv_lib_t dl_handle;
+typedef uv_lib_t ltreesitter_Dynlib;
 #else
-typedef void dl_handle;
+typedef void ltreesitter_Dynlib;
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -14,16 +14,16 @@ typedef void dl_handle;
 #endif
 
 #ifdef _WIN32
-#define DL_EXT "dll"
+#define LTREESITTER_DL_EXT "dll"
 #else
-#define DL_EXT "so"
+#define LTREESITTER_DL_EXT "so"
 #endif
 
 #include <stdbool.h>
 
-bool open_dynamic_lib(const char *name, dl_handle **handle);
-void *dynamic_sym(dl_handle *handle, const char *sym_name);
-void close_dynamic_lib(dl_handle *handle);
-const char *dynamic_lib_error(dl_handle *handle);
+bool ltreesitter_open_dynamic_lib(const char *name, ltreesitter_Dynlib **handle);
+void *ltreesitter_dynamic_sym(ltreesitter_Dynlib *handle, const char *sym_name);
+void ltreesitter_close_dynamic_lib(ltreesitter_Dynlib *handle);
+const char *ltreesitter_dynamic_lib_error(ltreesitter_Dynlib *handle);
 
 #endif
