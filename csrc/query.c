@@ -28,6 +28,7 @@ ltreesitter_Query *ltreesitter_check_query(lua_State *L, int idx) {
 }
 
 void handle_query_error(
+void ltreesitter_handle_query_error(
 	lua_State *L,
 	TSQuery *q,
 	uint32_t err_offset,
@@ -88,7 +89,7 @@ static void push_query_copy(lua_State *L, int query_idx) {
 		&err_offset,
 		&err_type);
 
-	handle_query_error(L, q, err_offset, err_type, orig->src);
+	ltreesitter_handle_query_error(L, q, err_offset, err_type, orig->src);
 	const char *src_copy = str_ldup(orig->src, orig->src_len);
 	if (!src_copy) {
 		ALLOC_FAIL(L);
@@ -720,7 +721,7 @@ static const luaL_Reg default_query_predicates[] = {
 	{"find?", find_predicate},
 	{NULL, NULL}};
 
-void setup_predicate_tables(lua_State *L) {
+void ltreesitter_setup_query_predicate_tables(lua_State *L) {
 	lua_newtable(L);
 	setfuncs(L, default_query_predicates);
 	set_registry_field(L, default_predicate_field);

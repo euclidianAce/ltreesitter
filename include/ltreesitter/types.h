@@ -19,6 +19,8 @@ struct ltreesitter_Parser {
 
 // reference counted source text for trees to hold on to
 typedef struct {
+	// TODO: rather than refcounting, we should use the lua registry to garbage
+	// collect this
 	size_t refs;
 	size_t length;
 	const char *text;

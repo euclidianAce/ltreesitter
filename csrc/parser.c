@@ -670,7 +670,7 @@ int make_query(lua_State *L) {
 		len,
 		&err_offset,
 		&err_type);
-	handle_query_error(L, q, err_offset, err_type, query_src);
+	ltreesitter_handle_query_error(L, q, err_offset, err_type, query_src);
 
 	if (q) {
 		ltreesitter_push_query(L, lang, query_src, len, q, 1);

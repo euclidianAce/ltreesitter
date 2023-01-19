@@ -30,7 +30,7 @@ LUA_API int luaopen_ltreesitter(lua_State *L) {
 	ltreesitter_create_query_cursor_metatable(L);
 
 	setup_registry_index(L);
-	setup_predicate_tables(L);
+	ltreesitter_setup_query_predicate_tables(L);
 	setup_object_table(L);
 	setup_parser_cache(L);
 
