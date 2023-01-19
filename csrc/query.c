@@ -7,6 +7,7 @@
 #include "object.h"
 #include <ltreesitter/node.h>
 #include <ltreesitter/parser.h>
+#include <ltreesitter/query.h>
 #include <ltreesitter/query_cursor.h>
 #include <ltreesitter/tree.h>
 #include <ltreesitter/types.h>
