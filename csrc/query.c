@@ -318,7 +318,7 @@ deferred:
       id: integer
       pattern_index: integer
       capture_count: integer
-      captures: {string|integer:Node}
+      captures: {string:Node|{Node}}
    end
 ]] */
 
@@ -345,26 +345,53 @@ static int query_iterator_next_match(lua_State *L) {
 	pushinteger(L, m.pattern_index);
 	lua_setfield(L, -2, "pattern_index"); // { <match> }
 	pushinteger(L, m.capture_count);
-	lua_setfield(L, -2, "capture_count");                 // { <match> }
-	lua_createtable(L, m.capture_count, m.capture_count); // { <match> }, { <arraymap> }
+	lua_setfield(L, -2, "capture_count"); // { <match> }
+	lua_createtable(L, 0, m.capture_count); // { <match> }, { <capture-map> }
 
 	for (uint16_t i = 0; i < m.capture_count; ++i) {
-		ltreesitter_push_node(
-			L, parent_idx,
-			m.captures[i].node);   // {<arraymap>}, <Node>
-		lua_pushvalue(L, -1);      // {<arraymap>}, <Node>, <Node>
-		lua_rawseti(L, -3, i + 1); // {<arraymap> <Node>}, <Node>
+#define push_current_node() do { \
+	ltreesitter_push_node( \
+		L, parent_idx, \
+		m.captures[i].node); \
+} while (0)
+
 		uint32_t len;
 		const char *name = ts_query_capture_name_for_id(c->query->query, m.captures[i].index, &len);
-		if (len > 0) {
-			lua_pushstring(L, name); // {<arraymap>}, <Node>, "name"
-			lua_insert(L, -2);       // {<arraymap>}, "name", <Node>
-			lua_rawset(L, -3);       // {<arraymap> <Node>, [name]=<Node>}
-		} else {
-			lua_pop(L, 1);
-		}                            // {<arraymap>}
-	}                                // { <match> }, { <arraymap> }
-	lua_setfield(L, -2, "captures"); // {<match> captures=<arraymap>}
+		lua_pushlstring(L, name, len); // {<capture-map>}, name
+		switch (table_rawget(L, -2)) {
+		case LUA_TNIL: // first node, just set it
+			// fprintf(stderr, "i:%u (@%.*s), nil (first capture)\n", i, (int)len, name);
+			lua_pop(L, 1);                 // {<capture-map>}
+			lua_pushlstring(L, name, len); // {<capture-map>}, name
+			push_current_node();           // {<capture-map>}, name, <Node>
+			lua_rawset(L, -3);             // {<capture-map>}
+			break;
+		case LUA_TUSERDATA: // second node, transform to table
+			// {<capture-map>}, <first Node>
+			// fprintf(stderr, "i:%u (@%.*s), userdata (second capture)\n", i, (int)len, name);
+			lua_createtable(L, 2, 0);      // {<capture-map>}, <first Node>, array
+			lua_insert(L, -2);             // {<capture-map>}, array, <first Node>
+			lua_rawseti(L, -2, 1);         // {<capture-map>}, array
+			push_current_node();           // {<capture-map>}, array, <second Node>
+			lua_rawseti(L, -2, 2);         // {<capture-map>}, array
+			lua_pushlstring(L, name, len); // {<capture-map>}, array, name
+			lua_insert(L, -2);             // {<capture-map>}, name, array
+			lua_rawset(L, -3);             // {<capture-map>}
+			break;
+		case LUA_TTABLE: // third+ node, append it
+			// {<capture-map>}, array
+			// fprintf(stderr, "i:%u (@%.*s), table (third+ capture)\n", i, (int)len, name);
+			{
+				size_t len = length_of(L, -1);
+				push_current_node();     // {<capture-map>}, array, <nth Node>
+				lua_rawseti(L, -2, len + 1); // {<capture-map>}, array
+				lua_pop(L, 1);           // {<capture-map>}
+			}
+			break;
+		}
+#undef push_current_node
+	} // { <match> }, { <capture-map> }
+	lua_setfield(L, -2, "captures"); // {<match> captures=<capture-map>}
 	return 1;
 }
 
