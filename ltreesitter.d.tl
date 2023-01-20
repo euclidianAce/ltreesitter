@@ -46,10 +46,10 @@ local record ltreesitter
       set_timeout: function(Parser, integer)  -- csrc/parser.c:520
    end
    record Query userdata
-      capture: function(Query, Node, start: integer | Point, end_: integer | Point): function(): (Node, string)  -- csrc/query.c:485
-      exec: function(Query, Node, start: integer | Point, end_: integer | Point)  -- csrc/query.c:573
-      match: function(Query, Node, start: integer | Point, end_: integer | Point): function(): Match  -- csrc/query.c:445
-      with: function(Query, {string:function(...: string | Node | {Node}): any...}): Query  -- csrc/query.c:514
+      capture: function(Query, Node, start: integer | Point, end_: integer | Point): function(): (Node, string)  -- csrc/query.c:496
+      exec: function(Query, Node, start: integer | Point, end_: integer | Point)  -- csrc/query.c:584
+      match: function(Query, Node, start: integer | Point, end_: integer | Point): function(): Match  -- csrc/query.c:450
+      with: function(Query, {string:function(...: string | Node | {Node}): any...}): Query  -- csrc/query.c:525
    end
    record Tree userdata
       copy: function(Tree): Tree  -- csrc/tree.c:92

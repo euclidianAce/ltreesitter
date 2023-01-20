@@ -355,32 +355,37 @@ static int query_iterator_next_match(lua_State *L) {
 		m.captures[i].node); \
 } while (0)
 
+		const TSQuantifier quantifier = ts_query_capture_quantifier_for_id(
+			c->query->query,
+			m.pattern_index,
+			m.captures[i].index);
+
 		uint32_t len;
 		const char *name = ts_query_capture_name_for_id(c->query->query, m.captures[i].index, &len);
 		lua_pushlstring(L, name, len); // {<capture-map>}, name
 		switch (table_rawget(L, -2)) {
-		case LUA_TNIL: // first node, just set it
-			// fprintf(stderr, "i:%u (@%.*s), nil (first capture)\n", i, (int)len, name);
-			lua_pop(L, 1);                 // {<capture-map>}
-			lua_pushlstring(L, name, len); // {<capture-map>}, name
-			push_current_node();           // {<capture-map>}, name, <Node>
-			lua_rawset(L, -3);             // {<capture-map>}
+		case LUA_TNIL: // first node, just set it, or set up table
+			lua_pop(L, 1);                     // {<capture-map>}
+			lua_pushlstring(L, name, len);     // {<capture-map>}, name
+			switch (quantifier) {
+			case TSQuantifierZero: // unreachable?
+				break;
+			case TSQuantifierZeroOrOne:
+			case TSQuantifierOne:
+				push_current_node();           // {<capture-map>}, name, <Node>
+				lua_rawset(L, -3);             // {<capture-map>}
+				break;
+			case TSQuantifierZeroOrMore:
+			case TSQuantifierOneOrMore:
+				lua_createtable(L, 1, 0);      // {<capture-map>}, name, array
+				push_current_node();           // {<capture-map>}, name, array, <Node>
+				lua_rawseti(L, -2, 1);         // {<capture-map>}, name, array
+				lua_rawset(L, -3);             // {<capture-map>}
+				break;
+			}
 			break;
-		case LUA_TUSERDATA: // second node, transform to table
-			// {<capture-map>}, <first Node>
-			// fprintf(stderr, "i:%u (@%.*s), userdata (second capture)\n", i, (int)len, name);
-			lua_createtable(L, 2, 0);      // {<capture-map>}, <first Node>, array
-			lua_insert(L, -2);             // {<capture-map>}, array, <first Node>
-			lua_rawseti(L, -2, 1);         // {<capture-map>}, array
-			push_current_node();           // {<capture-map>}, array, <second Node>
-			lua_rawseti(L, -2, 2);         // {<capture-map>}, array
-			lua_pushlstring(L, name, len); // {<capture-map>}, array, name
-			lua_insert(L, -2);             // {<capture-map>}, name, array
-			lua_rawset(L, -3);             // {<capture-map>}
-			break;
-		case LUA_TTABLE: // third+ node, append it
+		case LUA_TTABLE: // append it
 			// {<capture-map>}, array
-			// fprintf(stderr, "i:%u (@%.*s), table (third+ capture)\n", i, (int)len, name);
 			{
 				size_t len = length_of(L, -1);
 				push_current_node();     // {<capture-map>}, array, <nth Node>
@@ -456,9 +461,15 @@ static void query_cursor_set_range(lua_State *L, TSQueryCursor *c) {
       id: integer
       pattern_index: integer
       capture_count: integer
-      captures: {string|integer:Node}
+      captures: {string:Node|{Node}}
    end
    </pre>
+
+   If a capture can only contain at most one node (as is the case with regular <code>(node) @capture-name</code> patterns and <code>(node)? @capture-name</code> patterns),
+   it will either be <code>nil</code> or that <code>Node</code>.
+
+   If a capture can containe multiple nodes (as is the case with <code>(node)* @capture-name</code> and <code>(node)+ @capture-name</code> patterns)
+   it will either be <code>nil</code> or an array of <code>Node</code>
 
    Example:
    <pre>
