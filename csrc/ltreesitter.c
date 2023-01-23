@@ -3,6 +3,7 @@
 
 #include "luautils.h"
 #include "object.h"
+#include <ltreesitter/module.h>
 #include <ltreesitter/dynamiclib.h>
 #include <ltreesitter/node.h>
 #include <ltreesitter/parser.h>
@@ -21,7 +22,7 @@ static const luaL_Reg lib_funcs[] = {
 	{NULL, NULL},
 };
 
-LUA_API int luaopen_ltreesitter(lua_State *L) {
+LTREESITTER_EXPORT int luaopen_ltreesitter(lua_State *L) {
 	ltreesitter_create_parser_metatable(L);
 	ltreesitter_create_tree_metatable(L);
 	ltreesitter_create_tree_cursor_metatable(L);
