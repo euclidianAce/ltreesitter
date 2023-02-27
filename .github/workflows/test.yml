@@ -30,18 +30,18 @@ jobs:
 
       - name: Install tree-sitter-c
         run: |
-          git clone https://github.com/tree-sitter/tree-sitter-c.git
+          git clone --depth=1 https://github.com/tree-sitter/tree-sitter-c.git
           cd tree-sitter-c
           mkdir -p ~/.tree-sitter/bin
           cc src/parser.c -shared -fPIC -o ~/.tree-sitter/bin/c.so
 
       - name: Install Lua
-        uses: leafo/gh-actions-lua@v8.0.0
+        uses: leafo/gh-actions-lua@v10.0.0
         with:
           luaVersion: ${{ matrix.luaVersion }}
 
       - name: Install LuaRocks
-        uses: leafo/gh-actions-luarocks@v4.0.0
+        uses: leafo/gh-actions-luarocks@v4.3.0
 
       - name: Build
         run: |
