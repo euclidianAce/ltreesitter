@@ -78,7 +78,8 @@ describe("Query", function()
 			do
 				count = count + 1
 				assert.are.equal(1, match.capture_count)
-				assert.are.equal("// hello", match.captures[1]:source())
+				assert.is.userdata(match.captures.a)
+				assert.are.equal("// hello", match.captures.a:source())
 			end
 			assert.are.equal(1, count)
 		end)
@@ -101,7 +102,8 @@ describe("Query", function()
 			do
 				count = count + 1
 				assert.are.equal(1, match.capture_count)
-				assert.are.equal("// world", match.captures[1]:source())
+				assert.is.userdata(match.captures.a)
+				assert.are.equal("// world", match.captures.a:source())
 			end
 			assert.are.equal(1, count)
 		end)
