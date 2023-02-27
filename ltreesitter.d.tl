@@ -71,7 +71,7 @@ local record ltreesitter
    end
    load: function(file_name: string, language_name: string): Parser, string  -- csrc/parser.c:111
    require: function(library_file_name: string, language_name: string): Parser  -- csrc/parser.c:167
-   version: string -- csrc/ltreesitter.c:13
+   version: string -- csrc/ltreesitter.c:14
 
    -- Inlines
 
