@@ -12,7 +12,7 @@ end
 
 local ok, c_parser = pcall(ts.require, "c")
 if not ok then
-	error("The ltreesitter test suite requires a C parser in your LUA_CPATH")
+	error("The ltreesitter test suite requires a C parser in your LUA_CPATH\n\n" .. tostring(c_parser))
 end
 M.c_parser = c_parser
 
