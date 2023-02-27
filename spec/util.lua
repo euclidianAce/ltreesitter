@@ -10,6 +10,8 @@ function M.assert_userdata_type(obj, mt_name, message)
 	return obj
 end
 
+-- for CI
+package.cpath = package.cpath .. ";" .. os.getenv "HOME" .. "/.tree-sitter/bin/?.so"
 local ok, c_parser = pcall(ts.require, "c")
 if not ok then
 	error("The ltreesitter test suite requires a C parser in your LUA_CPATH\n\n" .. tostring(c_parser))
