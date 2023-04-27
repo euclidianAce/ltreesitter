@@ -29,6 +29,7 @@ LTREESITTER_EXPORT int luaopen_ltreesitter(lua_State *L) {
 	ltreesitter_create_node_metatable(L);
 	ltreesitter_create_query_metatable(L);
 	ltreesitter_create_query_cursor_metatable(L);
+	ltreesitter_create_source_text_metatable(L);
 
 	setup_registry_index(L);
 	ltreesitter_setup_query_predicate_tables(L);

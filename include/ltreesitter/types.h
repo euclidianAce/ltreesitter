@@ -2,6 +2,7 @@
 #define LTREESITTER_TYPES_H
 
 #include "dynamiclib.h"
+#include <lua.h>
 #include <tree_sitter/api.h>
 
 typedef struct ltreesitter_Parser ltreesitter_Parser;
@@ -17,24 +18,18 @@ struct ltreesitter_Parser {
 };
 #define LTREESITTER_PARSER_METATABLE_NAME "ltreesitter.Parser"
 
-// reference counted source text for trees to hold on to
+// garbage collected source text for trees and queries to hold on to
 typedef struct {
-	// TODO: rather than refcounting, we should use the lua registry to garbage
-	// collect this
-	size_t refs;
 	size_t length;
-	const char *text;
+	char text[];
 } ltreesitter_SourceText;
+#define LTREESITTER_SOURCE_TEXT_METATABLE_NAME "ltreesitter.SourceText"
 
 struct ltreesitter_Tree {
 	TSTree *tree;
 
-	// The *TSTree structure is opaque so we don't have access to how it
-	// internally gets the source of the string that it parsed,
-	// so we just keep a copy for ourselves here.
-	// Not the most memory efficient, but I'd argue having Node:source()
-	// is worth it
-	ltreesitter_SourceText *source;
+	// TODO: this should be a tagged union of a reader function and source text
+	ltreesitter_SourceText const *source;
 };
 #define LTREESITTER_TREE_METATABLE_NAME "ltreesitter.Tree"
 
@@ -52,8 +47,7 @@ struct ltreesitter_Query {
 	TSQuery *query;
 
 	const TSLanguage *lang;
-	const char *src;
-	size_t src_len;
+	ltreesitter_SourceText const *source;
 };
 #define LTREESITTER_QUERY_METATABLE_NAME "ltreesitter.Query"
 
@@ -62,5 +56,12 @@ struct ltreesitter_QueryCursor {
 	TSQueryCursor *query_cursor;
 };
 #define LTREESITTER_QUERY_CURSOR_METATABLE_NAME "ltreesitter.QueryCursor"
+
+// pointer will only be valid for as long as it is on the stack as it may be garbage collected
+// will push nil and return NULL on allocation failure
+ltreesitter_SourceText *ltreesitter_source_text_push_uninitialized(lua_State *, size_t length);
+ltreesitter_SourceText *ltreesitter_source_text_push(lua_State *, size_t, const char *);
+ltreesitter_SourceText *ltreesitter_check_source_text(lua_State *, int index);
+void ltreesitter_create_source_text_metatable(lua_State *);
 
 #endif

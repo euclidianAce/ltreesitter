@@ -102,7 +102,7 @@ static int tree_cursor_goto_first_child_for_byte(lua_State *L) {
 static int tree_cursor_gc(lua_State *L) {
 	ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
 #ifdef LOG_GC
-	printf("Tree Cursor %p is being garbage collected\n", c);
+	printf("Tree Cursor %p is being garbage collected\n", (void *)c);
 #endif
 	ts_tree_cursor_delete(&c->cursor);
 	return 0;

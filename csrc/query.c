@@ -40,14 +40,15 @@ static inline void offset_to_pos(const char *src, uint32_t offset, uint32_t *row
 	}
 }
 
-void ltreesitter_handle_query_error(
+// returns true when there is no error
+bool ltreesitter_handle_query_error(
 	lua_State *L,
 	TSQuery *q,
 	uint32_t err_offset,
 	TSQueryError err_type,
 	const char *query_src) {
 	if (q)
-		return;
+		return true;
 	char slice[16] = {0};
 	strncpy(slice, &query_src[err_offset >= 10 ? err_offset - 10 : err_offset], 15);
 	uint32_t row, col;
@@ -61,7 +62,7 @@ void ltreesitter_handle_query_error(
 		break
 
 	switch (err_type) {
-		case TSQueryErrorNone: return; // unreachable
+		case TSQueryErrorNone: return true; // unreachable
 		CASE(TSQueryErrorSyntax, "syntax");
 		CASE(TSQueryErrorNodeType, "node");
 		CASE(TSQueryErrorField, "field");
@@ -72,6 +73,7 @@ void ltreesitter_handle_query_error(
 #undef CASE
 
 	lua_error(L);
+	return false;
 }
 
 void ltreesitter_push_query(
@@ -82,13 +84,18 @@ void ltreesitter_push_query(
 	TSQuery *q,
 	int parent_idx) {
 
-	ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query));
+	parent_idx = absindex(L, parent_idx);
+	ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query)); // query
 	setmetatable(L, LTREESITTER_QUERY_METATABLE_NAME);
-	lua_pushvalue(L, -1);
-	set_parent(L, parent_idx);
+	lua_pushvalue(L, -1); // query, query
+	set_parent(L, parent_idx); // query
 	lq->lang = lang;
-	lq->src = src;
-	lq->src_len = src_len;
+
+	lua_pushvalue(L, -1); // query, query
+	lq->source = ltreesitter_source_text_push(L, src_len, src); // query, query, source text
+	set_parent(L, -2); // query, query
+	lua_pop(L, 1); // query
+
 	lq->query = q;
 }
 
@@ -100,25 +107,24 @@ static void push_query_copy(lua_State *L, int query_idx) {
 	TSQueryError err_type;
 	TSQuery *q = ts_query_new(
 		orig->lang,
-		orig->src,
-		orig->src_len,
+		orig->source->text,
+		orig->source->length,
 		&err_offset,
 		&err_type);
 
-	ltreesitter_handle_query_error(L, q, err_offset, err_type, orig->src);
-	const char *src_copy = str_ldup(orig->src, orig->src_len);
+	if (!ltreesitter_handle_query_error(L, q, err_offset, err_type, orig->source->text))
+		return;
+	const char *src_copy = str_ldup(orig->source->text, orig->source->length);
 	if (!src_copy) {
 		ALLOC_FAIL(L);
 		return;
 	}
-	ltreesitter_push_query(L, orig->lang, src_copy, orig->src_len, q, -2); // <Parent>, <Query>
-
+	ltreesitter_push_query(L, orig->lang, src_copy, orig->source->length, q, -1); // <Parent>, <Query>
 	lua_remove(L, -2); // <Query>
 }
 
 static int query_gc(lua_State *L) {
 	ltreesitter_Query *q = ltreesitter_check_query(L, 1);
-	free((char *)q->src);
 	ts_query_delete(q->query);
 	return 1;
 }
@@ -177,12 +183,15 @@ static void get_capture_from_table(
 	lua_rawget(L, table_index);
 }
 
+// TODO: this function cannot handle upvalue indexes for query_idx nor tree_idx
 static bool do_predicates(
 	lua_State *L,
-	const int query_idx,
+	int query_idx,
 	const TSQuery *const q,
 	int tree_idx,
 	const TSQueryMatch *const m) {
+	query_idx = absindex(L, query_idx);
+	tree_idx = absindex(L, tree_idx);
 	bool result = true;
 
 #define RETURN(value) do { result = (value); goto deferred; } while (0)
@@ -326,13 +335,16 @@ deferred:
 
 static int query_iterator_next_match(lua_State *L) {
 	// upvalues: Query, Node, Cursor
-	const int query_idx = lua_upvalueindex(1);
-	ltreesitter_Query *const q = ltreesitter_check_query(L, query_idx);
+	const int initial_query_idx = lua_upvalueindex(1);
+	ltreesitter_Query *const q = ltreesitter_check_query(L, initial_query_idx);
 	ltreesitter_QueryCursor *c = ltreesitter_check_query_cursor(L, lua_upvalueindex(3));
 	TSQueryMatch m;
 	push_parent(L, lua_upvalueindex(2));
 	const int parent_idx = lua_gettop(L);
 	(void)ltreesitter_check_tree(L, parent_idx, INTERNAL_PARENT_CHECK_ERR_MSG);
+
+	lua_pushvalue(L, initial_query_idx);
+	const int query_idx = lua_gettop(L);
 
 	do {
 		if (!ts_query_cursor_next_match(c->query_cursor, &m))
@@ -402,14 +414,16 @@ static int query_iterator_next_match(lua_State *L) {
 
 static int query_iterator_next_capture(lua_State *L) {
 	// upvalues: Query, Node, Cursor
-	const int query_idx = lua_upvalueindex(1);
-	ltreesitter_Query *const q = ltreesitter_check_query(L, query_idx);
+	const int initial_query_idx = lua_upvalueindex(1);
+	ltreesitter_Query *const q = ltreesitter_check_query(L, initial_query_idx);
 	TSQueryCursor *c = ltreesitter_check_query_cursor(L, lua_upvalueindex(3))->query_cursor;
 	push_parent(L, lua_upvalueindex(2));
 	const int parent_idx = lua_gettop(L);
 	(void)ltreesitter_check_tree(L, -1, INTERNAL_PARENT_CHECK_ERR_MSG);
 	TSQueryMatch m;
 	uint32_t capture_index;
+	lua_pushvalue(L, initial_query_idx);
+	const int query_idx = lua_gettop(L);
 
 	do {
 		if (!ts_query_cursor_next_capture(c, &m, &capture_index))

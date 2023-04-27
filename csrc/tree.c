@@ -60,15 +60,11 @@ void ltreesitter_push_tree(
 	ltreesitter_Tree *tree = lua_newuserdata(L, sizeof(struct ltreesitter_Tree));
 	tree->tree = t;
 	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
-	tree->source = malloc(sizeof(ltreesitter_SourceText));
-	if (!tree->source) {
-		ALLOC_FAIL(L);
-	}
-	*tree->source = (ltreesitter_SourceText){
-		.refs = 1,
-		.length = src_len,
-		.text = src,
-	};
+	lua_pushvalue(L, -1);
+	tree->source = ltreesitter_source_text_push(L, src_len, src);
+	set_parent(L, -2);
+
+	// fprintf(stderr, "Created tree %p with source %p\n", (void*)tree, (void*)tree->source);
 }
 
 /* @teal-export Tree.root: function(Tree): Node [[
@@ -96,10 +92,11 @@ static int tree_to_string(lua_State *L) {
 static int tree_copy(lua_State *L) {
 	ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1);
 	ltreesitter_Tree *const t_copy = lua_newuserdata(L, sizeof(struct ltreesitter_Tree));
-	t_copy->tree = ts_tree_copy(t->tree);
-	++t->source->refs;
-	t_copy->source = t->source;
 	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
+	t_copy->tree = ts_tree_copy(t->tree);
+	t_copy->source = ltreesitter_source_text_push(L, t->source->length, t->source->text);
+	set_parent(L, -2);
+	// fprintf(stderr, "Copied tree(%p) to make tree %p with source %p\n", (void*)t, (void*)t_copy, (void*)t_copy->source);
 	return 1;
 }
 
@@ -245,15 +242,9 @@ static int tree_get_changed_ranges(lua_State *L) {
 static int tree_gc(lua_State *L) {
 	ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1);
 #ifdef LOG_GC
-	printf("Tree %p is being garbage collected\n", t);
+	printf("Tree %p is being garbage collected\n", (void const *)t);
+	printf("    source text=%p\n", (void const *)t->source);
 #endif
-	if (--t->source->refs == 0) {
-#ifdef LOG_GC
-		printf("   Tree %p source refcount is 0, collecting that too\n", t);
-#endif
-		free((void *)t->source->text);
-		free(t->source);
-	}
 	ts_tree_delete(t->tree);
 	return 0;
 }
