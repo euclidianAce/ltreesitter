@@ -101,7 +101,7 @@ void ltreesitter_push_query(
 
 static void push_query_copy(lua_State *L, int query_idx) {
 	ltreesitter_Query *orig = ltreesitter_check_query(L, query_idx);
-	push_parent(L, query_idx); // <parent>
+	push_parent(L, query_idx); // parent
 
 	uint32_t err_offset;
 	TSQueryError err_type;
@@ -114,13 +114,17 @@ static void push_query_copy(lua_State *L, int query_idx) {
 
 	if (!ltreesitter_handle_query_error(L, q, err_offset, err_type, orig->source->text))
 		return;
-	const char *src_copy = str_ldup(orig->source->text, orig->source->length);
-	if (!src_copy) {
-		ALLOC_FAIL(L);
-		return;
-	}
-	ltreesitter_push_query(L, orig->lang, src_copy, orig->source->length, q, -1); // <Parent>, <Query>
-	lua_remove(L, -2); // <Query>
+
+	ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query)); // parent, query
+	setmetatable(L, LTREESITTER_QUERY_METATABLE_NAME);
+
+	lq->lang = orig->lang;
+	lq->query = q;
+	lq->source = ltreesitter_source_text_push(L, orig->source->length, orig->source->text); // parent, query, sourcetext
+	set_parent(L, -1); // parent, query
+	lua_pushvalue(L, -1); // parent, query, query
+	set_parent(L, -2); // parent, query
+	lua_remove(L, -2); // query
 }
 
 static int query_gc(lua_State *L) {
