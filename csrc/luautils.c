@@ -52,12 +52,14 @@ void create_libtable(lua_State *L, const luaL_Reg l[]) {
 void create_metatable(
 	lua_State *L,
 	const char *name,
-	const luaL_Reg metamethods[],
-	const luaL_Reg index[]) {
+	const luaL_Reg *metamethods,
+	const luaL_Reg *index) {
 	luaL_newmetatable(L, name);     // metatable
 	setfuncs(L, metamethods);       // metatable
-	lua_newtable(L);                // metatable, table
-	setfuncs(L, index);             // metatable, table
+	if (index) {
+		lua_newtable(L);            // metatable, table
+		setfuncs(L, index);         // metatable, table
+	}
 	lua_setfield(L, -2, "__index"); // metatable
 
 	// lua <=5.2 doesn't set the __name field which we rely upon for the tests to pass

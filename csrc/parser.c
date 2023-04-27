@@ -251,7 +251,7 @@ static size_t find_char(const char *str, size_t len, char c) {
 	const char *ptr = memchr(str, c, len);
 	if (!ptr)
 		return len;
-	return (intptr_t)(ptr - str);
+	return (size_t)(ptr - str);
 }
 
 static void substitute_question_marks(
@@ -263,7 +263,7 @@ static void substitute_question_marks(
 	size_t i = 0;
 	while (i < path_pattern_len) {
 		const size_t prev_i = i;
-		i += find_char(path_pattern + i, path_pattern_len - i, '?');
+		i += find_char(path_pattern + prev_i, path_pattern_len - prev_i, '?');
 
 		if (i > prev_i + 1)
 			sb_push_lstr(buf, i - prev_i, path_pattern + prev_i);
@@ -307,7 +307,7 @@ static bool try_load_from_path_list(
 	while (end < path_list_len) {
 		buf.length = 0;
 		start = end;
-		end += find_char(path_list + start, path_list_len, ';');
+		end += find_char(path_list + start, path_list_len - start, ';');
 		const size_t len = end - start;
 		substitute_question_marks(&buf, path_list + start, len, dl_name);
 
@@ -362,7 +362,7 @@ int ltreesitter_require_parser(lua_State *L) {
 static int parser_gc(lua_State *L) {
 	ltreesitter_Parser *lp = luaL_checkudata(L, 1, LTREESITTER_PARSER_METATABLE_NAME);
 #ifdef LOG_GC
-	printf("Parser p: %p is being garbage collected\n", lp);
+	printf("Parser p: %p is being garbage collected\n", (void const *)lp);
 	printf("   p->dl: %p\n", lp->dl);
 #endif
 	ts_parser_delete(lp->parser);
