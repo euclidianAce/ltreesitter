@@ -57,11 +57,14 @@ void ltreesitter_push_tree(
 	TSTree *t,
 	size_t src_len,
 	const char *src) {
-	ltreesitter_Tree *tree = lua_newuserdata(L, sizeof(struct ltreesitter_Tree)); // tree
-	tree->tree = t;
+	ltreesitter_SourceText *source = ltreesitter_source_text_push(L, src_len, src); // source text
+	ltreesitter_Tree *tree = lua_newuserdata(L, sizeof(struct ltreesitter_Tree)); // source text, tree
 	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
-	tree->source = ltreesitter_source_text_push(L, src_len, src); // tree, source text
-	set_parent(L, -2); // tree
+	tree->tree = t;
+	tree->source = source;
+	lua_pushvalue(L, -1); // source text, tree, tree
+	set_parent(L, -3); // source text, tree
+	lua_remove(L, -2); // tree
 
 	// fprintf(stderr, "Created tree %p with source %p\n", (void*)tree, (void*)tree->source);
 }
