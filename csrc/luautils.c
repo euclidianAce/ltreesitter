@@ -57,15 +57,15 @@ void create_metatable(
 	luaL_newmetatable(L, name);     // metatable
 	setfuncs(L, metamethods);       // metatable
 	if (index) {
-		lua_newtable(L);            // metatable, table
-		setfuncs(L, index);         // metatable, table
+		lua_newtable(L);                // metatable, table
+		setfuncs(L, index);             // metatable, table
+		lua_setfield(L, -2, "__index"); // metatable
 	}
-	lua_setfield(L, -2, "__index"); // metatable
 
 	// lua <=5.2 doesn't set the __name field which we rely upon for the tests to pass
 #if LUA_VERSION_NUM < 503
-	lua_pushstring(L, name);
-	lua_setfield(L, -2, "__name");
+	lua_pushstring(L, name);        // metatable, name
+	lua_setfield(L, -2, "__name");  // metatable
 #endif
 }
 
