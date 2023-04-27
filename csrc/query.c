@@ -655,6 +655,15 @@ static int query_exec(lua_State *L) {
 	return 0;
 }
 
+/* @teal-export Query.source: function(Query): string [[
+   Gets the source that the query was initialized with
+]]*/
+static int query_source(lua_State *L) {
+	ltreesitter_Query *q = ltreesitter_check_query(L, 1);
+	lua_pushlstring(L, q->source->text, q->source->length);
+	return 1;
+}
+
 static bool predicate_arg_to_string(
 	lua_State *L,
 	int index,
@@ -805,6 +814,7 @@ static const luaL_Reg query_methods[] = {
 	{"capture", query_capture_factory},
 	{"with", query_copy_with_predicates},
 	{"exec", query_exec},
+	{"source", query_source},
 	{NULL, NULL}};
 
 static const luaL_Reg query_metamethods[] = {
