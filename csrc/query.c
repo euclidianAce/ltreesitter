@@ -91,9 +91,9 @@ void ltreesitter_push_query(
 	set_parent(L, parent_idx); // query
 	lq->lang = lang;
 
-	lua_pushvalue(L, -1); // query, query
-	lq->source = ltreesitter_source_text_push(L, src_len, src); // query, query, source text
-	set_parent(L, -2); // query, query
+	lq->source = ltreesitter_source_text_push(L, src_len, src); // query, source text
+	lua_pushvalue(L, -2); // query, source text, query
+	set_parent(L, -2); // query, source text
 	lua_pop(L, 1); // query
 
 	lq->query = q;
