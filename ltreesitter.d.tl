@@ -46,13 +46,14 @@ local record ltreesitter
       set_timeout: function(Parser, integer)  -- csrc/parser.c:520
    end
    record Query userdata
-      capture: function(Query, Node, start: integer | Point, end_: integer | Point): function(): (Node, string)  -- csrc/query.c:496
-      exec: function(Query, Node, start: integer | Point, end_: integer | Point)  -- csrc/query.c:584
-      match: function(Query, Node, start: integer | Point, end_: integer | Point): function(): Match  -- csrc/query.c:450
-      with: function(Query, {string:function(...: string | Node | {Node}): any...}): Query  -- csrc/query.c:525
+      capture: function(Query, Node, start: integer | Point, end_: integer | Point): function(): (Node, string)  -- csrc/query.c:514
+      exec: function(Query, Node, start: integer | Point, end_: integer | Point)  -- csrc/query.c:602
+      match: function(Query, Node, start: integer | Point, end_: integer | Point): function(): Match  -- csrc/query.c:468
+      source: function(Query): string  -- csrc/query.c:657
+      with: function(Query, {string:function(...: string | Node | {Node}): any...}): Query  -- csrc/query.c:543
    end
    record Tree userdata
-      copy: function(Tree): Tree  -- csrc/tree.c:92
+      copy: function(Tree): Tree  -- csrc/tree.c:90
       edit: function(
          Tree,
          start_byte: integer,
@@ -64,10 +65,10 @@ local record ltreesitter
          old_end_point_col: integer,
          new_end_point_row: integer,
          new_end_point_col: integer
-      )  -- csrc/tree.c:178
-      edit_s: function(Tree, TreeEdit)  -- csrc/tree.c:121
-      get_changed_ranges: function(old: Tree, new: Tree): {Range}  -- csrc/tree.c:207
-      root: function(Tree): Node  -- csrc/tree.c:73
+      )  -- csrc/tree.c:177
+      edit_s: function(Tree, TreeEdit)  -- csrc/tree.c:120
+      get_changed_ranges: function(old: Tree, new: Tree): {Range}  -- csrc/tree.c:206
+      root: function(Tree): Node  -- csrc/tree.c:71
    end
    load: function(file_name: string, language_name: string): Parser, string  -- csrc/parser.c:111
    require: function(library_file_name: string, language_name: string): Parser  -- csrc/parser.c:167
@@ -83,14 +84,14 @@ local record ltreesitter
       start_point: Point
       old_end_point: Point
       new_end_point: Point
-   end -- csrc/tree.c:110
+   end -- csrc/tree.c:109
 
    record Match
       id: integer
       pattern_index: integer
       capture_count: integer
       captures: {string:Node|{Node}}
-   end -- csrc/query.c:315
+   end -- csrc/query.c:328
 
    record Point
       row: integer
