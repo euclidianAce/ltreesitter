@@ -387,10 +387,7 @@ int ltreesitter_parser_parse_string(lua_State *L) {
 	lua_settop(L, 3);
 	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
 	size_t len;
-	const char *str = luaL_checklstring(L, 2, &len);
-	const char *copy = str_ldup(str, len);
-	if (!copy)
-		return ALLOC_FAIL(L);
+	const char *to_parse = luaL_checklstring(L, 2, &len);
 
 	TSTree *old_tree;
 	if (lua_type(L, 3) == LUA_TNIL) {
@@ -399,13 +396,13 @@ int ltreesitter_parser_parse_string(lua_State *L) {
 		old_tree = ltreesitter_check_tree_arg(L, 3)->tree;
 	}
 
-	TSTree *tree = ts_parser_parse_string(p->parser, old_tree, str, len);
+	TSTree *tree = ts_parser_parse_string(p->parser, old_tree, to_parse, len);
 	if (!tree) {
 		lua_pushnil(L);
 		return 1;
 	}
 
-	ltreesitter_push_tree(L, tree, len, copy);
+	ltreesitter_push_tree(L, tree, len, to_parse);
 	return 1;
 }
 
@@ -514,6 +511,7 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 		return 1;
 	}
 	ltreesitter_push_tree(L, t, payload.string_builder.length, payload.string_builder.data);
+	sb_free(&payload.string_builder);
 
 	return 1;
 }
@@ -655,29 +653,24 @@ int make_query(lua_State *L) {
 	lua_settop(L, 2);
 	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
 	size_t len;
-	// lua doesn't guarantee that this string stays alive after it is popped from the stack, so dupe it
 	const char *lua_query_src = luaL_checklstring(L, 2, &len);
-	const char *query_src = str_ldup(lua_query_src, len);
-	if (!query_src) {
-		return ALLOC_FAIL(L);
-	}
 	uint32_t err_offset = 0;
 	TSQueryError err_type = TSQueryErrorNone;
 	const TSLanguage *lang = ts_parser_language(p->parser);
 	TSQuery *q = ts_query_new(
 		lang,
-		query_src,
+		lua_query_src,
 		len,
 		&err_offset,
 		&err_type);
-	ltreesitter_handle_query_error(L, q, err_offset, err_type, query_src);
+	ltreesitter_handle_query_error(L, q, err_offset, err_type, lua_query_src);
 
-	if (q) {
-		ltreesitter_push_query(L, lang, query_src, len, q, 1);
-		return 1;
-	}
+	if (q)
+		ltreesitter_push_query(L, lang, lua_query_src, len, q, 1);
+	else
+		lua_pushnil(L);
 
-	return 0;
+	return 1;
 }
 
 /* @teal-export Parser.get_version: function(Parser): integer [[
