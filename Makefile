@@ -8,8 +8,7 @@ HEADERS=$(wildcard csrc/*.h) $(wildcard include/ltreesitter/*.h)
 SRC=$(wildcard csrc/*.c)
 OBJ=$(SRC:.c=.o)
 
-CFLAGS := -Wall -Wextra -Werror -Og -ggdb -std=c99 -pedantic -fPIC
-CFLAGS += -I./include
+CFLAGS := -I./include -Wall -Wextra -Werror -Og -ggdb -std=c99 -pedantic -fPIC
 # CFLAGS += -DLOG_GC
 # CFLAGS += -fsanitize=address,undefined,leak
 LIBS :=

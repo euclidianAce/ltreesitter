@@ -52,6 +52,7 @@ ltreesitter_Tree *ltreesitter_check_tree_arg(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_TREE_METATABLE_NAME);
 }
 
+// src will be duplicated
 void ltreesitter_push_tree(
 	lua_State *L,
 	TSTree *t,

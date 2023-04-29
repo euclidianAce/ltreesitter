@@ -76,6 +76,7 @@ bool ltreesitter_handle_query_error(
 	return false;
 }
 
+// src will be duplicated
 void ltreesitter_push_query(
 	lua_State *L,
 	const TSLanguage *lang,
@@ -89,14 +90,17 @@ void ltreesitter_push_query(
 	setmetatable(L, LTREESITTER_QUERY_METATABLE_NAME);
 	lua_pushvalue(L, -1); // query, query
 	set_parent(L, parent_idx); // query
-	lq->lang = lang;
 
-	lq->source = ltreesitter_source_text_push(L, src_len, src); // query, source text
+	ltreesitter_SourceText *source = ltreesitter_source_text_push(L, src_len, src); // query, source text
 	lua_pushvalue(L, -2); // query, source text, query
 	set_parent(L, -2); // query, source text
 	lua_pop(L, 1); // query
 
-	lq->query = q;
+	*lq = (ltreesitter_Query){
+		.source = source,
+		.query = q,
+		.lang = lang,
+	};
 }
 
 static void push_query_copy(lua_State *L, int query_idx) {
@@ -118,13 +122,17 @@ static void push_query_copy(lua_State *L, int query_idx) {
 	ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query)); // parent, query
 	setmetatable(L, LTREESITTER_QUERY_METATABLE_NAME);
 
-	lq->lang = orig->lang;
-	lq->query = q;
-	lq->source = ltreesitter_source_text_push(L, orig->source->length, orig->source->text); // parent, query, sourcetext
+	ltreesitter_SourceText *source = ltreesitter_source_text_push(L, orig->source->length, orig->source->text); // parent, query, sourcetext
 	set_parent(L, -1); // parent, query
 	lua_pushvalue(L, -1); // parent, query, query
 	set_parent(L, -2); // parent, query
 	lua_remove(L, -2); // query
+
+	*lq = (ltreesitter_Query){
+		.lang = orig->lang,
+		.query = q,
+		.source = source,
+	};
 }
 
 static int query_gc(lua_State *L) {
