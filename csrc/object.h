@@ -3,8 +3,19 @@
 
 #include <lua.h>
 
-void setup_object_table(lua_State *L);
-void push_parent(lua_State *L, int obj_idx);
-void set_parent(lua_State *L, int parent_idx);
+// The object table is a table in the registry with __mode = 'k' that we use to represent ownership.
+// This allows lua to garbage collect our data structures properly.
+//
+// The basic idea is just a table with weak keys:
+//
+//    object_table[parent] = child
+//
+// As long as `parent` lives, so does `child`
+
+void setup_object_table(lua_State *);
+void push_child(lua_State *, int obj_idx);
+
+// ( object -- ) -> object_table[object] = value at child_idx
+void set_child(lua_State *, int child_idx);
 
 #endif
