@@ -13,7 +13,7 @@ static void push_object_table(lua_State *L) {
 	push_registry_field(L, object_field);
 }
 
-void push_parent(lua_State *L, int obj_idx) {
+void push_child(lua_State *L, int obj_idx) {
 	lua_pushvalue(L, obj_idx); // object_copy
 	push_object_table(L);      // object_copy, object_table
 	lua_insert(L, -2);         // object_table, object_copy
@@ -26,11 +26,12 @@ void push_parent(lua_State *L, int obj_idx) {
 
 // sets the parent of an object at the top of the stack
 // pops the object off of the stack
-void set_parent(lua_State *L, int parent_idx) {
+// ( object -- ) -> object_table[object] = value at child_idx
+void set_child(lua_State *L, int child_idx) {
 	// object
-	lua_pushvalue(L, parent_idx); // object, parent
-	push_object_table(L);         // object, parent, object_table
-	lua_insert(L, -3);            // object_table, object, parent
-	lua_rawset(L, -3);            // object_table
+	lua_pushvalue(L, child_idx); // object, child
+	push_object_table(L);        // object, child, object_table
+	lua_insert(L, -3);           // object_table, object, child
+	lua_rawset(L, -3);           // object_table
 	lua_pop(L, 1);
 }

@@ -64,7 +64,7 @@ void ltreesitter_push_tree(
 	tree->tree = t;
 	tree->source = source;
 	lua_pushvalue(L, -1); // source text, tree, tree
-	set_parent(L, -3); // source text, tree
+	set_child(L, -3); // source text, tree
 	lua_remove(L, -2); // tree
 
 	// fprintf(stderr, "Created tree %p with source %p\n", (void*)tree, (void*)tree->source);
@@ -98,7 +98,7 @@ static int tree_copy(lua_State *L) {
 	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
 	t_copy->tree = ts_tree_copy(t->tree);
 	t_copy->source = ltreesitter_source_text_push(L, t->source->length, t->source->text);
-	set_parent(L, -2);
+	set_child(L, -2);
 	// fprintf(stderr, "Copied tree(%p) to make tree %p with source %p\n", (void*)t, (void*)t_copy, (void*)t_copy->source);
 	return 1;
 }

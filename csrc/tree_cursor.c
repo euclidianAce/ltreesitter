@@ -12,7 +12,7 @@ ltreesitter_TreeCursor *ltreesitter_check_tree_cursor(lua_State *L, int idx) {
 ltreesitter_TreeCursor *ltreesitter_push_tree_cursor(lua_State *L, int parent_idx, TSNode n) {
 	ltreesitter_TreeCursor *c = lua_newuserdata(L, sizeof(struct ltreesitter_TreeCursor));
 	lua_pushvalue(L, -1);
-	set_parent(L, parent_idx);
+	set_child(L, parent_idx);
 	c->cursor = ts_tree_cursor_new(n);
 	setmetatable(L, LTREESITTER_TREE_CURSOR_METATABLE_NAME);
 	return c;
@@ -23,7 +23,7 @@ ltreesitter_TreeCursor *ltreesitter_push_tree_cursor(lua_State *L, int parent_id
 ]] */
 static int tree_cursor_current_node(lua_State *L) {
 	ltreesitter_TreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
-	push_parent(L, 1);
+	push_child(L, 1);
 	ltreesitter_push_node(
 		L, -1,
 		ts_tree_cursor_current_node(&c->cursor));
