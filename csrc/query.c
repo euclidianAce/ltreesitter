@@ -99,12 +99,15 @@ void ltreesitter_push_query(
 	set_child(L, child_idx); // query
 
 	ltreesitter_SourceText *source = ltreesitter_source_text_push(L, src_len, src); // query, source text
+	if (!source) {
+		ALLOC_FAIL(L);
+		return;
+	}
 	lua_pushvalue(L, -2); // query, source text, query
 	set_child(L, -2); // query, source text
 	lua_pop(L, 1); // query
 
 	*lq = (ltreesitter_Query){
-		.source = source,
 		.query = q,
 		.lang = lang,
 	};
@@ -123,8 +126,8 @@ static void push_query_copy(lua_State *L, int query_idx) {
 	TSQueryError err_type;
 	TSQuery *q = ts_query_new(
 		orig->lang,
-		orig->source->text,
-		orig->source->length,
+		source_text->text,
+		source_text->length,
 		&err_offset,
 		&err_type);
 
@@ -141,7 +144,6 @@ static void push_query_copy(lua_State *L, int query_idx) {
 	*lq = (ltreesitter_Query){
 		.lang = orig->lang,
 		.query = q,
-		.source = source_text,
 	};
 }
 
@@ -677,8 +679,19 @@ static int query_exec(lua_State *L) {
    Gets the source that the query was initialized with
 ]]*/
 static int query_source(lua_State *L) {
-	ltreesitter_Query *q = ltreesitter_check_query(L, 1);
-	lua_pushlstring(L, q->source->text, q->source->length);
+	ltreesitter_Query *q = ltreesitter_check_query(L, 1); // query
+	if (!q) {
+		int t = lua_type(L, 1);
+		luaL_error(L, "Expected an ltreesitter.Query, got %s", lua_typename(L, t));
+		return 0;
+	}
+	push_child(L, -1); // query, source
+	ltreesitter_SourceText const *source_text = ltreesitter_check_source_text(L, -1);
+	if (!source_text) {
+		luaL_error(L, "Internal error: Query child was not a SourceText");
+		return 0;
+	}
+	lua_pushlstring(L, source_text->text, source_text->length); // query, source, string
 	return 1;
 }
 
