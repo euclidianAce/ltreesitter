@@ -46,11 +46,18 @@ bool ltreesitter_handle_query_error(
 	TSQuery *q,
 	uint32_t err_offset,
 	TSQueryError err_type,
-	const char *query_src) {
+	const char *query_src,
+	size_t query_src_len) {
 	if (q)
 		return true;
 	char slice[16] = {0};
-	strncpy(slice, &query_src[err_offset >= 10 ? err_offset - 10 : err_offset], 15);
+	{
+		size_t start_idx = err_offset >= 10 ? err_offset - 10 : err_offset;
+		size_t n_bytes = query_src_len - start_idx;
+		if (n_bytes > 15)
+			n_bytes = 15;
+		memcpy(slice, &query_src[start_idx], n_bytes);
+	}
 	uint32_t row, col;
 	offset_to_pos(query_src, err_offset, &row, &col);
 	char buf[128];
@@ -116,7 +123,7 @@ static void push_query_copy(lua_State *L, int query_idx) {
 		&err_offset,
 		&err_type);
 
-	if (!ltreesitter_handle_query_error(L, q, err_offset, err_type, orig->source->text))
+	if (!ltreesitter_handle_query_error(L, q, err_offset, err_type, source_text->text, source_text->length))
 		return;
 
 	ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query)); // child, query
