@@ -111,8 +111,13 @@ void ltreesitter_push_query(
 }
 
 static void push_query_copy(lua_State *L, int query_idx) {
-	ltreesitter_Query *orig = ltreesitter_check_query(L, query_idx);
-	push_child(L, query_idx); // child
+	ltreesitter_Query *orig = ltreesitter_check_query(L, query_idx); // query
+	push_child(L, query_idx); // query, sourcetext
+	ltreesitter_SourceText const *source_text = ltreesitter_check_source_text(L, -1);
+	if (!source_text) {
+		luaL_error(L, "Internal error: Query child was not a SourceText");
+		return;
+	}
 
 	uint32_t err_offset;
 	TSQueryError err_type;
@@ -126,19 +131,17 @@ static void push_query_copy(lua_State *L, int query_idx) {
 	if (!ltreesitter_handle_query_error(L, q, err_offset, err_type, source_text->text, source_text->length))
 		return;
 
-	ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query)); // child, query
+	ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query)); // query, sourcetext, new query
 	setmetatable(L, LTREESITTER_QUERY_METATABLE_NAME);
 
-	ltreesitter_SourceText *source = ltreesitter_source_text_push(L, orig->source->length, orig->source->text); // child, query, sourcetext
-	set_child(L, -1); // child, query
-	lua_pushvalue(L, -1); // child, query, query
-	set_child(L, -2); // child, query
-	lua_remove(L, -2); // query
+	lua_pushvalue(L, -1); // query, sourcetext, new query, new query
+	set_child(L, -3); // query, sourcetext, new query
+	lua_remove(L, -2); // query, new query
 
 	*lq = (ltreesitter_Query){
 		.lang = orig->lang,
 		.query = q,
-		.source = source,
+		.source = source_text,
 	};
 }
 

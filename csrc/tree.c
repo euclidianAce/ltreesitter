@@ -93,13 +93,20 @@ static int tree_to_string(lua_State *L) {
    Creates a copy of the tree. Tree-sitter recommends to create copies if you are going to use multithreading since tree accesses are not thread-safe, but copying them is cheap and quick
 ]] */
 static int tree_copy(lua_State *L) {
-	ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1);
-	ltreesitter_Tree *const t_copy = lua_newuserdata(L, sizeof(struct ltreesitter_Tree));
+	lua_settop(L, 1);
+	ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1); // tree
+	push_child(L, 1); // tree, source text
+	ltreesitter_SourceText const *source_text = ltreesitter_check_source_text(L, -1);
+	if (!source_text) {
+		luaL_error(L, "Internal error: Tree child was not a SourceText");
+		return 0;
+	}
+	ltreesitter_Tree *const t_copy = lua_newuserdata(L, sizeof(struct ltreesitter_Tree)); // tree, source text, new tree
 	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
 	t_copy->tree = ts_tree_copy(t->tree);
-	t_copy->source = ltreesitter_source_text_push(L, t->source->length, t->source->text);
-	set_child(L, -2);
-	// fprintf(stderr, "Copied tree(%p) to make tree %p with source %p\n", (void*)t, (void*)t_copy, (void*)t_copy->source);
+	t_copy->source = source_text;
+	lua_pushvalue(L, -1); // tree, source text, new tree, new tree
+	set_child(L, -3); // tree, source text, new tree
 	return 1;
 }
 

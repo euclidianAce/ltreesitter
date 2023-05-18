@@ -47,6 +47,7 @@ struct ltreesitter_Query {
 	TSQuery *query;
 
 	const TSLanguage *lang;
+	// TODO: this doesn't need to be stored here
 	ltreesitter_SourceText const *source;
 };
 #define LTREESITTER_QUERY_METATABLE_NAME "ltreesitter.Query"
