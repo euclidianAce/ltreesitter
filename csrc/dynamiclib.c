@@ -18,7 +18,8 @@ bool ltreesitter_open_dynamic_lib(const char *name, ltreesitter_Dynlib **handle)
 
 void *ltreesitter_dynamic_sym(ltreesitter_Dynlib *handle, const char *sym_name) {
 #ifdef _WIN32
-	return GetProcAddress(handle, sym_name);
+	FARPROC sym = GetProcAddress(handle, sym_name);
+	return *(void**)(&sym);
 #elif LTREESITTER_USE_LIBUV
 	void *sym = NULL;
 	if (uv_dlsym(handle, sym_name, &sym) == 0) {
