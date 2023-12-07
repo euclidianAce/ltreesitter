@@ -13,7 +13,7 @@
 #include <ltreesitter/tree_cursor.h>
 
 // @teal-export version: string
-static const char version_str[] = "0.0.6+dev";
+static const char version_str[] = "0.0.7";
 
 static const luaL_Reg lib_funcs[] = {
 	{"load", ltreesitter_load_parser},
