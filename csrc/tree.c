@@ -52,6 +52,12 @@ ltreesitter_Tree *ltreesitter_check_tree_arg(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_TREE_METATABLE_NAME);
 }
 
+static ltreesitter_Tree *push_uninitialized_tree(lua_State *L) {
+	ltreesitter_Tree *tree = lua_newuserdata(L, sizeof *tree);
+	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
+	return tree;
+}
+
 // src will be duplicated
 void ltreesitter_push_tree(
 	lua_State *L,
@@ -59,15 +65,28 @@ void ltreesitter_push_tree(
 	size_t src_len,
 	const char *src) {
 	ltreesitter_SourceText *source = ltreesitter_source_text_push(L, src_len, src); // source text
-	ltreesitter_Tree *tree = lua_newuserdata(L, sizeof *tree); // source text, tree
-	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
+	ltreesitter_Tree *tree = push_uninitialized_tree(L); // source text, tree
 	tree->tree = t;
-	tree->source = source;
+	tree->text_or_null_if_function_reader = source;
 	lua_pushvalue(L, -1); // source text, tree, tree
 	set_child(L, -3); // source text, tree
 	lua_remove(L, -2); // tree
 
 	// fprintf(stderr, "Created tree %p with source %p\n", (void*)tree, (void*)tree->source);
+}
+
+void ltreesitter_push_tree_with_reader(
+	lua_State *L,
+	TSTree *t,
+	int reader_function_index) {
+	lua_pushvalue(L, reader_function_index);             // reader
+	ltreesitter_Tree *tree = push_uninitialized_tree(L); // reader, tree
+	tree->tree = t;
+	tree->text_or_null_if_function_reader = NULL;
+
+	lua_pushvalue(L, -1); // reader, tree, tree
+	set_child(L, -3);     // reader, tree
+	lua_remove(L, -2);    // tree
 }
 
 /* @teal-export Tree.root: function(Tree): Node [[
@@ -94,18 +113,17 @@ static int tree_to_string(lua_State *L) {
 static int tree_copy(lua_State *L) {
 	lua_settop(L, 1);
 	ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1); // tree
-	push_child(L, 1); // tree, source text
+	push_child(L, 1); // tree, source text/reader
 	ltreesitter_SourceText const *source_text = ltreesitter_check_source_text(L, -1);
 	if (!source_text) {
 		luaL_error(L, "Internal error: Tree child was not a SourceText");
 		return 0;
 	}
-	ltreesitter_Tree *const t_copy = lua_newuserdata(L, sizeof(struct ltreesitter_Tree)); // tree, source text, new tree
-	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
+	ltreesitter_Tree *const t_copy = push_uninitialized_tree(L); // tree, source text/reader, new tree
 	t_copy->tree = ts_tree_copy(t->tree);
-	t_copy->source = source_text;
-	lua_pushvalue(L, -1); // tree, source text, new tree, new tree
-	set_child(L, -3); // tree, source text, new tree
+	t_copy->text_or_null_if_function_reader = source_text;
+	lua_pushvalue(L, -1); // tree, source text/reader, new tree, new tree
+	set_child(L, -3); // tree, source text/reader, new tree
 	return 1;
 }
 

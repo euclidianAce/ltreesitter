@@ -698,26 +698,20 @@ static int query_source(lua_State *L) {
 static bool predicate_arg_to_string(
 	lua_State *L,
 	int index,
-	const char **out_ptr,
-	size_t *out_len
+	MaybeOwnedString *out_str
 ) {
 	if (lua_isnil(L, index))
 		return false;
 
 	if (lua_type(L, index) == LUA_TSTRING) {
-		*out_ptr = luaL_checklstring(L, index, out_len);
-		return true;
+		out_str->owned = false;
+		out_str->data = luaL_checklstring(L, index, &out_str->length);
 	} else {
-		const ltreesitter_Node *node = ltreesitter_check_node(L, index);
-		push_child(L, index);
-		const ltreesitter_Tree *tree = ltreesitter_check_tree(L, -1, INTERNAL_PARENT_CHECK_ERR_MSG);
-		uint32_t start = ts_node_start_byte(node->node);
-		uint32_t end = ts_node_end_byte(node->node);
-		*out_ptr = tree->source->text + start;
-		*out_len = end - start;
-		lua_remove(L, -1);
-		return true;
+		lua_pushvalue(L, index);
+		*out_str = get_node_source(L);
+		lua_pop(L, 1);
 	}
+	return true;
 }
 
 static bool ensure_predicate_arg_string(
@@ -725,11 +719,11 @@ static bool ensure_predicate_arg_string(
 	int index
 ) {
 	index = absindex(L, index);
-	size_t len;
-	const char *str;
-	if (!predicate_arg_to_string(L, index, &str, &len))
+	MaybeOwnedString str;
+	if (!predicate_arg_to_string(L, index, &str))
 		return false;
-	lua_pushlstring(L, str, len);
+	mos_push_to_lua(L, str);
+	mos_free(&str);
 	lua_replace(L, index);
 	return true;
 }
@@ -740,27 +734,30 @@ static int eq_predicate(lua_State *L) {
 	if (num_args < 2) {
 		luaL_error(L, "predicate eq? expects 2 or more arguments, got %d", num_args);
 	}
-	const char *a;
-	size_t a_len;
-	if (!predicate_arg_to_string(L, 1, &a, &a_len)) {
+	MaybeOwnedString a;
+	if (!predicate_arg_to_string(L, 1, &a)) {
 		lua_pushboolean(L, false);
+		mos_free(&a);
 		return 1;
 	}
-	const char *b;
-	size_t b_len;
-
+	MaybeOwnedString b;
 	for (int i = 2; i <= num_args; ++i) {
-		if (!predicate_arg_to_string(L, i, &b, &b_len)) {
+		if (!predicate_arg_to_string(L, i, &b)) {
 			lua_pushboolean(L, false);
+			mos_free(&a);
+			mos_free(&b);
 			return 1;
 		}
-		if (a_len != b_len || strncmp(a, b, a_len) != 0) {
+		if (!mos_eq(a, b)) {
 			lua_pushboolean(L, false);
+			mos_free(&a);
+			mos_free(&b);
 			return 1;
 		};
+		mos_free(&a);
 		a = b;
-		a_len = b_len;
 	}
+	mos_free(&a);
 
 	lua_pushboolean(L, true);
 	return 1;

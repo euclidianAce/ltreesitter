@@ -355,18 +355,100 @@ static int node_child_by_field_name(lua_State *L) {
 	return 1;
 }
 
+MaybeOwnedString get_node_source(lua_State *L) { // node
+	TSNode n = ltreesitter_check_node(L, -1)->node;
+	push_child(L, -1); // node, tree
+	ltreesitter_Tree *const t = ltreesitter_check_tree(L, -1, "Internal error: node child was not a tree");
+	if (t->text_or_null_if_function_reader) {
+		const uint32_t start = ts_node_start_byte(n);
+		const uint32_t end = ts_node_end_byte(n);
+		lua_pop(L, 1); // node
+		return (MaybeOwnedString){
+			.owned = false,
+			.data = t->text_or_null_if_function_reader->text + start,
+			.length = end - start,
+		};
+	}
+	push_child(L, -1); // node, tree, reader
+	StringBuilder sb = {0};
+
+	const uint32_t start_byte = ts_node_start_byte(n);
+	const uint32_t end_byte = ts_node_end_byte(n);
+	const uint32_t expected_byte_length = end_byte - start_byte;
+	uint32_t needed_bytes = expected_byte_length;
+	TSPoint position = ts_node_start_point(n);
+
+	while (needed_bytes > 0) {
+		lua_pushvalue(L, -1); // ..., reader
+
+		const uint32_t start_index = start_byte + end_byte - needed_bytes;
+
+		pushinteger(L, start_index); // ..., reader, index
+		lua_newtable(L); { // ..., reader, index, point
+			pushinteger(L, position.row); lua_setfield(L, -2, "row");
+			pushinteger(L, position.column); lua_setfield(L, -2, "column");
+		} // ..., reader, index, point
+
+		if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
+			sb_free(&sb);
+			lua_error(L);
+		}
+
+		// ..., return value
+
+		int t = lua_type(L, -1);
+		switch (t) {
+		case LUA_TNIL:
+			needed_bytes = 0;
+			break;
+		case LUA_TSTRING:
+			{
+				size_t len;
+				char const *str = lua_tolstring(L, -1, &len);
+				if (len > needed_bytes)
+					len = needed_bytes;
+				sb_push_lstr(&sb, len, str);
+				needed_bytes -= len;
+
+				// According to https://github.com/tree-sitter/tree-sitter/discussions/1286
+				// `column` is just a byte offset
+				for (size_t i = 0; i < len; ++i) {
+					if (str[i] == '\n') {
+						position.row += 1;
+						position.column = 0;
+					} else {
+						position.column += 1;
+					}
+				}
+			}
+			break;
+		default:
+			sb_free(&sb);
+			luaL_error(L, "read error: Reader function returned %s (expected string)", lua_typename(L, t));
+			break;
+		}
+		lua_pop(L, 1);
+	} // node, tree, reader
+	lua_pop(L, 2); // node
+
+	return (MaybeOwnedString){
+		.owned = true,
+		.length = sb.length,
+		.data = sb.data,
+	};
+}
+
 /* @teal-export Node.source: function(Node): string [[
    Get the substring of the source that was parsed to create <code>Node</code>
 ]]*/
-static int node_get_source_str(lua_State *L) {
-	lua_settop(L, 1);
-	TSNode n = ltreesitter_check_node(L, 1)->node;
-	const uint32_t start = ts_node_start_byte(n);
-	const uint32_t end = ts_node_end_byte(n);
+void ltreesitter_push_node_source(lua_State *L) { // node
+	MaybeOwnedString str = get_node_source(L);
+	mos_push_to_lua(L, str);
+	mos_free(&str);
+}
 
-	push_child(L, 1);
-	ltreesitter_Tree *const t = ltreesitter_check_tree(L, 2, "Internal error: node child was not a tree");
-	lua_pushlstring(L, t->source->text + start, end - start);
+int node_get_source_str(lua_State *L) {
+	ltreesitter_push_node_source(L);
 	return 1;
 }
 

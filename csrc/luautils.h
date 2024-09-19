@@ -27,6 +27,16 @@ void sb_push_fmt(StringBuilder *sb, const char *fmt, ...);
 void sb_push_to_lua(lua_State *L, StringBuilder *sb);
 void sb_free(StringBuilder *sb);
 
+typedef struct {
+	char const *data;
+	size_t length;
+	bool owned; // when true, owner is responsible for `free`ing data
+} MaybeOwnedString;
+
+void mos_push_to_lua(lua_State *, MaybeOwnedString);
+void mos_free(MaybeOwnedString *);
+bool mos_eq(MaybeOwnedString, MaybeOwnedString);
+
 char *str_ldup(const char *s, const size_t len);
 void table_geti(lua_State *L, int idx, int i);
 int table_rawget(lua_State *L, int idx);
@@ -46,6 +56,10 @@ void set_registry_field(lua_State *L, const char *f);
 void newtable_with_mode(lua_State *L, const char *mode);
 size_t length_of(lua_State *L, int index);
 
+bool push_ref_from_registry(lua_State *, int ref);
+int ref_into_registry(lua_State *, int object_to_ref);
+void unref_from_registry(lua_State *, int ref);
+
 #if LUA_VERSION_NUM > 501
 void dump_stack(lua_State *L, int from);
 #endif
@@ -53,5 +67,7 @@ void dump_stack(lua_State *L, int from);
 #ifndef LUA_OK
 #define LUA_OK 0
 #endif
+
+MaybeOwnedString get_node_source(lua_State *);
 
 #endif

@@ -137,6 +137,29 @@ int push_registry_table(lua_State *L) {
 	return 1;
 }
 
+int ref_into_registry(lua_State *L, int object_to_ref) {
+	lua_pushvalue(L, object_to_ref); // object
+	push_registry_table(L);          // object, { <ltreesitter registry> }
+	lua_rotate(L, -2, 1);            // { }, object
+	int ref = luaL_ref(L, -2);       // { }
+	lua_pop(L, 1);
+	return ref;
+}
+
+void unref_from_registry(lua_State *L, int ref_to_unref) {
+	push_registry_table(L);          // { <ltreesitter registry> }
+	luaL_unref(L, -1, ref_to_unref);
+	lua_pop(L, 1);                   // <empty>
+}
+
+bool push_ref_from_registry(lua_State *L, int ref) {
+	push_registry_table(L);          // { <ltreesitter registry> }
+	int type = table_rawget(L, ref); // {}, object
+	lua_rotate(L, -2, 1);            // object, {}
+    lua_pop(L, 1);                   // object
+	return type != LUA_TNIL;
+}
+
 void push_registry_field(lua_State *L, const char *f) {
 	push_registry_table(L);
 	lua_getfield(L, -1, f);
@@ -237,4 +260,19 @@ void sb_free(StringBuilder *sb) {
 
 void sb_push_to_lua(lua_State *L, StringBuilder *sb) {
 	lua_pushlstring(L, sb->data, sb->length);
+}
+
+void mos_free(MaybeOwnedString *s) {
+	if (s->owned) free((void *)s->data);
+	s->data = NULL;
+	s->length = 0;
+	s->owned = false;
+}
+
+void mos_push_to_lua(lua_State *L, MaybeOwnedString s) {
+	lua_pushlstring(L, s.data, s.length);
+}
+
+bool mos_eq(MaybeOwnedString a, MaybeOwnedString b) {
+	return a.length == b.length && memcmp(a.data, b.data, a.length) == 0;
 }

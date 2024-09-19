@@ -94,16 +94,16 @@ describe("Parser", function()
 		end)
 		it("should use the given function to parse chunks of text", function()
 			local lines = {
-				"#include <stdio.h>",
-				"int main(void) {",
-				"    printf(\"hello world\\n\");",
-				"    return 0;",
-				"}",
+				"#include <stdio.h>\n",
+				"int main(void) {\n",
+				"    printf(\"hello world\\n\");\n",
+				"    return 0;\n",
+				"}\n",
 			}
 			local function read_lines(_byte_idx, point)
 				local ln = lines[point.row + 1]
 				if ln then
-					return ln:sub(point.column + 1, -1) .. "\n"
+					return ln:sub(point.column + 1, point.column + math.random(1, 10))
 				end
 			end
 			local tree = p:parse_with(read_lines)

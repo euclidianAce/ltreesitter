@@ -131,6 +131,36 @@ describe("Node", function()
 			local src = assert(root[2]:child(0), "Error in Node:child"):source()
 			assert.are.equal(src, "/* hello world */")
 		end)
+
+		it("should work when the tree was parsed with a reader function", function()
+			local lines = {
+				"#include <stdio.h>\n",
+				"int main(void) {\n",
+				"    printf(\"hello world\\n\");\n",
+				"    return 0;\n",
+				"}\n",
+			}
+			local function read_by_line(_byte_idx, zero_indexed_point)
+				local point = { row = zero_indexed_point.row + 1, column = zero_indexed_point.column + 1 }
+				local ln = lines[point.row]
+				while ln and point.column > #ln do
+					point.row = point.row + 1
+					point.column = 1
+					ln = lines[point.row]
+				end
+				if not ln then return end
+				local len = math.random(1, 10)
+				local result = ln:sub(point.column, point.column + len - 1)
+				return result
+			end
+
+			local tree_with_reader = p:parse_with(read_by_line)
+
+			local root = tree_with_reader:root()
+			assert.are.equal("#include <stdio.h>\n", root:child(0):source())
+			local c = root:child(1):child(2):child(2)
+			assert.are.equal("return 0;", c:source())
+		end)
 	end)
 
 	-- TODO: assert the correct values for these

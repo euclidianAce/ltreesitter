@@ -27,9 +27,7 @@ typedef struct {
 
 struct ltreesitter_Tree {
 	TSTree *tree;
-
-	// TODO: this should be a tagged union of a reader function and source text
-	ltreesitter_SourceText const *source;
+	ltreesitter_SourceText const *text_or_null_if_function_reader;
 };
 #define LTREESITTER_TREE_METATABLE_NAME "ltreesitter.Tree"
 

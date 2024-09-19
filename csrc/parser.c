@@ -405,12 +405,13 @@ enum ReadError {
 };
 struct CallInfo {
 	lua_State *L;
-	StringBuilder string_builder;
 	enum ReadError read_error;
+	bool should_pop;
 };
 static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, TSPoint position, uint32_t *bytes_read) {
 	struct CallInfo *const i = payload;
 	lua_State *const L = i->L;
+	if (i->should_pop) lua_pop(L, 1);
 	lua_pushvalue(L, -1); // grab a copy of the function
 	pushinteger(L, byte_index);
 
@@ -440,24 +441,12 @@ static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, T
 
 	size_t n = 0;
 	const char *read_str = lua_tolstring(L, -1, &n);
-	if (!sb_ensure_cap(&i->string_builder, byte_index + n)) {
-		ALLOC_FAIL(L);
-		*bytes_read = 0;
-		return NULL;
-	}
-
-	memcpy(&i->string_builder.data[byte_index], read_str, n);
-	if (byte_index + *bytes_read > i->string_builder.length) {
-		i->string_builder.length = byte_index + n;
-	}
-
-	lua_pop(L, 1);
-
+	i->should_pop = true; // defer popping this string since lua is free to gc if it gets popped
 	*bytes_read = n;
 	return read_str;
 }
 
-/* @teal-export Parser.parse_with: function(Parser, reader: function(integer, Point): (string), old_tree: Tree): Tree [[
+/* @teal-export Parser.parse_with: function(Parser, reader: (function(integer, Point): string), old_tree: Tree): Tree [[
    <code>reader</code> should be a function that takes a byte index
    and a <code>Point</code> and returns the text at that point. The
    function should return either <code>nil</code> or an empty string
@@ -477,7 +466,7 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 	struct CallInfo payload = {
 		.L = L,
 		.read_error = READERR_NONE,
-		.string_builder = {0},
+		.should_pop = false,
 	};
 
 	TSInput input = (TSInput){
@@ -502,8 +491,7 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 		lua_pushnil(L);
 		return 1;
 	}
-	ltreesitter_push_tree(L, t, payload.string_builder.length, payload.string_builder.data);
-	sb_free(&payload.string_builder);
+	ltreesitter_push_tree_with_reader(L, t, 2);
 
 	return 1;
 }
