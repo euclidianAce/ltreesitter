@@ -35,3 +35,12 @@ void set_child(lua_State *L, int child_idx) {
 	lua_rawset(L, -3);           // object_table
 	lua_pop(L, 1);
 }
+
+static const char *parser_cache_index = "parsers";
+void setup_parser_cache(lua_State *L) {
+	newtable_with_mode(L, "v");
+	set_registry_field(L, parser_cache_index);
+}
+void push_parser_cache(lua_State *L) {
+	push_registry_field(L, parser_cache_index);
+}

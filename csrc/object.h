@@ -15,6 +15,9 @@
 void setup_object_table(lua_State *);
 void push_child(lua_State *, int obj_idx);
 
+void setup_parser_cache(lua_State *);
+void push_parser_cache(lua_State *);
+
 // ( object -- ) -> object_table[object] = value at child_idx
 void set_child(lua_State *, int child_idx);
 
