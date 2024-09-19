@@ -36,13 +36,13 @@ enum ParserLoadErr {
 };
 
 #define TREE_SITTER_SYM "tree_sitter_"
-static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_file, const char *lang_name, uint32_t *out_version) {
+static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_file, const char *lang_name, uint32_t *out_version, const char **dynlib_open_error) {
 	static char buf[128];
-	if (snprintf(buf, sizeof(buf) - sizeof(TREE_SITTER_SYM), TREE_SITTER_SYM "%s", lang_name) == 0) {
+	if (snprintf(buf, sizeof buf - sizeof TREE_SITTER_SYM - 1, TREE_SITTER_SYM "%s", lang_name) == 0) {
 		return PARSE_LOAD_ERR_BUFLEN;
 	}
 
-	if (!ltreesitter_open_dynamic_lib(parser_file, &p->dl)) {
+	if (!ltreesitter_open_dynamic_lib(parser_file, &p->dl, dynlib_open_error)) {
 		return PARSE_LOAD_ERR_DLOPEN;
 	}
 
@@ -133,7 +133,8 @@ int ltreesitter_load_parser(lua_State *L) {
 		.parser = NULL,
 	};
 	uint32_t version = 0;
-	switch (try_dlopen(&proxy, parser_file, lang_name, &version)) {
+	const char *dynlib_error;
+	switch (try_dlopen(&proxy, parser_file, lang_name, &version, &dynlib_error)) {
 	case PARSE_LOAD_ERR_NONE:
 		break;
 	case PARSE_LOAD_ERR_DLSYM:
@@ -142,7 +143,7 @@ int ltreesitter_load_parser(lua_State *L) {
 		return 2;
 	case PARSE_LOAD_ERR_DLOPEN:
 		lua_pushnil(L);
-		lua_pushstring(L, ltreesitter_dynamic_lib_error(proxy.dl));
+		lua_pushfstring(L, "Unable to open dynamic library '%s': %s", parser_file, dynlib_error);
 		return 2;
 	case PARSE_LOAD_ERR_BUFLEN:
 		lua_pushnil(L);
@@ -201,7 +202,8 @@ static bool try_load_from_path(
 		.parser = NULL,
 	};
 	uint32_t version = 0;
-	switch (try_dlopen(&proxy, dl_file, lang_name, &version)) {
+	const char *dynlib_error;
+	switch (try_dlopen(&proxy, dl_file, lang_name, &version, &dynlib_error)) {
 	case PARSE_LOAD_ERR_NONE: {
 		ltreesitter_Parser *const p = new_parser(L);
 		p->dl = proxy.dl;
@@ -216,7 +218,7 @@ static bool try_load_from_path(
 		break;
 
 	case PARSE_LOAD_ERR_DLOPEN:
-		sb_push_fmt(err_buf, "\n\tTried %s: %s", dl_file, ltreesitter_dynamic_lib_error(proxy.dl));
+		sb_push_fmt(err_buf, "\n\tTried %s: %s", dl_file, dynlib_error);
 		break;
 
 	case PARSE_LOAD_ERR_DLSYM:

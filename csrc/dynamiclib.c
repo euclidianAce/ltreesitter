@@ -3,17 +3,31 @@
 
 #include <ltreesitter/dynamiclib.h>
 
-bool ltreesitter_open_dynamic_lib(const char *name, ltreesitter_Dynlib **handle) {
+bool ltreesitter_open_dynamic_lib(const char *name, ltreesitter_Dynlib **handle, const char **out_error) {
+	ltreesitter_Dynlib *lib = NULL;
 #ifdef _WIN32
-	*handle = LoadLibrary(name);
-	return *handle != NULL;
+	lib = LoadLibrary(name);
+	if (!lib) *out_error = GetLastError();
 #elif LTREESITTER_USE_LIBUV
-	*handle = malloc(sizeof(ltreesitter_Dynlib));
-	return uv_dlopen(name, *handle) == 0;
+	{
+		ltreesitter_Dynlib temp;
+		if (uv_dlopen(name, &temp) != 0) {
+			*out_error = uv_dlerror(&temp);
+		} else {
+			lib = malloc(sizeof *lib);
+			if (!lib)
+				*out_error = "Out of memory";
+			else
+				*lib = temp;
+		}
+	}
 #else
-	*handle = dlopen(name, RTLD_NOW | RTLD_LOCAL);
-	return *handle != NULL;
+	lib = dlopen(name, RTLD_NOW | RTLD_LOCAL);
+	if (!lib)
+		*out_error = dlerror();
 #endif
+	*handle = lib;
+	return lib != NULL;
 }
 
 void *ltreesitter_dynamic_sym(ltreesitter_Dynlib *handle, const char *sym_name) {
@@ -39,20 +53,5 @@ void ltreesitter_close_dynamic_lib(ltreesitter_Dynlib *handle) {
 	free(handle);
 #else
 	dlclose(handle);
-#endif
-}
-
-#define UNUSED(x) ((void)(x))
-
-const char *ltreesitter_dynamic_lib_error(ltreesitter_Dynlib *handle) {
-#ifdef _WIN32
-	// Does windows have an equivalent dlerror?
-	UNUSED(handle);
-	return "Error in LoadLibrary";
-#elif LTREESITTER_USE_LIBUV
-	return uv_dlerror(handle);
-#else
-	UNUSED(handle);
-	return dlerror();
 #endif
 }
