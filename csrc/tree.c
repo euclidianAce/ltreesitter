@@ -59,7 +59,7 @@ void ltreesitter_push_tree(
 	size_t src_len,
 	const char *src) {
 	ltreesitter_SourceText *source = ltreesitter_source_text_push(L, src_len, src); // source text
-	ltreesitter_Tree *tree = lua_newuserdata(L, sizeof(struct ltreesitter_Tree)); // source text, tree
+	ltreesitter_Tree *tree = lua_newuserdata(L, sizeof *tree); // source text, tree
 	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
 	tree->tree = t;
 	tree->source = source;
@@ -75,7 +75,6 @@ void ltreesitter_push_tree(
 ]] */
 static int tree_push_root(lua_State *L) {
 	ltreesitter_Tree *const t = ltreesitter_check_tree_arg(L, 1);
-	lua_newuserdata(L, sizeof(ltreesitter_Node));
 	ltreesitter_push_node(L, 1, ts_tree_root_node(t->tree));
 	return 1;
 }
