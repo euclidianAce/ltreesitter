@@ -12,14 +12,7 @@ description = {
    detailed = [[Standalone Lua bindings to the Treesitter api (with full type definitions for Teal).]],
    issues_url = "https://github.com/euclidianAce/ltreesitter/issues",
 }
-external_dependencies = {
-   TREE_SITTER = {
-      header = "tree_sitter/api.h",
-   },
-   -- UV = {
-      -- header = "uv.h",
-   -- }
-}
+
 build = {
 	type = "builtin",
    modules = {
@@ -36,10 +29,9 @@ build = {
             "csrc/parser.c",
             "csrc/query_cursor.c",
             "csrc/tree_cursor.c",
+	    "tree-sitter/lib/src/lib.c",
          },
-         incdirs = { "include", "$(TREE_SITTER_INCDIR)" },
-         libraries = { "tree-sitter" },
-         libdirs = { "$(TREE_SITTER_LIBDIR)" },
+         incdirs = { "include", "tree-sitter/lib/include" },
       },
    },
    copy_directories = {
