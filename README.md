@@ -4,6 +4,8 @@
 
 Tree sitter bindings for Lua
 
+Current tree-sitter version: v0.24.4
+
 # Documentation
 
 Documentation can be found at [this repo's github pages](https://euclidianace.github.io/ltreesitter/)
