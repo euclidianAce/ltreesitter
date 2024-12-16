@@ -156,7 +156,7 @@ int ltreesitter_load_parser(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export require: function(library_file_name: string, language_name: string): Parser [[
+/* @teal-export require: function(library_file_name: string, language_name?: string): Parser [[
    Search <code>~/.tree-sitter/bin</code> and <code>package.cpath</code> for a parser with the filename <code>library_file_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_'language_name'</code>
    <code>language_name</code> is optional and will be set to <code>library_file_name</code> if not provided.
 
@@ -367,7 +367,7 @@ ltreesitter_Parser *ltreesitter_check_parser(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_PARSER_METATABLE_NAME);
 }
 
-/* @teal-export Parser.parse_string: function(Parser, string, Tree): Tree [[
+/* @teal-export Parser.parse_string: function(Parser, string, ?Tree): Tree [[
    Uses the given parser to parse the string
 
    If <code>Tree</code> is provided then it will be used to create a new updated tree
@@ -446,7 +446,7 @@ static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, T
 	return read_str;
 }
 
-/* @teal-export Parser.parse_with: function(Parser, reader: (function(integer, Point): string), old_tree: Tree): Tree [[
+/* @teal-export Parser.parse_with: function(Parser, reader: (function(integer, Point): string), old_tree?: Tree): Tree [[
    <code>reader</code> should be a function that takes a byte index
    and a <code>Point</code> and returns the text at that point. The
    function should return either <code>nil</code> or an empty string
