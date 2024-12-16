@@ -572,7 +572,10 @@ static int parser_set_ranges(lua_State *L) {
 		lua_pop(L, 1);
 
 		if (i > 0 && ranges[i - 1].end_byte > ranges[i].start_byte) {
-			return luaL_error(L, "Error in ranges: range[%d].end_byte (%d) is greater than range[%d].start_byte (%d)", i, (int)ranges[i - 1].end_byte, i + 1, (int)ranges[i].start_byte);
+			int end_byte = (int)ranges[i - 1].end_byte;
+			int start_byte = (int)ranges[i].start_byte;
+			free(ranges);
+			return luaL_error(L, "Error in ranges: range[%d].end_byte (%d) is greater than range[%d].start_byte (%d)", i, end_byte, i + 1, start_byte);
 		}
 	}
 
