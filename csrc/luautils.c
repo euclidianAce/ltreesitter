@@ -140,7 +140,7 @@ int push_registry_table(lua_State *L) {
 int ref_into_registry(lua_State *L, int object_to_ref) {
 	lua_pushvalue(L, object_to_ref); // object
 	push_registry_table(L);          // object, { <ltreesitter registry> }
-	lua_rotate(L, -2, 1);            // { }, object
+	lua_insert(L, -2);               // { }, object
 	int ref = luaL_ref(L, -2);       // { }
 	lua_pop(L, 1);
 	return ref;
@@ -155,8 +155,8 @@ void unref_from_registry(lua_State *L, int ref_to_unref) {
 bool push_ref_from_registry(lua_State *L, int ref) {
 	push_registry_table(L);          // { <ltreesitter registry> }
 	int type = table_rawget(L, ref); // {}, object
-	lua_rotate(L, -2, 1);            // object, {}
-    lua_pop(L, 1);                   // object
+	lua_insert(L, -2);               // object, {}
+	lua_pop(L, 1);                   // object
 	return type != LUA_TNIL;
 }
 
