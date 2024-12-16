@@ -5,15 +5,15 @@
 # !!!
 
 HEADERS=$(wildcard csrc/*.h) $(wildcard include/ltreesitter/*.h)
-SRC=$(wildcard csrc/*.c)
+SRC=$(wildcard csrc/*.c) tree-sitter/lib/src/lib.c
 OBJ=$(SRC:.c=.o)
 
-CFLAGS := -I./include -Wall -Wextra -Werror -Og -ggdb -std=c99 -pedantic -fPIC
+CFLAGS := -I./include -I./tree-sitter/lib/include -I./tree-sitter/lib/src -Wall -Wextra -Werror -Og -ggdb -std=c11 -pedantic -fPIC
 # CFLAGS += -DLOG_GC
 # CFLAGS += -fsanitize=address,undefined,leak
 LIBS :=
 # LIBS += -lasan -lubsan -lpthread
-LIBS += -ltree-sitter -llua -ldl
+LIBS += -llua -ldl
 
 INSTALL_PREFIX:=/usr/local/lib
 
@@ -35,4 +35,4 @@ install: ltreesitter.a ltreesitter.so
 	cp ltreesitter.a $(INSTALL_PREFIX)/
 	cp ltreesitter.so $(INSTALL_PREFIX)/
 
-.PHONY: clean all
+.PHONY: clean all dynamic static

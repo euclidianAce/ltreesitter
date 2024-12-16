@@ -4,7 +4,7 @@
 
 Tree sitter bindings for Lua
 
-Current tree-sitter version: v0.24.4
+Current tree-sitter version: v0.24.5
 
 # Documentation
 
