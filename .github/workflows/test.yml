@@ -21,13 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@main
 
-      - name: Install tree-sitter
-        run: |
-          git clone https://github.com/tree-sitter/tree-sitter
-          cd tree-sitter
-          make all
-          sudo make install
-
       - name: Install tree-sitter-c
         run: |
           git clone --depth=1 https://github.com/tree-sitter/tree-sitter-c.git
