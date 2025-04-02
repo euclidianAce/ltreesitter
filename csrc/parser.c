@@ -294,8 +294,15 @@ static bool try_load_from_path_list(
 ) {
 	size_t start = 0;
 	size_t end = 0;
+	bool result = false;
 
 	StringBuilder buf = {0};
+	StringBuilder name_buf = {0};
+	sb_ensure_cap(&name_buf, strlen(dl_name) + sizeof("parsers" PATH_SEP));
+	sb_push_str(&name_buf, "parser" PATH_SEP);
+	sb_push_str(&name_buf, dl_name);
+	sb_push_char(&name_buf, 0);
+
 	while (end < path_list_len) {
 		buf.length = 0;
 		start = end;
@@ -304,14 +311,24 @@ static bool try_load_from_path_list(
 		substitute_question_marks(&buf, path_list + start, len, dl_name);
 
 		if (try_load_from_path(L, buf.data, lang_name, err_buf)) {
-			sb_free(&buf);
-			return true;
+			result = true;
+			break;
 		}
+
+		buf.length = 0;
+		name_buf.length = 0;
+		substitute_question_marks(&buf, path_list + start, len, name_buf.data);
+		if (try_load_from_path(L, buf.data, lang_name, err_buf)) {
+			result = true;
+			break;
+		}
+
 		end += 1;
 	}
 
 	sb_free(&buf);
-	return false;
+	sb_free(&name_buf);
+	return result;
 }
 
 int ltreesitter_require_parser(lua_State *L) {
