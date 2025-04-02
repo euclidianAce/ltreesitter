@@ -13,8 +13,10 @@ typedef void ltreesitter_Dynlib;
 #endif
 #endif
 
-#ifdef _WIN32
+#if defined _WIN32
 #define LTREESITTER_DL_EXT "dll"
+#elif defined __APPLE__
+#define LTREESITTER_DL_EXT "dylib"
 #else
 #define LTREESITTER_DL_EXT "so"
 #endif
