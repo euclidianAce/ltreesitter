@@ -23,6 +23,7 @@ jobs:
         with:
           submodules: "recursive"
 
+      # TODO: are there actions to install parsers anywhere?
       - name: Install tree-sitter-c
         run: |
           git clone --depth=1 https://github.com/tree-sitter/tree-sitter-c.git
@@ -31,12 +32,12 @@ jobs:
           cc src/parser.c -shared -fPIC -o ~/.tree-sitter/bin/c.so
 
       - name: Install Lua
-        uses: leafo/gh-actions-lua@v10.0.0
+        uses: hishamhm/gh-actions-lua@master
         with:
           luaVersion: ${{ matrix.luaVersion }}
 
       - name: Install LuaRocks
-        uses: leafo/gh-actions-luarocks@v4.3.0
+        uses: hishamhm/gh-actions-luarocks@master
 
       - name: Build
         run: |
