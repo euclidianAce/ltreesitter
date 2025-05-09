@@ -37,13 +37,13 @@ local record ltreesitter
       type: function(Node): string  -- csrc/node.c:21
    end
    record Parser userdata
-      get_ranges: function(Parser): {Range}  -- csrc/parser.c:611
-      get_version: function(Parser): integer  -- csrc/parser.c:655
-      parse_string: function(Parser, string, ?Tree): Tree  -- csrc/parser.c:369
-      parse_with: function(Parser, reader: (function(integer, Point): string), old_tree?: Tree): Tree  -- csrc/parser.c:448
-      query: function(Parser, string): Query  -- csrc/parser.c:628
-      set_ranges: function(Parser, {Range}): boolean  -- csrc/parser.c:532
-      set_timeout: function(Parser, integer)  -- csrc/parser.c:498
+      get_ranges: function(Parser): {Range}  -- csrc/parser.c:631
+      get_version: function(Parser): integer  -- csrc/parser.c:675
+      parse_string: function(Parser, string, ?Tree): Tree  -- csrc/parser.c:386
+      parse_with: function(Parser, reader: (function(integer, Point): string), old_tree?: Tree): Tree  -- csrc/parser.c:465
+      query: function(Parser, string): Query  -- csrc/parser.c:648
+      set_ranges: function(Parser, {Range}): boolean  -- csrc/parser.c:549
+      set_timeout: function(Parser, integer)  -- csrc/parser.c:515
    end
    record Query userdata
       capture: function(Query, Node, start?: integer | Point, end_?: integer | Point): function(): (Node, string)  -- csrc/query.c:534
@@ -82,7 +82,7 @@ local record ltreesitter
 
       start_point: Point
       end_point: Point
-   end -- csrc/parser.c:509
+   end -- csrc/parser.c:526
 
    record TreeEdit
       start_byte: integer
