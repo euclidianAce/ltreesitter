@@ -347,7 +347,7 @@ deferred:
 }
 
 /* @teal-inline [[
-   record Match
+   interface Match
       id: integer
       pattern_index: integer
       capture_count: integer
@@ -495,7 +495,7 @@ static void query_cursor_set_range(lua_State *L, TSQueryCursor *c) {
 
    The match object is a record populated with all the information given by treesitter
    <pre>
-   type Match = record
+   interface Match
       id: integer
       pattern_index: integer
       capture_count: integer

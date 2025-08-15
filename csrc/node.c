@@ -47,7 +47,7 @@ static int node_end_byte(lua_State *L) {
 }
 
 /* @teal-inline [[
-   record Point
+   interface Point
       row: integer
       column: integer
    end

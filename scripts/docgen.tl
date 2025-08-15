@@ -159,7 +159,7 @@ local function generate_record_defs(defs: {NamedRecordDef}, indent: integer)
       if rec_def is {NamedRecordDef} then
          ti(output, "record ")
          ti(output, def.name)
-         ti(output, " userdata\n")
+         ti(output, " is userdata\n")
          generate_record_defs(rec_def, indent + 1)
          ti(output, ("   "):rep(indent))
          ti(output, "end\n")
@@ -327,6 +327,6 @@ do
 
    w"</body></html>"
    fh:close()
-   io.write(" Done.\n")
+   io.write("\n Done.\n")
 end
 
