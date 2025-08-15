@@ -35,7 +35,7 @@ static const luaL_Reg source_text_metamethods[] = {
 	{NULL, NULL},
 };
 
-ltreesitter_SourceText *ltreesitter_source_text_push_uninitialized(lua_State *L, size_t len) {
+ltreesitter_SourceText *ltreesitter_source_text_push_uninitialized(lua_State *L, uint32_t len) {
 	ltreesitter_SourceText *src_text = lua_newuserdata(L, sizeof(ltreesitter_SourceText) + len);
 	if (!src_text) {
 		lua_pushnil(L);
@@ -46,7 +46,7 @@ ltreesitter_SourceText *ltreesitter_source_text_push_uninitialized(lua_State *L,
 	return src_text;
 }
 
-ltreesitter_SourceText *ltreesitter_source_text_push(lua_State *L, size_t len, const char *src) {
+ltreesitter_SourceText *ltreesitter_source_text_push(lua_State *L, uint32_t len, const char *src) {
 	ltreesitter_SourceText *st = ltreesitter_source_text_push_uninitialized(L, len);
 	if (!st)
 		return NULL;

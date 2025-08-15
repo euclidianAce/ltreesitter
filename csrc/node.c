@@ -358,14 +358,14 @@ static int node_child_by_field_name(lua_State *L) {
 MaybeOwnedString get_node_source(lua_State *L) { // node
 	TSNode n = ltreesitter_check_node(L, -1)->node;
 	push_child(L, -1); // node, tree
-	ltreesitter_Tree *const t = ltreesitter_check_tree(L, -1, "Internal error: node child was not a tree");
-	if (t->text_or_null_if_function_reader) {
+	ltreesitter_Tree *const tree = ltreesitter_check_tree(L, -1, "Internal error: node child was not a tree");
+	if (tree->text_or_null_if_function_reader) {
 		const uint32_t start = ts_node_start_byte(n);
 		const uint32_t end = ts_node_end_byte(n);
 		lua_pop(L, 1); // node
 		return (MaybeOwnedString){
 			.owned = false,
-			.data = t->text_or_null_if_function_reader->text + start,
+			.data = tree->text_or_null_if_function_reader->text + start,
 			.length = end - start,
 		};
 	}
@@ -396,8 +396,8 @@ MaybeOwnedString get_node_source(lua_State *L) { // node
 
 		// ..., return value
 
-		int t = lua_type(L, -1);
-		switch (t) {
+		int ret_type = lua_type(L, -1);
+		switch (ret_type) {
 		case LUA_TNIL:
 			needed_bytes = 0;
 			break;
@@ -424,7 +424,7 @@ MaybeOwnedString get_node_source(lua_State *L) { // node
 			break;
 		default:
 			sb_free(&sb);
-			luaL_error(L, "read error: Reader function returned %s (expected string)", lua_typename(L, t));
+			luaL_error(L, "read error: Reader function returned %s (expected string)", lua_typename(L, ret_type));
 			break;
 		}
 		lua_pop(L, 1);

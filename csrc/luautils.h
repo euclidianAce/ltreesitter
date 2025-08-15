@@ -16,7 +16,8 @@
 
 typedef struct {
 	char *data;
-	size_t length, capacity;
+	// tree-sitter usually works within u32s
+	uint32_t length, capacity;
 } StringBuilder;
 
 bool sb_ensure_cap(StringBuilder *sb, size_t n);
@@ -29,7 +30,7 @@ void sb_free(StringBuilder *sb);
 
 typedef struct {
 	char const *data;
-	size_t length;
+	uint32_t length;
 	bool owned; // when true, owner is responsible for `free`ing data
 } MaybeOwnedString;
 

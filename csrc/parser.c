@@ -349,7 +349,6 @@ int ltreesitter_require_parser(lua_State *L) {
 	StringBuilder err_buf = {0};
 	sb_push_str(&err_buf, "Unable to load parser for ");
 	sb_push_str(&err_buf, lang_name);
-	bool ok;
 
 	if (!try_load_from_path_list(L, cpath, cpath_len, so_name, lang_name, &path, &err_buf)) {
 		sb_push_to_lua(L, &err_buf);

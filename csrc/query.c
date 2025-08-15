@@ -423,10 +423,10 @@ static int query_iterator_next_match(lua_State *L) {
 		case LUA_TTABLE: // append it
 			// {<capture-map>}, array
 			{
-				size_t len = length_of(L, -1);
-				push_current_node();     // {<capture-map>}, array, <nth Node>
-				lua_rawseti(L, -2, len + 1); // {<capture-map>}, array
-				lua_pop(L, 1);           // {<capture-map>}
+				size_t arr_len = length_of(L, -1);
+				push_current_node();             // {<capture-map>}, array, <nth Node>
+				lua_rawseti(L, -2, arr_len + 1); // {<capture-map>}, array
+				lua_pop(L, 1);                   // {<capture-map>}
 			}
 			break;
 		}
@@ -480,8 +480,8 @@ static void query_cursor_set_range(lua_State *L, TSQueryCursor *c) {
 
 		ts_query_cursor_set_point_range(
 			c,
-			(TSPoint){.row = lua_tonumber(L, 5), .column = lua_tonumber(L, 6)},
-			(TSPoint){.row = lua_tonumber(L, 7), .column = lua_tonumber(L, 8)}
+			(TSPoint){.row = lua_tointeger(L, 5), .column = lua_tointeger(L, 6)},
+			(TSPoint){.row = lua_tointeger(L, 7), .column = lua_tointeger(L, 8)}
 		);
 	}
 }

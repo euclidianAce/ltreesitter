@@ -189,13 +189,13 @@ static int tree_edit_s(lua_State *L) {
 	ts_tree_edit(
 		t->tree,
 		&(const TSInputEdit){
-			.start_byte = lua_tonumber(L, 3),
-			.old_end_byte = lua_tonumber(L, 4),
-			.new_end_byte = lua_tonumber(L, 5),
+			.start_byte = lua_tointeger(L, 3),
+			.old_end_byte = lua_tointeger(L, 4),
+			.new_end_byte = lua_tointeger(L, 5),
 
-			.start_point = {.row = lua_tonumber(L, 7), .column = lua_tonumber(L, 8)},
-			.old_end_point = {.row = lua_tonumber(L, 10), .column = lua_tonumber(L, 11)},
-			.new_end_point = {.row = lua_tonumber(L, 13), .column = lua_tonumber(L, 14)},
+			.start_point = {.row = lua_tointeger(L, 7), .column = lua_tointeger(L, 8)},
+			.old_end_point = {.row = lua_tointeger(L, 10), .column = lua_tointeger(L, 11)},
+			.new_end_point = {.row = lua_tointeger(L, 13), .column = lua_tointeger(L, 14)},
 		});
 	return 0;
 }

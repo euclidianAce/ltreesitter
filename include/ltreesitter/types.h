@@ -20,7 +20,7 @@ struct ltreesitter_Parser {
 
 // garbage collected source text for trees and queries to hold on to
 typedef struct {
-	size_t length;
+	uint32_t length;
 	char text[];
 } ltreesitter_SourceText;
 #define LTREESITTER_SOURCE_TEXT_METATABLE_NAME "ltreesitter.SourceText"
@@ -56,8 +56,8 @@ struct ltreesitter_QueryCursor {
 
 // pointer will only be valid for as long as it is on the stack as it may be garbage collected
 // will push nil and return NULL on allocation failure
-ltreesitter_SourceText *ltreesitter_source_text_push_uninitialized(lua_State *, size_t length);
-ltreesitter_SourceText *ltreesitter_source_text_push(lua_State *, size_t, const char *);
+ltreesitter_SourceText *ltreesitter_source_text_push_uninitialized(lua_State *, uint32_t length);
+ltreesitter_SourceText *ltreesitter_source_text_push(lua_State *, uint32_t, const char *);
 ltreesitter_SourceText *ltreesitter_check_source_text(lua_State *, int index);
 void ltreesitter_create_source_text_metatable(lua_State *);
 
