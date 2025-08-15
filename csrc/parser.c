@@ -156,22 +156,6 @@ int ltreesitter_load_parser(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export require: function(library_file_name: string, language_name?: string): Parser [[
-   Search <code>~/.tree-sitter/bin</code> and <code>package.cpath</code> for a parser with the filename <code>library_file_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_'language_name'</code>
-   <code>language_name</code> is optional and will be set to <code>library_file_name</code> if not provided.
-
-   So if you want to load a Lua parser from a file named <code>lua.so</code> then use <code>ltreesitter.require("lua")</code>
-   But if you want to load a Lua parser from a file named <code>parser.so</code> then use <code>ltreesitter.require("parser", "lua")</code>
-
-   Like the regular <code>require</code>, this will error if the parser is not found or the symbol couldn't be loaded. Use either <code>pcall</code> or <code>ltreesitter.load</code> to not error out on failure.
-
-   <pre>
-   local my_parser = ltreesitter.require("my_language")
-   my_parser:parse_string(...)
-   -- etc.
-   </pre>
-]] */
-
 #ifdef _WIN32
 #define PATH_SEP "\\"
 #else
@@ -290,13 +274,13 @@ static bool try_load_from_path_list(
 	size_t path_list_len,
 	const char *dl_name,
 	const char *lang_name,
+	StringBuilder *path_buf,
 	StringBuilder *err_buf
 ) {
 	size_t start = 0;
 	size_t end = 0;
 	bool result = false;
 
-	StringBuilder buf = {0};
 	StringBuilder name_buf = {0};
 	sb_ensure_cap(&name_buf, strlen(dl_name) + sizeof("parsers" PATH_SEP));
 	sb_push_str(&name_buf, "parser" PATH_SEP);
@@ -304,21 +288,21 @@ static bool try_load_from_path_list(
 	sb_push_char(&name_buf, 0);
 
 	while (end < path_list_len) {
-		buf.length = 0;
+		path_buf->length = 0;
 		start = end;
 		end += find_char(path_list + start, path_list_len - start, ';');
 		const size_t len = end - start;
-		substitute_question_marks(&buf, path_list + start, len, dl_name);
+		substitute_question_marks(path_buf, path_list + start, len, dl_name);
 
-		if (try_load_from_path(L, buf.data, lang_name, err_buf)) {
+		if (try_load_from_path(L, path_buf->data, lang_name, err_buf)) {
 			result = true;
 			break;
 		}
 
-		buf.length = 0;
+		path_buf->length = 0;
 		name_buf.length = 0;
-		substitute_question_marks(&buf, path_list + start, len, name_buf.data);
-		if (try_load_from_path(L, buf.data, lang_name, err_buf)) {
+		substitute_question_marks(path_buf, path_list + start, len, name_buf.data);
+		if (try_load_from_path(L, path_buf->data, lang_name, err_buf)) {
 			result = true;
 			break;
 		}
@@ -326,10 +310,27 @@ static bool try_load_from_path_list(
 		end += 1;
 	}
 
-	sb_free(&buf);
 	sb_free(&name_buf);
 	return result;
 }
+
+/* @teal-export require: function(library_file_name: string, language_name?: string): Parser, string [[
+   Search <code>~/.tree-sitter/bin</code> and <code>package.cpath</code> for a parser with the filename <code>library_file_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_'language_name'</code>
+   <code>language_name</code> is optional and will be set to <code>library_file_name</code> if not provided.
+
+   So if you want to load a Lua parser from a file named <code>lua.so</code> then use <code>ltreesitter.require("lua")</code>
+   But if you want to load a Lua parser from a file named <code>parser.so</code> then use <code>ltreesitter.require("parser", "lua")</code>
+
+   Like the regular <code>require</code>, this will error if the parser is not found or the symbol couldn't be loaded. Use either <code>pcall</code> or <code>ltreesitter.load</code> to not error out on failure.
+
+   Returns the parser and the path it was loaded from.
+
+   <pre>
+   local my_parser = ltreesitter.require("my_language")
+   my_parser:parse_string(...)
+   -- etc.
+   </pre>
+]] */
 
 int ltreesitter_require_parser(lua_State *L) {
 	// grab args
@@ -343,29 +344,23 @@ int ltreesitter_require_parser(lua_State *L) {
 	size_t cpath_len;
 	const char *cpath = lua_tolstring(L, -1, &cpath_len);
 
+	StringBuilder path = {0};
 	// buffer to build up search paths in error message
 	StringBuilder err_buf = {0};
 	sb_push_str(&err_buf, "Unable to load parser for ");
 	sb_push_str(&err_buf, lang_name);
 	bool ok;
 
-#define CHECK(x) do { \
-	ok = (x); \
-	if (!ok) break; \
-	sb_free(&err_buf); \
-	return 1; \
-} while (0)
-
-	CHECK(try_load_from_path_list(L, cpath, cpath_len, so_name, lang_name, &err_buf));
-
-#undef CHECK
-
-	if (!ok) {
+	if (!try_load_from_path_list(L, cpath, cpath_len, so_name, lang_name, &path, &err_buf)) {
 		sb_push_to_lua(L, &err_buf);
+		sb_free(&path);
 		sb_free(&err_buf);
 		return lua_error(L);
 	}
-	return 1;
+	sb_push_to_lua(L, &path);
+	sb_free(&err_buf);
+
+	return 2;
 }
 
 static int parser_gc(lua_State *L) {
