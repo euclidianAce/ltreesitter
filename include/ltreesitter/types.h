@@ -7,8 +7,6 @@
 
 typedef struct ltreesitter_Parser ltreesitter_Parser;
 typedef struct ltreesitter_Tree ltreesitter_Tree;
-typedef struct ltreesitter_TreeCursor ltreesitter_TreeCursor;
-typedef struct ltreesitter_Node ltreesitter_Node;
 typedef struct ltreesitter_Query ltreesitter_Query;
 typedef struct ltreesitter_QueryCursor ltreesitter_QueryCursor;
 
@@ -31,14 +29,8 @@ struct ltreesitter_Tree {
 };
 #define LTREESITTER_TREE_METATABLE_NAME "ltreesitter.Tree"
 
-struct ltreesitter_TreeCursor {
-	TSTreeCursor cursor;
-};
 #define LTREESITTER_TREE_CURSOR_METATABLE_NAME "ltreesitter.TreeCursor"
 
-struct ltreesitter_Node {
-	TSNode node;
-};
 #define LTREESITTER_NODE_METATABLE_NAME "ltreesitter.Node"
 
 struct ltreesitter_Query {

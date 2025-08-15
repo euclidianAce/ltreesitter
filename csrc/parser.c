@@ -26,10 +26,15 @@ enum ParserLoadErr {
 };
 
 #define TREE_SITTER_SYM "tree_sitter_"
+#define TREE_SITTER_SYM_LEN (sizeof TREE_SITTER_SYM - 1)
 static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_file, const char *lang_name, uint32_t *out_version, const char **dynlib_open_error) {
-	static char buf[128];
-	if (snprintf(buf, sizeof buf - sizeof TREE_SITTER_SYM - 1, TREE_SITTER_SYM "%s", lang_name) == 0) {
-		return PARSE_LOAD_ERR_BUFLEN;
+	static char buf[128] = { 't', 'r', 'e', 'e', '_', 's', 'i', 't', 't', 'e', 'r', '_' };
+	{
+		size_t lang_name_len = strlen(lang_name);
+		if (lang_name_len > sizeof buf - TREE_SITTER_SYM_LEN - 1)
+			return PARSE_LOAD_ERR_BUFLEN;
+		memcpy(buf + 12, lang_name, lang_name_len);
+		buf[12 + lang_name_len] = 0;
 	}
 
 	if (!ltreesitter_open_dynamic_lib(parser_file, &p->dl, dynlib_open_error)) {
@@ -129,7 +134,7 @@ int ltreesitter_load_parser(lua_State *L) {
 		break;
 	case PARSE_LOAD_ERR_DLSYM:
 		lua_pushnil(L);
-		lua_pushfstring(L, "Unable to find symbol %s%s", TREE_SITTER_SYM, lang_name);
+		lua_pushfstring(L, "Unable to find symbol " TREE_SITTER_SYM "%s", lang_name);
 		return 2;
 	case PARSE_LOAD_ERR_DLOPEN:
 		lua_pushnil(L);

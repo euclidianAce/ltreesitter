@@ -519,7 +519,7 @@ static void query_cursor_set_range(lua_State *L, TSQueryCursor *c) {
 ]]*/
 static int query_match_factory(lua_State *L) {
 	ltreesitter_Query *const q = ltreesitter_check_query(L, 1);
-	TSNode n = ltreesitter_check_node(L, 2)->node;
+	TSNode n = *ltreesitter_check_node(L, 2);
 	TSQueryCursor *c = ts_query_cursor_new();
 	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
 	lua_settop(L, 2);
@@ -548,7 +548,7 @@ static int query_match_factory(lua_State *L) {
 ]]*/
 static int query_capture_factory(lua_State *L) {
 	ltreesitter_Query *const q = ltreesitter_check_query(L, 1);
-	TSNode n = ltreesitter_check_node(L, 2)->node;
+	TSNode n = *ltreesitter_check_node(L, 2);
 	TSQueryCursor *c = ts_query_cursor_new();
 	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
 	lua_settop(L, 2);
@@ -657,7 +657,7 @@ static int query_copy_with_predicates(lua_State *L) {
 ]]*/
 static int query_exec(lua_State *L) {
 	TSQuery *const q = ltreesitter_check_query(L, 1)->query;
-	TSNode n = ltreesitter_check_node(L, 2)->node;
+	TSNode n = *ltreesitter_check_node(L, 2);
 
 	TSQueryCursor *c = ts_query_cursor_new();
 	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
@@ -705,7 +705,9 @@ static bool predicate_arg_to_string(
 
 	if (lua_type(L, index) == LUA_TSTRING) {
 		out_str->owned = false;
-		out_str->data = luaL_checklstring(L, index, &out_str->length);
+		size_t len;
+		out_str->data = luaL_checklstring(L, index, &len);
+		out_str->length = len;
 	} else {
 		lua_pushvalue(L, index);
 		*out_str = get_node_source(L);
