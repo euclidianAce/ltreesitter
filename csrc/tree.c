@@ -133,7 +133,7 @@ static inline bool is_non_negative(lua_State *L, int i) {
 
 // Maybe make this Tree.Edit?
 /* @teal-inline [[
-   record TreeEdit
+   interface TreeEdit
       start_byte: integer
       old_end_byte: integer
       new_end_byte: integer

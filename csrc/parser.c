@@ -520,7 +520,7 @@ int ltreesitter_parser_set_timeout(lua_State *L) {
 }
 
 /* @teal-inline [[
-   record Range
+   interface Range
       start_byte: integer
       end_byte: integer
 
