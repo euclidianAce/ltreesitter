@@ -5,6 +5,8 @@
 #include <lua.h>
 #include <tree_sitter/api.h>
 
+#include <stdint.h>
+
 typedef struct ltreesitter_Parser ltreesitter_Parser;
 typedef struct ltreesitter_Tree ltreesitter_Tree;
 typedef struct ltreesitter_Query ltreesitter_Query;
