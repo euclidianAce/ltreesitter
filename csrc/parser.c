@@ -523,6 +523,15 @@ int ltreesitter_parser_set_timeout(lua_State *L) {
 	return 0;
 }
 
+/* @teal-export Parser.reset: function(Parser) [[
+   Reset the parser, causing the next parse to start from the beginning
+]] */
+int ltreesitter_parser_reset(lua_State *L) {
+	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
+	ts_parser_reset(p->parser);
+	return 0;
+}
+
 /* @teal-inline [[
    interface Range
       start_byte: integer
@@ -682,6 +691,7 @@ static int get_version(lua_State *L) {
 }
 
 static const luaL_Reg parser_methods[] = {
+	{"reset", ltreesitter_parser_reset},
 	{"set_timeout", ltreesitter_parser_set_timeout},
 	{"set_ranges", parser_set_ranges},
 	{"get_ranges", parser_get_ranges},
