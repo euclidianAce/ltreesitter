@@ -414,6 +414,30 @@ int ltreesitter_parser_parse_string(lua_State *L) {
 	return 1;
 }
 
+#define read_callback_idx 2
+#define progress_callback_idx 3
+
+typedef struct {
+	lua_State *L;
+	bool callback_errored;
+} ProgressInfo;
+static bool ltreesitter_parser_progress_callback(TSParseState *state) {
+	// assumed state, lua callback is on top of the stack
+	ProgressInfo *const info = state->payload;
+	lua_State *const L = info->L;
+	lua_settop(L, progress_callback_idx);
+
+	lua_pushvalue(L, -1);
+	lua_pushboolean(L, state->has_error);
+	lua_pushinteger(L, state->current_byte_offset);
+	if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
+		info->callback_errored = true;
+		return true;
+	}
+
+	return lua_toboolean(L, -1);
+}
+
 enum ReadError {
 	READERR_NONE,
 	READERR_PCALL,
@@ -422,13 +446,12 @@ enum ReadError {
 struct CallInfo {
 	lua_State *L;
 	enum ReadError read_error;
-	bool should_pop;
 };
 static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, TSPoint position, uint32_t *bytes_read) {
 	struct CallInfo *const i = payload;
 	lua_State *const L = i->L;
-	if (i->should_pop) lua_pop(L, 1);
-	lua_pushvalue(L, -1); // grab a copy of the function
+	lua_settop(L, 3);
+	lua_pushvalue(L, read_callback_idx); // grab a copy of the function
 	pushinteger(L, byte_index);
 
 	lua_newtable(L);                 // byte_index, {}
@@ -457,50 +480,75 @@ static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, T
 
 	size_t n = 0;
 	const char *read_str = lua_tolstring(L, -1, &n);
-	i->should_pop = true; // defer popping this string since lua is free to gc if it gets popped
 	*bytes_read = n;
 	return read_str;
 }
 
-/* @teal-export Parser.parse_with: function(Parser, reader: (function(integer, Point): string), old_tree?: Tree): Tree [[
+/* @teal-export Parser.parse_with: function(
+   Parser,
+   reader: (function(integer, Point): string),
+   progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
+   old_tree?: Tree): Tree [[
+
    <code>reader</code> should be a function that takes a byte index
    and a <code>Point</code> and returns the text at that point. The
    function should return either <code>nil</code> or an empty string
    to signal that there is no more text.
 
+   <code>progress_callback</code> should be a function that takes a boolean
+   signalling if an error has occurred, and an integer byte offset. This
+   function may return `true` to cancel parsing.
+
    A <code>Tree</code> can be provided to reuse parts of it for parsing,
    provided the <code>Tree:edit</code> has been called previously
+
+   May return nil if the progress callback cancelled parsing
 ]] */
 int ltreesitter_parser_parse_with(lua_State *L) {
-	lua_settop(L, 3);
+	lua_settop(L, 4);
 	ltreesitter_Parser *const p = ltreesitter_check_parser(L, 1);
 	TSTree *old_tree = NULL;
-	if (!lua_isnil(L, 3)) {
-		old_tree = ltreesitter_check_tree_arg(L, 3)->tree;
+	if (!lua_isnil(L, 4)) {
+		old_tree = ltreesitter_check_tree_arg(L, 4)->tree;
 	}
 	lua_pop(L, 1);
-	struct CallInfo payload = {
+	struct CallInfo read_payload = {
 		.L = L,
 		.read_error = READERR_NONE,
-		.should_pop = false,
 	};
 
-	TSInput input = (TSInput){
+	TSInput input = {
 		.read = ltreesitter_parser_read,
-		.payload = &payload,
+		.payload = &read_payload,
 		.encoding = TSInputEncodingUTF8,
 	};
 
-	TSTree *t = ts_parser_parse(p->parser, old_tree, input);
+	ProgressInfo progress_payload = {
+		.L = L,
+		.callback_errored = false,
+	};
 
-	switch (payload.read_error) {
+	TSParseOptions options = {
+		.payload = &progress_payload,
+		.progress_callback = ltreesitter_parser_progress_callback,
+	};
+
+	TSTree *t = lua_isnil(L, progress_callback_idx)
+		? ts_parser_parse(p->parser, old_tree, input)
+		: ts_parser_parse_with_options(p->parser, old_tree, input, options);
+
+	switch (read_payload.read_error) {
 	case READERR_PCALL:
-		return luaL_error(L, "read error: Provided function errored: %s", lua_tostring(L, -1));
+		return luaL_error(L, "Read function errored: %s", lua_tostring(L, -1));
 	case READERR_TYPE:
-		return luaL_error(L, "read error: Provided function returned %s (expected string)", lua_typename(L, lua_type(L, -1)));
+		return luaL_error(L, "Read function returned %s (expected string)", lua_typename(L, lua_type(L, -1)));
 	case READERR_NONE:
 	default:
 		break;
+	}
+
+	if (progress_payload.callback_errored) {
+		return luaL_error(L, "Progress function errored: %s", lua_tostring(L, -1));
 	}
 
 	if (!t) {
@@ -512,6 +560,7 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 	return 1;
 }
 
+// TODO: Deprecated
 /* @teal-export Parser.set_timeout: function(Parser, integer) [[
    Sets how long the parser is allowed to take in microseconds
 ]] */
