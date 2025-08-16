@@ -43,10 +43,10 @@ static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_f
 
 	// ISO C is not a fan of void * -> function pointer
 	TSLanguage *(*tree_sitter_lang)(void);
-	*(void **)(&tree_sitter_lang) = ltreesitter_dynamic_sym(p->dl, buf);
+	*(void **)(&tree_sitter_lang) = ltreesitter_dynamic_sym(&p->dl, buf);
 
 	if (!tree_sitter_lang) {
-		ltreesitter_close_dynamic_lib(p->dl);
+		ltreesitter_close_dynamic_lib(&p->dl);
 		return PARSE_LOAD_ERR_DLSYM;
 	}
 	TSParser *parser = ts_parser_new();
@@ -56,10 +56,10 @@ static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_f
 	p->parser = parser;
 
 	if (version < TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION) {
-		ltreesitter_close_dynamic_lib(p->dl);
+		ltreesitter_close_dynamic_lib(&p->dl);
 		return PARSE_LOAD_ERR_LANG_VERSION_TOO_OLD;
 	} else if (version > TREE_SITTER_LANGUAGE_VERSION) {
-		ltreesitter_close_dynamic_lib(p->dl);
+		ltreesitter_close_dynamic_lib(&p->dl);
 		return PARSE_LOAD_ERR_LANG_VERSION_TOO_NEW;
 	}
 

@@ -11,7 +11,7 @@ typedef struct ltreesitter_Query ltreesitter_Query;
 typedef struct ltreesitter_QueryCursor ltreesitter_QueryCursor;
 
 struct ltreesitter_Parser {
-	ltreesitter_Dynlib *dl;
+	ltreesitter_Dynlib dl;
 	TSParser *parser;
 };
 #define LTREESITTER_PARSER_METATABLE_NAME "ltreesitter.Parser"
