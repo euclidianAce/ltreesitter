@@ -40,5 +40,17 @@ LTREESITTER_EXPORT int luaopen_ltreesitter(lua_State *L) {
 	lua_pushstring(L, version_str);
 	lua_setfield(L, -2, "version");
 
+	// @teal-export TREE_SITTER_LANGUAGE_VERSION: integer
+	lua_pushinteger(L, TREE_SITTER_LANGUAGE_VERSION);
+	lua_setfield(L, -2, "TREE_SITTER_LANGUAGE_VERSION");
+
+	// @teal-export TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION: integer
+	lua_pushinteger(L, TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION);
+	lua_setfield(L, -2, "TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION");
+
+	// @teal-export tree_sitter_version: string
+	lua_pushstring(L, "0.25.8");
+	lua_setfield(L, -2, "tree_sitter_version");
+
 	return 1;
 }

@@ -221,8 +221,12 @@ h2 {
 <p>get the api version of the parser's language</p><br>
 <h2><a name="Parser.parse_string"><code>Parser.parse_string: function(Parser, string, ?Tree): Tree </code></a></h2>
 <p>Uses the given parser to parse the string<br><br>   If <code>Tree</code> is provided then it will be used to create a new updated tree<br>   (but it is the responsibility of the programmer to make the correct <code>Tree:edit</code> calls)<br><br>   Could return <code>nil</code> if the parser has a timeout</p><br>
-<h2><a name="Parser.parse_with"><code>Parser.parse_with: function(Parser, reader: (function(integer, Point): string), old_tree?: Tree): Tree </code></a></h2>
-<p><code>reader</code> should be a function that takes a byte index<br>   and a <code>Point</code> and returns the text at that point. The<br>   function should return either <code>nil</code> or an empty string<br>   to signal that there is no more text.<br><br>   A <code>Tree</code> can be provided to reuse parts of it for parsing,<br>   provided the <code>Tree:edit</code> has been called previously</p><br>
+<h2><a name="Parser.parse_with"><code>Parser.parse_with: function(
+   Parser,
+   reader: (function(integer, Point): string),
+   progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
+   old_tree?: Tree): Tree </code></a></h2>
+<p><code>reader</code> should be a function that takes a byte index<br>   and a <code>Point</code> and returns the text at that point. The<br>   function should return either <code>nil</code> or an empty string<br>   to signal that there is no more text.<br><br>   <code>progress_callback</code> should be a function that takes a boolean<br>   signalling if an error has occurred, and an integer byte offset. This<br>   function may return `true` to cancel parsing.<br><br>   A <code>Tree</code> can be provided to reuse parts of it for parsing,<br>   provided the <code>Tree:edit</code> has been called previously<br><br>   May return nil if the progress callback cancelled parsing</p><br>
 <h2><a name="Parser.query"><code>Parser.query: function(Parser, string): Query </code></a></h2>
 <p>Create a query out of the given string for the language of the given parser</p><br>
 <h2><a name="Parser.reset"><code>Parser.reset: function(Parser) </code></a></h2>

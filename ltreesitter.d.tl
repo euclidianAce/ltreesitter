@@ -37,14 +37,18 @@ local record ltreesitter
       type: function(Node): string  -- csrc/node.c:21
    end
    record Parser is userdata
-      get_ranges: function(Parser): {Range}  -- csrc/parser.c:639
-      get_version: function(Parser): integer  -- csrc/parser.c:683
+      get_ranges: function(Parser): {Range}  -- csrc/parser.c:688
+      get_version: function(Parser): integer  -- csrc/parser.c:732
       parse_string: function(Parser, string, ?Tree): Tree  -- csrc/parser.c:385
-      parse_with: function(Parser, reader: (function(integer, Point): string), old_tree?: Tree): Tree  -- csrc/parser.c:464
-      query: function(Parser, string): Query  -- csrc/parser.c:656
-      reset: function(Parser)  -- csrc/parser.c:525
-      set_ranges: function(Parser, {Range}): boolean  -- csrc/parser.c:557
-      set_timeout: function(Parser, integer)  -- csrc/parser.c:514
+      parse_with: function(
+   Parser,
+   reader: (function(integer, Point): string),
+   progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
+   old_tree?: Tree): Tree  -- csrc/parser.c:486
+      query: function(Parser, string): Query  -- csrc/parser.c:705
+      reset: function(Parser)  -- csrc/parser.c:574
+      set_ranges: function(Parser, {Range}): boolean  -- csrc/parser.c:606
+      set_timeout: function(Parser, integer)  -- csrc/parser.c:563
    end
    record Query is userdata
       capture: function(Query, Node, start?: integer | Point, end_?: integer | Point): function(): (Node, string)  -- csrc/query.c:534
@@ -53,6 +57,8 @@ local record ltreesitter
       source: function(Query): string  -- csrc/query.c:677
       with: function(Query, {string:function(...: string | Node | {Node}): any...}): Query  -- csrc/query.c:563
    end
+   TREE_SITTER_LANGUAGE_VERSION: integer -- csrc/ltreesitter.c:42
+   TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION: integer -- csrc/ltreesitter.c:46
    record Tree is userdata
       copy: function(Tree): Tree  -- csrc/tree.c:109
       edit: function(
@@ -73,6 +79,7 @@ local record ltreesitter
    end
    load: function(file_name: string, language_name: string): Parser, string  -- csrc/parser.c:106
    require: function(library_file_name: string, language_name?: string): Parser, string  -- csrc/parser.c:321
+   tree_sitter_version: string -- csrc/ltreesitter.c:50
    version: string -- csrc/ltreesitter.c:14
 
    -- Inlines
@@ -83,7 +90,7 @@ local record ltreesitter
 
       start_point: Point
       end_point: Point
-   end -- csrc/parser.c:534
+   end -- csrc/parser.c:583
 
    interface TreeEdit
       start_byte: integer
