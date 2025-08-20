@@ -273,7 +273,8 @@ static bool do_predicates(
 			luaL_error(L, "Internal lua error, unable to handle %d arguments to predicate", max_args);
 	}
 
-	for (enum { questions, non_questions, end } step = questions; step < end; ++step) {
+	enum { questions, non_questions, end };
+	for (int step = questions; step < end; ++step) {
 		int num_args = 0;
 		const char *func_name = NULL;
 		for (uint32_t j = 0; j < num_steps; ++j) {
