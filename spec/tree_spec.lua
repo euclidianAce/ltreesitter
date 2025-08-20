@@ -29,7 +29,7 @@ describe("Tree", function()
 			old_end_point = { row = 0, column = 18 },
 			new_end_point = { row = 0, column = 25 },
 		}
-		local u = p:parse_string([[ int main(void) { int a; return 0; } ]], t)
+		local u = p:parse_string([[ int main(void) { int a; return 0; } ]], nil, t)
 		local c = t:get_changed_ranges(u)
 		assert.are.same({{
 			start_byte  = 18,

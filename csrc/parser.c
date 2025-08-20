@@ -319,7 +319,7 @@ static bool try_load_from_path_list(
 }
 
 /* @teal-export require: function(library_file_name: string, language_name?: string): Parser, string [[
-   Search <code>~/.tree-sitter/bin</code> and <code>package.cpath</code> for a parser with the filename <code>library_file_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_'language_name'</code>
+   Search <code>package.cpath</code> for a parser with the filename <code>library_file_name.so</code> or <code>parsers/library_file_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_'language_name'</code>
    <code>language_name</code> is optional and will be set to <code>library_file_name</code> if not provided.
 
    So if you want to load a Lua parser from a file named <code>lua.so</code> then use <code>ltreesitter.require("lua")</code>
@@ -330,7 +330,8 @@ static bool try_load_from_path_list(
    Returns the parser and the path it was loaded from.
 
    <pre>
-   local my_parser = ltreesitter.require("my_language")
+   local my_parser, loaded_from = ltreesitter.require("my_language")
+   print(loaded_from) -- /home/user/.luarocks/lib/lua/5.4/parsers/my_language.so
    my_parser:parse_string(...)
    -- etc.
    </pre>
@@ -386,7 +387,49 @@ ltreesitter_Parser *ltreesitter_check_parser(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_PARSER_METATABLE_NAME);
 }
 
-/* @teal-export Parser.parse_string: function(Parser, string, ?Tree): Tree [[
+/* @teal-inline [[
+   enum Encoding
+      "utf-8"
+      "utf-16le"
+      "utf-16be"
+      "custom"
+   end
+]]*/
+
+static TSInputEncoding encoding_from_str(lua_State *L, int str_index) {
+	size_t len = 0;
+	char const *encoding_str = lua_tolstring(L, str_index, &len);
+
+	if (!encoding_str) {
+		int type = lua_type(L, str_index);
+		if (type == LUA_TNIL) return TSInputEncodingUTF8;
+		luaL_error(L, "Expected one of `utf-8`, `utf-16le`, `utf-16be`, or `custom`, got %s", lua_typename(L, type));
+		return TSInputEncodingUTF8;
+	}
+
+	switch (len) {
+	case 5:
+		if (memcmp(encoding_str, "utf-8", 5) == 0) return TSInputEncodingUTF8;
+		break;
+
+	case 6:
+		if (memcmp(encoding_str, "custom", 6) == 0) return TSInputEncodingCustom;
+		break;
+
+	case 8:
+		if (memcmp(encoding_str, "utf-16le", 8) == 0) return TSInputEncodingUTF16LE;
+		if (memcmp(encoding_str, "utf-16be", 8) == 0) return TSInputEncodingUTF16BE;
+		break;
+
+	default:
+		break;
+	}
+
+	luaL_error(L, "Expected one of `utf-8`, `utf-16le`, `utf-16be`, or `custom`, got %s", encoding_str);
+	return TSInputEncodingUTF8;
+}
+
+/* @teal-export Parser.parse_string: function(Parser, string, ?Encoding, ?Tree): Tree [[
    Uses the given parser to parse the string
 
    If <code>Tree</code> is provided then it will be used to create a new updated tree
@@ -395,19 +438,21 @@ ltreesitter_Parser *ltreesitter_check_parser(lua_State *L, int idx) {
    Could return <code>nil</code> if the parser has a timeout
 ]] */
 int ltreesitter_parser_parse_string(lua_State *L) {
-	lua_settop(L, 3);
+	lua_settop(L, 4);
 	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
 	size_t len;
 	const char *to_parse = luaL_checklstring(L, 2, &len);
 
-	TSTree *old_tree;
-	if (lua_type(L, 3) == LUA_TNIL) {
-		old_tree = NULL;
-	} else {
-		old_tree = ltreesitter_check_tree_arg(L, 3)->tree;
-	}
+	TSInputEncoding encoding = encoding_from_str(L, 3);
 
-	TSTree *tree = ts_parser_parse_string(p->parser, old_tree, to_parse, len);
+	TSTree *const old_tree = lua_type(L, 4) == LUA_TNIL
+		? NULL
+		: ltreesitter_check_tree_arg(L, 4)->tree;
+
+	if (encoding == TSInputEncodingCustom)
+		return luaL_error(L, "Custom encodings are only usable with `parse_with`");
+
+	TSTree *const tree = ts_parser_parse_string_encoding(p->parser, old_tree, to_parse, len, encoding);
 	if (!tree) {
 		lua_pushnil(L);
 		return 1;
@@ -419,6 +464,7 @@ int ltreesitter_parser_parse_string(lua_State *L) {
 
 #define read_callback_idx 2
 #define progress_callback_idx 3
+//#define decode_callback_idx 4
 
 typedef struct {
 	lua_State *L;
@@ -487,11 +533,15 @@ static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, T
 	return read_str;
 }
 
+// TODO: allow taking a DecodeFunction
+
 /* @teal-export Parser.parse_with: function(
    Parser,
    reader: (function(integer, Point): string),
    progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
-   old_tree?: Tree): Tree [[
+   encoding?: Encoding,
+   old_tree?: Tree
+   ): Tree [[
 
    <code>reader</code> should be a function that takes a byte index
    and a <code>Point</code> and returns the text at that point. The
@@ -500,30 +550,37 @@ static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, T
 
    <code>progress_callback</code> should be a function that takes a boolean
    signalling if an error has occurred, and an integer byte offset. This
-   function may return `true` to cancel parsing.
+   function will be called intermittently while parsing and may return `true`
+   to cancel parsing.
 
    A <code>Tree</code> can be provided to reuse parts of it for parsing,
    provided the <code>Tree:edit</code> has been called previously
 
+   <code>encoding</code> defaults to <code>"utf-8"</code> when not provided.
+
    May return nil if the progress callback cancelled parsing
 ]] */
 int ltreesitter_parser_parse_with(lua_State *L) {
-	lua_settop(L, 4);
+	lua_settop(L, 5);
 	ltreesitter_Parser *const p = ltreesitter_check_parser(L, 1);
 	TSTree *old_tree = NULL;
-	if (!lua_isnil(L, 4)) {
+	TSInputEncoding encoding = encoding_from_str(L, 4);
+	if (!lua_isnil(L, 5)) {
 		old_tree = ltreesitter_check_tree_arg(L, 4)->tree;
 	}
-	lua_pop(L, 1);
+	lua_pop(L, 2);
 	struct CallInfo read_payload = {
 		.L = L,
 		.read_error = READERR_NONE,
 	};
 
+	if (encoding == TSInputEncodingCustom)
+		return luaL_error(L, "custom encodings are not yet supported");
+
 	TSInput input = {
 		.read = ltreesitter_parser_read,
 		.payload = &read_payload,
-		.encoding = TSInputEncodingUTF8,
+		.encoding = encoding,
 	};
 
 	ProgressInfo progress_payload = {

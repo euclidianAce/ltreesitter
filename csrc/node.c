@@ -414,6 +414,8 @@ MaybeOwnedString get_node_source(lua_State *L) { // node
 
 				// According to https://github.com/tree-sitter/tree-sitter/discussions/1286
 				// `column` is just a byte offset
+				//
+				// TODO: what about utf-16?
 				for (size_t i = 0; i < len; ++i) {
 					if (str[i] == '\n') {
 						position.row += 1;
