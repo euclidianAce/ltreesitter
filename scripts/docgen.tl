@@ -77,7 +77,7 @@ end
 
 -- TODO: should probably just use the teal parser to pull out these type definitions
 local directives: {string:function(ts.Node, string, string)} = {
-   ["@teal-export"] = function(n: ts.Node, content: string, fname: string)
+   ["@teal-export"] = function(_n: ts.Node, content: string, _fname: string)
       local name <const>, typedef = content:match("%@teal%-export%s+(.-)%s*:%s*(.*)")
       local doc_s <const>, doc_e <const> = typedef:find("%[%[.*%]%]")
       local documentation: string
@@ -90,16 +90,16 @@ local directives: {string:function(ts.Node, string, string)} = {
          if documentation then
             insert_into(docs, name, "<" .. typedef .. ">" .. trim(documentation))
          end
-         local c_src_start <const> = n:start_point()
-         typedef = typedef .. " -- " .. fname .. ":" .. math.floor(c_src_start.row)
+         --local c_src_start <const> = n:start_point()
+         typedef = typedef -- .. " -- " .. fname .. ":" .. math.floor(c_src_start.row)
          insert_into(records as {string:any}, name, typedef)
       end
    end,
 
-   ["@teal-inline"] = function(n: ts.Node, content: string, fname: string)
-      local start <const> = n:start_point()
+   ["@teal-inline"] = function(_n: ts.Node, content: string, _fname: string)
+      --local start <const> = n:start_point()
       for inline_content in content:gmatch("@teal%-inline%s*%[%[(.-)%]%]") do
-         ti(inlines, inline_content:gsub("\n*$", "") .. " -- " .. fname .. ":" .. math.floor(start.row))
+         ti(inlines, (inline_content:gsub("\n*$", ""))) -- .. " -- " .. fname .. ":" .. math.floor(start.row))
       end
    end,
 
