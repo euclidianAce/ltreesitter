@@ -48,6 +48,8 @@ struct ltreesitter_QueryCursor {
 };
 #define LTREESITTER_QUERY_CURSOR_METATABLE_NAME "ltreesitter.QueryCursor"
 
+// TODO: TSLookaheadIterator
+
 // pointer will only be valid for as long as it is on the stack as it may be garbage collected
 // will push nil and return NULL on allocation failure
 ltreesitter_SourceText *ltreesitter_source_text_push_uninitialized(lua_State *, uint32_t length);

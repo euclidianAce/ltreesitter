@@ -11,8 +11,7 @@ TSTreeCursor *ltreesitter_check_tree_cursor(lua_State *L, int idx) {
 
 TSTreeCursor *ltreesitter_push_tree_cursor(lua_State *L, int parent_idx, TSNode n) {
 	TSTreeCursor *c = lua_newuserdata(L, sizeof(TSTreeCursor));
-	lua_pushvalue(L, -1);
-	set_child(L, parent_idx);
+	bind_lifetimes(L, -1, parent_idx);
 	*c = ts_tree_cursor_new(n);
 	setmetatable(L, LTREESITTER_TREE_CURSOR_METATABLE_NAME);
 	return c;
@@ -23,7 +22,7 @@ TSTreeCursor *ltreesitter_push_tree_cursor(lua_State *L, int parent_idx, TSNode 
 ]] */
 static int tree_cursor_current_node(lua_State *L) {
 	TSTreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
-	push_child(L, 1);
+	push_kept(L, 1);
 	ltreesitter_push_node(
 		L, -1,
 		ts_tree_cursor_current_node(c));
@@ -98,6 +97,28 @@ static int tree_cursor_goto_first_child_for_byte(lua_State *L) {
 	}
 	return 1;
 }
+
+// TODO:
+//void ts_tree_cursor_reset_to(TSTreeCursor *dst, const TSTreeCursor *src);
+//TSFieldId ts_tree_cursor_current_field_id(const TSTreeCursor *self);
+//void ts_tree_cursor_goto_descendant(TSTreeCursor *self, uint32_t goal_descendant_index);
+//uint32_t ts_tree_cursor_current_descendant_index(const TSTreeCursor *self);
+//uint32_t ts_tree_cursor_current_depth(const TSTreeCursor *self);
+//int64_t ts_tree_cursor_goto_first_child_for_point(TSTreeCursor *self, TSPoint goal_point);
+
+/*
+static int tree_cursor_copy(lua_State *L) {
+	TSTreeCursor *src = ltreesitter_check_tree_cursor(L, 1);
+	push_kept(L, 1);
+
+	TSTreeCursor *copy = lua_newuserdata(L, sizeof(TSTreeCursor));
+	*copy = ts_tree_cursor_copy(src);
+	setmetatable(L, LTREESITTER_TREE_CURSOR_METATABLE_NAME);
+
+	return 1;
+}
+*/
+//TSTreeCursor ts_tree_cursor_copy(const TSTreeCursor *cursor);
 
 static int tree_cursor_gc(lua_State *L) {
 	TSTreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);

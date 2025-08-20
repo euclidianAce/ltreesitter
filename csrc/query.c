@@ -90,21 +90,20 @@ void ltreesitter_push_query(
 	const char *src,
 	const size_t src_len,
 	TSQuery *q,
-	int child_idx) {
+	int kept_index) {
 
-	child_idx = absindex(L, child_idx);
+	kept_index = absindex(L, kept_index);
 	ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query)); // query
 	setmetatable(L, LTREESITTER_QUERY_METATABLE_NAME);
-	lua_pushvalue(L, -1); // query, query
-	set_child(L, child_idx); // query
+
+	bind_lifetimes(L, -1, kept_index); // this query keeps `kept_index` alive
 
 	ltreesitter_SourceText *source = ltreesitter_source_text_push(L, src_len, src); // query, source text
 	if (!source) {
 		ALLOC_FAIL(L);
 		return;
 	}
-	lua_pushvalue(L, -2); // query, source text, query
-	set_child(L, -2); // query, source text
+	bind_lifetimes(L, -2, -1); // query keeps source text alive
 	lua_pop(L, 1); // query
 
 	*lq = (ltreesitter_Query){
@@ -115,7 +114,7 @@ void ltreesitter_push_query(
 
 static void push_query_copy(lua_State *L, int query_idx) {
 	ltreesitter_Query *orig = ltreesitter_check_query(L, query_idx); // query
-	push_child(L, query_idx); // query, sourcetext
+	push_kept(L, query_idx); // query, sourcetext
 	ltreesitter_SourceText const *source_text = ltreesitter_check_source_text(L, -1);
 	if (!source_text) {
 		luaL_error(L, "Internal error: Query child was not a SourceText");
@@ -137,8 +136,7 @@ static void push_query_copy(lua_State *L, int query_idx) {
 	ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query)); // query, sourcetext, new query
 	setmetatable(L, LTREESITTER_QUERY_METATABLE_NAME);
 
-	lua_pushvalue(L, -1); // query, sourcetext, new query, new query
-	set_child(L, -3); // query, sourcetext, new query
+	bind_lifetimes(L, -1, -2); // new query keeps the same source text alive
 	lua_remove(L, -2); // query, new query
 
 	*lq = (ltreesitter_Query){
@@ -369,7 +367,7 @@ static int query_iterator_next_match(lua_State *L) {
 	ltreesitter_Query *const q = ltreesitter_check_query(L, initial_query_idx);
 	ltreesitter_QueryCursor *c = ltreesitter_check_query_cursor(L, lua_upvalueindex(3));
 	TSQueryMatch m;
-	push_child(L, lua_upvalueindex(2));
+	push_kept(L, lua_upvalueindex(2));
 	const int parent_idx = lua_gettop(L);
 	(void)ltreesitter_check_tree(L, parent_idx, INTERNAL_PARENT_CHECK_ERR_MSG);
 
@@ -447,7 +445,7 @@ static int query_iterator_next_capture(lua_State *L) {
 	const int initial_query_idx = lua_upvalueindex(1);
 	ltreesitter_Query *const q = ltreesitter_check_query(L, initial_query_idx);
 	TSQueryCursor *c = ltreesitter_check_query_cursor(L, lua_upvalueindex(3))->query_cursor;
-	push_child(L, lua_upvalueindex(2));
+	push_kept(L, lua_upvalueindex(2));
 	const int parent_idx = lua_gettop(L);
 	(void)ltreesitter_check_tree(L, -1, INTERNAL_PARENT_CHECK_ERR_MSG);
 	TSQueryMatch m;
@@ -672,7 +670,7 @@ static int query_exec(lua_State *L) {
 	TSQueryCursor *c = ts_query_cursor_new();
 	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
 
-	push_child(L, 2);
+	push_kept(L, 2);
 	const int parent_idx = absindex(L, -1);
 	(void)ltreesitter_check_tree(L, parent_idx, INTERNAL_PARENT_CHECK_ERR_MSG);
 
@@ -695,7 +693,7 @@ static int query_source(lua_State *L) {
 		luaL_error(L, "Expected an ltreesitter.Query, got %s", lua_typename(L, t));
 		return 0;
 	}
-	push_child(L, -1); // query, source
+	push_kept(L, -1); // query, source
 	ltreesitter_SourceText const *source_text = ltreesitter_check_source_text(L, -1);
 	if (!source_text) {
 		luaL_error(L, "Internal error: Query child was not a SourceText");

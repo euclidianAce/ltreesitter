@@ -13,26 +13,25 @@ static void push_object_table(lua_State *L) {
 	push_registry_field(L, object_field);
 }
 
-void push_child(lua_State *L, int obj_idx) {
-	lua_pushvalue(L, obj_idx); // object_copy
-	push_object_table(L);      // object_copy, object_table
-	lua_insert(L, -2);         // object_table, object_copy
-	lua_gettable(L, -2);       // object_table, object_table[object_copy]
-	lua_remove(L, -2);         // object_table[object_copy]
+void push_kept(lua_State *L, int keeper_idx) {
+	lua_pushvalue(L, keeper_idx); // keeper
+	push_object_table(L);         // keeper, object_table
+	lua_insert(L, -2);            // object_table, keeper
+	lua_gettable(L, -2);          // object_table, object_table[keeper]
+	lua_remove(L, -2);            // object_table[keeper]
 	if (lua_isnil(L, -1)) {
-		luaL_error(L, "Internal error: object has no parent!");
+		luaL_error(L, "Internal error: object is not a keeper!");
 	}
 }
 
-// sets the parent of an object at the top of the stack
-// pops the object off of the stack
-// ( object -- ) -> object_table[object] = value at child_idx
-void set_child(lua_State *L, int child_idx) {
-	// object
-	lua_pushvalue(L, child_idx); // object, child
-	push_object_table(L);        // object, child, object_table
-	lua_insert(L, -3);           // object_table, object, child
-	lua_rawset(L, -3);           // object_table
+void bind_lifetimes(lua_State *L, int as_long_as_this_object_lives, int so_shall_this_one) {
+	as_long_as_this_object_lives = absindex(L, as_long_as_this_object_lives);
+	so_shall_this_one = absindex(L, so_shall_this_one);
+
+	push_object_table(L);                           // objtable
+	lua_pushvalue(L, as_long_as_this_object_lives); // objtable, keeper
+	lua_pushvalue(L, so_shall_this_one);            // objtable, keeper, kept
+	lua_rawset(L, -3);                              // objtable
 	lua_pop(L, 1);
 }
 

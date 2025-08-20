@@ -68,8 +68,7 @@ void ltreesitter_push_tree(
 	ltreesitter_Tree *tree = push_uninitialized_tree(L); // source text, tree
 	tree->tree = t;
 	tree->text_or_null_if_function_reader = source;
-	lua_pushvalue(L, -1); // source text, tree, tree
-	set_child(L, -3); // source text, tree
+	bind_lifetimes(L, -1, -2);
 	lua_remove(L, -2); // tree
 
 	// fprintf(stderr, "Created tree %p with source %p\n", (void*)tree, (void*)tree->source);
@@ -84,9 +83,8 @@ void ltreesitter_push_tree_with_reader(
 	tree->tree = t;
 	tree->text_or_null_if_function_reader = NULL;
 
-	lua_pushvalue(L, -1); // reader, tree, tree
-	set_child(L, -3);     // reader, tree
-	lua_remove(L, -2);    // tree
+	bind_lifetimes(L, -1, -2);
+	lua_remove(L, -2); // tree
 }
 
 /* @teal-export Tree.root: function(Tree): Node [[
@@ -113,7 +111,7 @@ static int tree_to_string(lua_State *L) {
 static int tree_copy(lua_State *L) {
 	lua_settop(L, 1);
 	ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1); // tree
-	push_child(L, 1); // tree, source text/reader
+	push_kept(L, 1); // tree, source text/reader
 	ltreesitter_SourceText const *source_text = ltreesitter_check_source_text(L, -1);
 	if (!source_text) {
 		luaL_error(L, "Internal error: Tree child was not a SourceText");
@@ -122,8 +120,7 @@ static int tree_copy(lua_State *L) {
 	ltreesitter_Tree *const t_copy = push_uninitialized_tree(L); // tree, source text/reader, new tree
 	t_copy->tree = ts_tree_copy(t->tree);
 	t_copy->text_or_null_if_function_reader = source_text;
-	lua_pushvalue(L, -1); // tree, source text/reader, new tree, new tree
-	set_child(L, -3); // tree, source text/reader, new tree
+	bind_lifetimes(L, -1, -2);
 	return 1;
 }
 
