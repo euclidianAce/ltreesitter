@@ -244,11 +244,6 @@ static bool do_predicates(
 	uint32_t num_steps;
 	const TSQueryPredicateStep *const predicate_step = ts_query_predicates_for_pattern(q, m->pattern_index, &num_steps);
 	bool is_question = false; // if a predicate is a question then the query should only match if it results in a truthy value
-	/* TODO:
-		Currently queries are evaluated in order
-		So if a question comes after something with a side effect,
-		the side effect happens even if the query doesn't match
-		*/
 
 	{
 		// count the max number of args we need to prep for
@@ -280,62 +275,73 @@ static bool do_predicates(
 			luaL_error(L, "Internal lua error, unable to handle %d arguments to predicate", max_args);
 	}
 
-	int num_args = 0;
-	const char *func_name = NULL;
-	for (uint32_t j = 0; j < num_steps; ++j) {
-		switch (predicate_step[j].type) {
-		case TSQueryPredicateStepTypeString: {
-			// literal strings
+	for (enum { questions, non_questions, end } step = questions; step < end; ++step) {
+		int num_args = 0;
+		const char *func_name = NULL;
+		for (uint32_t j = 0; j < num_steps; ++j) {
+			switch (predicate_step[j].type) {
+			case TSQueryPredicateStepTypeString: {
+				// literal strings
 
-			uint32_t len;
-			const char *pred_name = ts_query_string_value_for_id(q, predicate_step[j].value_id, &len);
-			if (!func_name) {
-				// Find predicate
-				push_query_predicates(L, query_idx);
-				lua_getfield(L, -1, pred_name);
-				if (lua_isnil(L, -1)) {
-					lua_pop(L, 1);
-					// try to grab default value
-					push_default_predicate_table(L);
+				uint32_t len;
+				const char *pred_name = ts_query_string_value_for_id(q, predicate_step[j].value_id, &len);
+				if (!func_name) {
+					// Find predicate
+					push_query_predicates(L, query_idx);
 					lua_getfield(L, -1, pred_name);
-					lua_remove(L, -2);
-					if (lua_isnil(L, -1))
-						luaL_error(L, "Query doesn't have predicate '%s'", pred_name);
+					if (lua_isnil(L, -1)) {
+						lua_pop(L, 1);
+						// try to grab default value
+						push_default_predicate_table(L);
+						lua_getfield(L, -1, pred_name);
+						lua_remove(L, -2);
+						if (lua_isnil(L, -1))
+							luaL_error(L, "Query doesn't have predicate '%s'", pred_name);
+					}
+					func_name = pred_name;
+					if (func_name[len - 1] == '?') {
+						is_question = true;
+					}
+
+					if ((step == questions) != is_question) {
+						do j += 1;
+						while (j < num_steps && predicate_step[j].type != TSQueryPredicateStepTypeDone);
+						num_args = 0;
+						func_name = NULL;
+						is_question = false;
+						continue;
+					}
+				} else {
+					lua_pushlstring(L, pred_name, len);
+					++num_args;
 				}
-				func_name = pred_name;
-				if (func_name[len - 1] == '?') {
-					is_question = true;
-				}
-			} else {
-				lua_pushlstring(L, pred_name, len);
+				break;
+			}
+			case TSQueryPredicateStepTypeCapture: {
+				uint32_t len;
+				const char *name = ts_query_capture_name_for_id(q, predicate_step[j].value_id, &len);
+				get_capture_from_table(L, capture_table_index, name, len);
 				++num_args;
-			}
-			break;
-		}
-		case TSQueryPredicateStepTypeCapture: {
-			uint32_t len;
-			const char *name = ts_query_capture_name_for_id(q, predicate_step[j].value_id, &len);
-			get_capture_from_table(L, capture_table_index, name, len);
-			++num_args;
 
-			break;
-		}
-		case TSQueryPredicateStepTypeDone:
-			if (lua_pcall(L, num_args, 1, 0) != LUA_OK) {
-				lua_pushfstring(L, "Error calling predicate '%s': ", func_name);
-				lua_insert(L, -2);
-				lua_concat(L, 2);
-				lua_error(L);
+				break;
 			}
+			case TSQueryPredicateStepTypeDone:
+				if (lua_pcall(L, num_args, 1, 0) != LUA_OK) {
+					lua_pushfstring(L, "Error calling predicate '%s': ", func_name);
+					lua_insert(L, -2);
+					lua_concat(L, 2);
+					lua_error(L);
+				}
 
-			if (is_question && !lua_toboolean(L, -1)) {
-				RETURN(false);
+				if (is_question && !lua_toboolean(L, -1)) {
+					RETURN(false);
+				}
+
+				num_args = 0;
+				func_name = NULL;
+				is_question = false;
+				break;
 			}
-
-			num_args = 0;
-			func_name = NULL;
-			is_question = false;
-			break;
 		}
 	}
 
@@ -574,6 +580,10 @@ static int query_capture_factory(lua_State *L) {
       <code> (#match? text pattern) </code> will match the provided <code>text</code> matches the given <code>pattern</code>. Matches are determined by Lua's standard <code>string.match</code> function.
       <code> (#find? text substring) </code> will match if <code>text</code> contains <code>substring</code>. The substring is found with Lua's standard <code>string.find</code>, but the search always starts from the beginning, and pattern matching is disabled. This is equivalent to <code>string.find(text, substring, 0, true)</code>
 
+   Predicate evaluation order:
+
+      Since predicates that end with a `?` affect whether a node matches, these are run first, in the order they appear in the query's source. Once all `?` queries are run, all the non-`?` queries are run in the order they appear in the query's source.
+
    Example:
    The following snippet will match lua functions that have a single LDoc/EmmyLua style comment above them
    <pre>
@@ -593,11 +603,11 @@ static int query_capture_factory(lua_State *L) {
          .
          (function_definition
             (function_name) @the-function-name)
-         (#is_doc_comment? @the-comment)
+         (#is-doc-comment? @the-comment)
       )]]
       :with{
-         ["is_doc_comment?"] = function(str)
-            return str:sub(1, 4) == "---@"
+         ["is-doc-comment?"] = function(str)
+            return str:source():sub(1, 4) == "---@"
          end
       }
       :match(root_node)
