@@ -370,13 +370,15 @@ MaybeOwnedString get_node_source(lua_State *L) { // node
 		};
 	}
 	push_child(L, -1); // node, tree, reader
-	StringBuilder sb = {0};
 
 	const uint32_t start_byte = ts_node_start_byte(n);
 	const uint32_t end_byte = ts_node_end_byte(n);
 	const uint32_t expected_byte_length = end_byte - start_byte;
 	uint32_t needed_bytes = expected_byte_length;
 	TSPoint position = ts_node_start_point(n);
+
+	StringBuilder sb = {0};
+	if (!sb_ensure_cap(&sb, expected_byte_length)) ALLOC_FAIL(L);
 
 	while (needed_bytes > 0) {
 		lua_pushvalue(L, -1); // ..., reader
@@ -424,7 +426,7 @@ MaybeOwnedString get_node_source(lua_State *L) { // node
 			break;
 		default:
 			sb_free(&sb);
-			luaL_error(L, "read error: Reader function returned %s (expected string)", lua_typename(L, ret_type));
+			luaL_error(L, "Reader function returned %s (expected string)", lua_typename(L, ret_type));
 			break;
 		}
 		lua_pop(L, 1);
