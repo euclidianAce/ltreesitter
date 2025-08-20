@@ -155,8 +155,7 @@ int ltreesitter_load_parser(lua_State *L) {
 	}
 
 	ltreesitter_Parser *const p = new_parser(L);
-	p->dl = proxy.dl;
-	p->parser = proxy.parser;
+	*p = proxy;
 
 	return 1;
 }
@@ -344,10 +343,13 @@ int ltreesitter_require_parser(lua_State *L) {
 	const char *lang_name = luaL_optstring(L, 2, so_name);
 
 	lua_getglobal(L, "package");  // lang_name, <ts path>, package
+	if (lua_isnil(L, -1)) return luaL_error(L, "Unable to load parser for %s, `package` was nil", lang_name);
 	lua_getfield(L, -1, "cpath"); // lang_name, <ts path>, package, package.cpath
+	if (lua_isnil(L, -1)) return luaL_error(L, "Unable to load parser for %s, `package.cpath` was nil", lang_name);
 	lua_remove(L, -2);            // lang_name, <ts path>, package.cpath
 	size_t cpath_len;
 	const char *cpath = lua_tolstring(L, -1, &cpath_len);
+	if (!cpath) return luaL_error(L, "Unable to load parser for %s, `package.cpath` was not a string", lang_name);
 
 	StringBuilder path = {0};
 	// buffer to build up search paths in error message
