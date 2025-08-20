@@ -362,6 +362,7 @@ int ltreesitter_require_parser(lua_State *L) {
 		return lua_error(L);
 	}
 	sb_push_to_lua(L, &path);
+	sb_free(&path);
 	sb_free(&err_buf);
 
 	return 2;
