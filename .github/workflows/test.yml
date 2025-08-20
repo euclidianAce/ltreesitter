@@ -46,6 +46,6 @@ jobs:
 
       - name: Test
         run: |
-          busted -o utfTerminal
+          env LTREESITTER_TEST_LOAD_C_PARSER=~/.tree-sitter/bin/c.so busted -o utfTerminal
 
 

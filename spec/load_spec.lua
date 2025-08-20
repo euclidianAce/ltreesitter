@@ -2,14 +2,17 @@ local assert = require("luassert")
 local ts = require("ltreesitter")
 local util = require("spec.util")
 
+local c_parser_to_load = os.getenv "LTREESITTER_TEST_LOAD_C_PARSER"
+
 describe("ltreesitter.load", function()
 	it("should return nil and an error message on failure", function()
 		local ok, err = ts.load("./parser_that_doesnt_exist", "language_that_doesnt_exist")
 		assert(ok == nil, "Expected load to return nil")
 		assert(type(err) == "string", "Expected an error message")
 	end)
-	it("should return a ltreesitter.Parser (loading from ~/.tree-sitter/bin/c.so, so if this fails check that first)", function()
-		local p = ts.load(os.getenv("HOME") .. "/.tree-sitter/bin/c.so", "c")
+
+	;(c_parser_to_load and it or pending)("should load a ltreesitter.Parser from $LTREESITTER_TEST_LOAD_C_PARSER", function()
+		local p = ts.load(c_parser_to_load, "c")
 		util.assert_userdata_type(p, "ltreesitter.Parser")
 	end)
 end)
