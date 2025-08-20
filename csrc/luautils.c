@@ -3,10 +3,8 @@
 
 char *str_ldup(const char *s, const size_t len) {
 	char *dup = malloc(sizeof(char) * (len + 1));
-	if (!dup) {
-		return NULL;
-	}
-	strncpy(dup, s, len);
+	if (!dup) return NULL;
+	memcpy(dup, s, len);
 	dup[len] = '\0';
 	return dup;
 }
@@ -221,24 +219,26 @@ bool sb_ensure_cap(StringBuilder *sb, size_t n) {
 	return false;
 }
 
-void sb_push_char(StringBuilder *sb, char c) {
-	sb_ensure_cap(sb, sb->length + 1);
+bool sb_push_char(StringBuilder *sb, char c) {
+	if (!sb_ensure_cap(sb, sb->length + 1)) return false;
 	sb->data[sb->length] = c;
 	sb->length += 1;
+	return true;
 }
 
-void sb_push_str(StringBuilder *sb, const char *str) {
+bool sb_push_str(StringBuilder *sb, const char *str) {
 	size_t len = strlen(str);
-	sb_push_lstr(sb, len, str);
+	return sb_push_lstr(sb, len, str);
 }
 
-void sb_push_lstr(StringBuilder *sb, size_t len, const char *str) {
-	sb_ensure_cap(sb, sb->length + len);
+bool sb_push_lstr(StringBuilder *sb, size_t len, const char *str) {
+	if (!sb_ensure_cap(sb, sb->length + len)) return false;
 	memcpy(sb->data + sb->length, str, len);
 	sb->length += len;
+	return true;
 }
 
-void sb_push_fmt(StringBuilder *sb, const char *fmt, ...) {
+bool sb_push_fmt(StringBuilder *sb, const char *fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
 	int n;
@@ -248,9 +248,13 @@ void sb_push_fmt(StringBuilder *sb, const char *fmt, ...) {
 		n = vsnprintf(NULL, 0, fmt, copy);
 		va_end(copy);
 	}
-	sb_ensure_cap(sb, sb->length + n + 1);
+	if (!sb_ensure_cap(sb, sb->length + n + 1)) {
+		va_end(args);
+		return false;
+	}
 	sb->length += vsnprintf(sb->data + sb->length, n + 1, fmt, args);
 	va_end(args);
+	return true;
 }
 
 void sb_free(StringBuilder *sb) {
