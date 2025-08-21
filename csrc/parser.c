@@ -566,7 +566,7 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 	TSTree *old_tree = NULL;
 	TSInputEncoding encoding = encoding_from_str(L, 4);
 	if (!lua_isnil(L, 5)) {
-		old_tree = ltreesitter_check_tree_arg(L, 4)->tree;
+		old_tree = ltreesitter_check_tree_arg(L, 5)->tree;
 	}
 	lua_pop(L, 2);
 	struct CallInfo read_payload = {
