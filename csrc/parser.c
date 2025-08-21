@@ -387,12 +387,15 @@ ltreesitter_Parser *ltreesitter_check_parser(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_PARSER_METATABLE_NAME);
 }
 
+// TODO: #CustomEncoding via "custom"
+// not possible until https://github.com/tree-sitter/tree-sitter/issues/4721
+// is resolved
+
 /* @teal-inline [[
    enum Encoding
       "utf-8"
       "utf-16le"
       "utf-16be"
-      "custom"
    end
 ]]*/
 
@@ -403,7 +406,7 @@ static TSInputEncoding encoding_from_str(lua_State *L, int str_index) {
 	if (!encoding_str) {
 		int type = lua_type(L, str_index);
 		if (type == LUA_TNIL) return TSInputEncodingUTF8;
-		luaL_error(L, "Expected one of `utf-8`, `utf-16le`, `utf-16be`, or `custom`, got %s", lua_typename(L, type));
+		luaL_error(L, "Expected one of `utf-8`, `utf-16le`, `utf-16be`, got %s", lua_typename(L, type));
 		return TSInputEncodingUTF8;
 	}
 
@@ -412,9 +415,10 @@ static TSInputEncoding encoding_from_str(lua_State *L, int str_index) {
 		if (memcmp(encoding_str, "utf-8", 5) == 0) return TSInputEncodingUTF8;
 		break;
 
-	case 6:
-		if (memcmp(encoding_str, "custom", 6) == 0) return TSInputEncodingCustom;
-		break;
+	// #CustomEncoding
+	//case 6:
+	//	if (memcmp(encoding_str, "custom", 6) == 0) return TSInputEncodingCustom;
+	//	break;
 
 	case 8:
 		if (memcmp(encoding_str, "utf-16le", 8) == 0) return TSInputEncodingUTF16LE;
@@ -425,7 +429,7 @@ static TSInputEncoding encoding_from_str(lua_State *L, int str_index) {
 		break;
 	}
 
-	luaL_error(L, "Expected one of `utf-8`, `utf-16le`, `utf-16be`, or `custom`, got %s", encoding_str);
+	luaL_error(L, "Expected one of `utf-8`, `utf-16le`, or `utf-16be`, got %s", encoding_str);
 	return TSInputEncodingUTF8;
 }
 
@@ -434,8 +438,6 @@ static TSInputEncoding encoding_from_str(lua_State *L, int str_index) {
 
    If <code>Tree</code> is provided then it will be used to create a new updated tree
    (but it is the responsibility of the programmer to make the correct <code>Tree:edit</code> calls)
-
-   Could return <code>nil</code> if the parser has a timeout
 ]] */
 int ltreesitter_parser_parse_string(lua_State *L) {
 	lua_settop(L, 4);
@@ -449,8 +451,9 @@ int ltreesitter_parser_parse_string(lua_State *L) {
 		? NULL
 		: ltreesitter_check_tree_arg(L, 4)->tree;
 
-	if (encoding == TSInputEncodingCustom)
-		return luaL_error(L, "Custom encodings are only usable with `parse_with`");
+	// #CustomEncoding
+	//if (encoding == TSInputEncodingCustom)
+	//	return luaL_error(L, "Custom encodings are only usable with `parse_with`");
 
 	TSTree *const tree = ts_parser_parse_string_encoding(p->parser, old_tree, to_parse, len, encoding);
 	if (!tree) {
@@ -574,13 +577,15 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 		.read_error = READERR_NONE,
 	};
 
-	if (encoding == TSInputEncodingCustom)
-		return luaL_error(L, "custom encodings are not yet supported");
+	// #CustomEncoding
+	//if (encoding == TSInputEncodingCustom)
+	//	return luaL_error(L, "Custom encodings are not yet supported");
 
 	TSInput input = {
 		.read = ltreesitter_parser_read,
 		.payload = &read_payload,
 		.encoding = encoding,
+		.decode = NULL,
 	};
 
 	ProgressInfo progress_payload = {

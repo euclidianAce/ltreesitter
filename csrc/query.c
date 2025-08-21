@@ -241,7 +241,6 @@ static bool do_predicates(
 
 	uint32_t num_steps;
 	const TSQueryPredicateStep *const predicate_step = ts_query_predicates_for_pattern(q, m->pattern_index, &num_steps);
-	bool is_question = false; // if a predicate is a question then the query should only match if it results in a truthy value
 
 	{
 		// count the max number of args we need to prep for
@@ -276,6 +275,7 @@ static bool do_predicates(
 	enum { questions, non_questions, end };
 	for (int step = questions; step < end; ++step) {
 		int num_args = 0;
+		bool is_question = false; // if a predicate is a question then the query should only match if it results in a truthy value
 		const char *func_name = NULL;
 		for (uint32_t j = 0; j < num_steps; ++j) {
 			switch (predicate_step[j].type) {
