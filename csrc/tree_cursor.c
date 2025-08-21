@@ -5,9 +5,9 @@
 #include "types.h"
 #include "tree_cursor.h"
 
-TSTreeCursor *tree_cursor_push(lua_State *L, int parent_idx, TSNode n) {
+TSTreeCursor *tree_cursor_push(lua_State *L, int kept_idx, TSNode n) {
 	TSTreeCursor *c = lua_newuserdata(L, sizeof(TSTreeCursor));
-	bind_lifetimes(L, -1, parent_idx);
+	bind_lifetimes(L, -1, kept_idx); // tree cursor keeps [kept_idx] alive
 	*c = ts_tree_cursor_new(n);
 	setmetatable(L, LTREESITTER_TREE_CURSOR_METATABLE_NAME);
 	return c;

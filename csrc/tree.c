@@ -33,7 +33,7 @@ void tree_push(
 	ltreesitter_Tree *tree = push_uninitialized_tree(L); // source text, tree
 	tree->tree = t;
 	tree->text_or_null_if_function_reader = source;
-	bind_lifetimes(L, -1, -2);
+	bind_lifetimes(L, -1, -2); // tree keeps source text alive
 	lua_remove(L, -2); // tree
 
 	// fprintf(stderr, "Created tree %p with source %p\n", (void*)tree, (void*)tree->source);
@@ -48,7 +48,7 @@ void tree_push_with_reader(
 	tree->tree = t;
 	tree->text_or_null_if_function_reader = NULL;
 
-	bind_lifetimes(L, -1, -2);
+	bind_lifetimes(L, -1, -2); // tree keeps reader alive
 	lua_remove(L, -2); // tree
 }
 
@@ -85,7 +85,7 @@ static int tree_copy(lua_State *L) {
 	ltreesitter_Tree *const t_copy = push_uninitialized_tree(L); // tree, source text/reader, new tree
 	t_copy->tree = ts_tree_copy(t->tree);
 	t_copy->text_or_null_if_function_reader = source_text;
-	bind_lifetimes(L, -1, -2);
+	bind_lifetimes(L, -1, -2); // tree keeps source text/reader alive
 	return 1;
 }
 
