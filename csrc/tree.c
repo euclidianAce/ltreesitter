@@ -17,13 +17,13 @@
 #include <stdio.h>
 #endif
 
-static void err_if(lua_State *L, const char *msg) {
+static void err_if(lua_State *L, char const *msg) {
 	if (msg) {
 		luaL_error(L, "%s", msg);
 	}
 }
 
-ltreesitter_Tree *tree_check(lua_State *L, int idx, const char *msg) {
+ltreesitter_Tree *tree_check(lua_State *L, int idx, char const *msg) {
 	ltreesitter_Tree *tree = luaL_testudata(L, idx, LTREESITTER_TREE_METATABLE_NAME);
 	if (!tree) err_if(L, msg);
 	return tree;
@@ -44,7 +44,7 @@ void tree_push(
 	lua_State *L,
 	TSTree *t,
 	size_t src_len,
-	const char *src) {
+	char const *src) {
 	SourceText *source = source_text_push(L, src_len, src); // source text
 	ltreesitter_Tree *tree = push_uninitialized_tree(L); // source text, tree
 	tree->tree = t;
@@ -79,9 +79,9 @@ static int tree_push_root(lua_State *L) {
 
 static int tree_to_string(lua_State *L) {
 	TSTree *t = tree_check_assert(L, 1)->tree;
-	const TSNode root = ts_tree_root_node(t);
+	TSNode const root = ts_tree_root_node(t);
 	char *s = ts_node_string(root);
-	lua_pushlstring(L, (const char *)s, strlen(s));
+	lua_pushlstring(L, (char const *)s, strlen(s));
 	free(s);
 	return 1;
 }

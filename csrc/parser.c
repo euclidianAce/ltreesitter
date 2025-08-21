@@ -34,7 +34,7 @@ enum ParserLoadErr {
 
 #define TREE_SITTER_SYM "tree_sitter_"
 #define TREE_SITTER_SYM_LEN (sizeof TREE_SITTER_SYM - 1)
-static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_file, const char *lang_name, uint32_t *out_version, const char **dynlib_open_error) {
+static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, char const *parser_file, char const *lang_name, uint32_t *out_version, char const **dynlib_open_error) {
 	static char buf[128] = { 't', 'r', 'e', 'e', '_', 's', 'i', 't', 't', 'e', 'r', '_' };
 	{
 		size_t lang_name_len = strlen(lang_name);
@@ -57,8 +57,8 @@ static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_f
 		return PARSE_LOAD_ERR_DLSYM;
 	}
 	TSParser *parser = ts_parser_new();
-	const TSLanguage *lang = tree_sitter_lang();
-	const uint32_t version = ts_language_version(lang);
+	TSLanguage const *lang = tree_sitter_lang();
+	uint32_t const version = ts_language_version(lang);
 	*out_version = version;
 	p->parser = parser;
 
@@ -81,7 +81,7 @@ static ltreesitter_Parser *new_parser(lua_State *L) {
 	return p;
 }
 
-static inline void push_parser_cache_key(lua_State *L, const char *dl_file, const char *lang_name) {
+static inline void push_parser_cache_key(lua_State *L, char const *dl_file, char const *lang_name) {
 	luaL_Buffer b;
 	luaL_buffinit(L, &b);
 	luaL_addstring(&b, dl_file);
@@ -90,8 +90,8 @@ static inline void push_parser_cache_key(lua_State *L, const char *dl_file, cons
 	luaL_pushresult(&b);
 }
 
-static void cache_parser(lua_State *L, const char *dl_file, const char *lang_name) {
-	const int parser_idx = lua_gettop(L);
+static void cache_parser(lua_State *L, char const *dl_file, char const *lang_name) {
+	int const parser_idx = lua_gettop(L);
 	push_parser_cache(L);                         // cache
 	push_parser_cache_key(L, dl_file, lang_name); // parser, cache, "thing.so\1blah"
 	lua_pushvalue(L, parser_idx);                 // cache, "thing.so\1blah", parser
@@ -99,7 +99,7 @@ static void cache_parser(lua_State *L, const char *dl_file, const char *lang_nam
 	lua_pop(L, 1);
 }
 
-static bool push_cached_parser(lua_State *L, const char *dl_file, const char *lang_name) {
+static bool push_cached_parser(lua_State *L, char const *dl_file, char const *lang_name) {
 	push_parser_cache(L);                         // cache
 	push_parser_cache_key(L, dl_file, lang_name); // cache, "dl_file\1lang_name"
 
@@ -124,8 +124,8 @@ static bool push_cached_parser(lua_State *L, const char *dl_file, const char *la
 ]] */
 int parser_load(lua_State *L) {
 	lua_settop(L, 2);
-	const char *parser_file = luaL_checkstring(L, 1);
-	const char *lang_name = luaL_checkstring(L, 2);
+	char const *parser_file = luaL_checkstring(L, 1);
+	char const *lang_name = luaL_checkstring(L, 2);
 
 	if (push_cached_parser(L, parser_file, lang_name))
 		return 1;
@@ -135,7 +135,7 @@ int parser_load(lua_State *L) {
 		.parser = NULL,
 	};
 	uint32_t version = 0;
-	const char *dynlib_error;
+	char const *dynlib_error;
 	switch (try_dlopen(&proxy, parser_file, lang_name, &version, &dynlib_error)) {
 	case PARSE_LOAD_ERR_NONE:
 		break;
@@ -175,8 +175,8 @@ int parser_load(lua_State *L) {
 
 static bool try_load_from_path(
 	lua_State *L,
-	const char *dl_file,
-	const char *lang_name,
+	char const *dl_file,
+	char const *lang_name,
 	StringBuilder *err_buf
 ) {
 	if (push_cached_parser(L, dl_file, lang_name))
@@ -187,7 +187,7 @@ static bool try_load_from_path(
 		.parser = NULL,
 	};
 	uint32_t version = 0;
-	const char *dynlib_error;
+	char const *dynlib_error;
 	switch (try_dlopen(&proxy, dl_file, lang_name, &version, &dynlib_error)) {
 	case PARSE_LOAD_ERR_NONE: {
 		ltreesitter_Parser *const p = new_parser(L);
@@ -234,8 +234,8 @@ static bool try_load_from_path(
 	return false;
 }
 
-static size_t find_char(const char *str, size_t len, char c) {
-	const char *ptr = memchr(str, c, len);
+static size_t find_char(char const *str, size_t len, char c) {
+	char const *ptr = memchr(str, c, len);
 	if (!ptr)
 		return len;
 	return (size_t)(ptr - str);
@@ -243,13 +243,13 @@ static size_t find_char(const char *str, size_t len, char c) {
 
 static void substitute_question_marks(
 	StringBuilder *buf,
-	const char *path_pattern,
+	char const *path_pattern,
 	size_t path_pattern_len,
-	const char *to_replace_with
+	char const *to_replace_with
 ) {
 	size_t i = 0;
 	while (i < path_pattern_len) {
-		const size_t prev_i = i;
+		size_t const prev_i = i;
 		i += find_char(path_pattern + prev_i, path_pattern_len - prev_i, '?');
 
 		if (i > prev_i + 1)
@@ -281,10 +281,10 @@ static void substitute_question_marks(
 // load from a package.path style list
 static bool try_load_from_path_list(
 	lua_State *L,
-	const char *path_list,
+	char const *path_list,
 	size_t path_list_len,
-	const char *dl_name,
-	const char *lang_name,
+	char const *dl_name,
+	char const *lang_name,
 	StringBuilder *path_buf,
 	StringBuilder *err_buf
 ) {
@@ -302,7 +302,7 @@ static bool try_load_from_path_list(
 		path_buf->length = 0;
 		start = end;
 		end += find_char(path_list + start, path_list_len - start, ';');
-		const size_t len = end - start;
+		size_t const len = end - start;
 		substitute_question_marks(path_buf, path_list + start, len, dl_name);
 
 		if (try_load_from_path(L, path_buf->data, lang_name, err_buf)) {
@@ -347,8 +347,8 @@ static bool try_load_from_path_list(
 int parser_require(lua_State *L) {
 	// grab args
 	lua_settop(L, 2);
-	const char *so_name = luaL_checkstring(L, 1);
-	const char *lang_name = luaL_optstring(L, 2, so_name);
+	char const *so_name = luaL_checkstring(L, 1);
+	char const *lang_name = luaL_optstring(L, 2, so_name);
 
 	lua_getglobal(L, "package");  // lang_name, <ts path>, package
 	if (lua_isnil(L, -1)) return luaL_error(L, "Unable to load parser for %s, `package` was nil", lang_name);
@@ -356,7 +356,7 @@ int parser_require(lua_State *L) {
 	if (lua_isnil(L, -1)) return luaL_error(L, "Unable to load parser for %s, `package.cpath` was nil", lang_name);
 	lua_remove(L, -2);            // lang_name, <ts path>, package.cpath
 	size_t cpath_len;
-	const char *cpath = lua_tolstring(L, -1, &cpath_len);
+	char const *cpath = lua_tolstring(L, -1, &cpath_len);
 	if (!cpath) return luaL_error(L, "Unable to load parser for %s, `package.cpath` was not a string", lang_name);
 
 	StringBuilder path = {0};
@@ -450,7 +450,7 @@ static int parser_parse_string(lua_State *L) {
 	lua_settop(L, 4);
 	ltreesitter_Parser *p = parser_check(L, 1);
 	size_t len;
-	const char *to_parse = luaL_checklstring(L, 2, &len);
+	char const *to_parse = luaL_checklstring(L, 2, &len);
 
 	TSInputEncoding encoding = encoding_from_str(L, 3);
 
@@ -506,7 +506,7 @@ struct CallInfo {
 	lua_State *L;
 	enum ReadError read_error;
 };
-static const char *read_callback(void *payload, uint32_t byte_index, TSPoint position, uint32_t *bytes_read) {
+static char const *read_callback(void *payload, uint32_t byte_index, TSPoint position, uint32_t *bytes_read) {
 	struct CallInfo *const i = payload;
 	lua_State *const L = i->L;
 	lua_settop(L, 3);
@@ -538,7 +538,7 @@ static const char *read_callback(void *payload, uint32_t byte_index, TSPoint pos
 	}
 
 	size_t n = 0;
-	const char *read_str = lua_tolstring(L, -1, &n);
+	char const *read_str = lua_tolstring(L, -1, &n);
 	*bytes_read = n;
 	return read_str;
 }
@@ -652,11 +652,11 @@ static int parser_reset(lua_State *L) {
 ]]*/
 
 static TSPoint topoint(lua_State *L, const int idx) {
-	const int absidx = absindex(L, idx);
+	int const absidx = absindex(L, idx);
 	expect_field(L, absidx, "row", LUA_TNUMBER);
 	expect_field(L, absidx, "column", LUA_TNUMBER);
-	const uint32_t row = lua_tonumber(L, -2);
-	const uint32_t col = lua_tonumber(L, -1);
+	uint32_t const row = lua_tonumber(L, -2);
+	uint32_t const col = lua_tonumber(L, -1);
 	lua_pop(L, 2);
 	return (TSPoint){
 		.row = row,
@@ -753,7 +753,7 @@ static int parser_get_ranges(lua_State *L) {
 	ltreesitter_Parser *p = parser_check(L, 1);
 
 	uint32_t length = 0;
-	const TSRange *ranges = ts_parser_included_ranges(p->parser, &length);
+	TSRange const *ranges = ts_parser_included_ranges(p->parser, &length);
 	lua_createtable(L, (int)length, 0);
 	for (uint32_t i = 0; i < length; ++i) {
 		push_range(L, ranges + i);
@@ -770,10 +770,10 @@ static int make_query(lua_State *L) {
 	lua_settop(L, 2);
 	ltreesitter_Parser *p = parser_check(L, 1);
 	size_t len;
-	const char *lua_query_src = luaL_checklstring(L, 2, &len);
+	char const *lua_query_src = luaL_checklstring(L, 2, &len);
 	uint32_t err_offset = 0;
 	TSQueryError err_type = TSQueryErrorNone;
-	const TSLanguage *lang = ts_parser_language(p->parser);
+	TSLanguage const *lang = ts_parser_language(p->parser);
 	TSQuery *q = ts_query_new(
 		lang,
 		lua_query_src,

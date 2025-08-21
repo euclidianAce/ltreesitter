@@ -33,7 +33,7 @@ struct ltreesitter_Tree {
 struct ltreesitter_Query {
 	TSQuery *query;
 
-	const TSLanguage *lang;
+	TSLanguage const *lang;
 };
 #define LTREESITTER_QUERY_METATABLE_NAME "ltreesitter.Query"
 
@@ -48,7 +48,7 @@ struct ltreesitter_QueryCursor {
 // pointer will only be valid for as long as it is on the stack as it may be garbage collected
 // will push nil and return NULL on allocation failure
 SourceText *source_text_push_uninitialized(lua_State *, uint32_t length);
-SourceText *source_text_push(lua_State *, uint32_t, const char *);
+SourceText *source_text_push(lua_State *, uint32_t, char const *);
 SourceText *source_text_check(lua_State *, int index);
 void source_text_init_metatable(lua_State *);
 

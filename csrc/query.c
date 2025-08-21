@@ -12,8 +12,8 @@
 #include "query_cursor.h"
 #include "types.h"
 
-static const char *default_predicate_field = "default_predicates";
-static const char *predicate_field = "predicates";
+static char const *default_predicate_field = "default_predicates";
+static char const *predicate_field = "predicates";
 
 static void push_default_predicate_table(lua_State *L) {
 	push_registry_field(L, default_predicate_field);
@@ -27,7 +27,7 @@ ltreesitter_Query *query_check(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_QUERY_METATABLE_NAME);
 }
 
-static inline void offset_to_pos(const char *src, uint32_t offset, uint32_t *row, uint32_t *col) {
+static inline void offset_to_pos(char const *src, uint32_t offset, uint32_t *row, uint32_t *col) {
 	*row = *col = 1;
 	for (uint32_t i = 0; i <= offset; ++i) {
 		if (src[i] == '\n') {
@@ -44,7 +44,7 @@ bool query_handle_error(
 	TSQuery *q,
 	uint32_t err_offset,
 	TSQueryError err_type,
-	const char *query_src,
+	char const *query_src,
 	size_t query_src_len) {
 	if (q)
 		return true;
@@ -84,9 +84,9 @@ bool query_handle_error(
 // src will be duplicated
 void query_push(
 	lua_State *L,
-	const TSLanguage *lang,
-	const char *src,
-	const size_t src_len,
+	TSLanguage const *lang,
+	char const *src,
+	size_t const src_len,
 	TSQuery *q,
 	int kept_index) {
 
@@ -182,7 +182,7 @@ static void add_capture_to_table(
 	lua_State *L,
 	int table_index,
 
-	const char *key,
+	char const *key,
 	size_t key_len,
 
 	int child_index,
@@ -196,7 +196,7 @@ static void add_capture_to_table(
 static void get_capture_from_table(
 	lua_State *L,
 	int table_index,
-	const char *key,
+	char const *key,
 	size_t key_len
 ) {
 	lua_pushlstring(L, key, key_len);
@@ -207,9 +207,9 @@ static void get_capture_from_table(
 static bool do_predicates(
 	lua_State *L,
 	int query_idx,
-	const TSQuery *const q,
+	TSQuery const *const q,
 	int tree_idx,
-	const TSQueryMatch *const m) {
+	TSQueryMatch const *const m) {
 	query_idx = absindex(L, query_idx);
 	tree_idx = absindex(L, tree_idx);
 	bool result = true;
@@ -217,7 +217,7 @@ static bool do_predicates(
 #define RETURN(value) do { result = (value); goto deferred; } while (0)
 #define return plz use "RETURN" macro
 
-	const int initial_stack_top = lua_gettop(L);
+	int const initial_stack_top = lua_gettop(L);
 
 	// store captures as a map of {string:Node} where the keys are the
 	// "@name"s and the values are the matched nodes
@@ -226,7 +226,7 @@ static bool do_predicates(
 	for (uint32_t i = 0; i < m->capture_count; ++i) {
 		TSQueryCapture capture = m->captures[i];
 		uint32_t name_len;
-		const char *name = ts_query_capture_name_for_id(q, capture.index, &name_len);
+		char const *name = ts_query_capture_name_for_id(q, capture.index, &name_len);
 
 		add_capture_to_table(L, capture_table_index, name, name_len, tree_idx, capture.node);
 	}
@@ -238,7 +238,7 @@ static bool do_predicates(
 	// }
 
 	uint32_t num_steps;
-	const TSQueryPredicateStep *const predicate_step = ts_query_predicates_for_pattern(q, m->pattern_index, &num_steps);
+	TSQueryPredicateStep const *const predicate_step = ts_query_predicates_for_pattern(q, m->pattern_index, &num_steps);
 
 	{
 		// count the max number of args we need to prep for
@@ -274,14 +274,14 @@ static bool do_predicates(
 	for (int step = questions; step < end; ++step) {
 		int num_args = 0;
 		bool is_question = false; // if a predicate is a question then the query should only match if it results in a truthy value
-		const char *func_name = NULL;
+		char const *func_name = NULL;
 		for (uint32_t j = 0; j < num_steps; ++j) {
 			switch (predicate_step[j].type) {
 			case TSQueryPredicateStepTypeString: {
 				// literal strings
 
 				uint32_t len;
-				const char *pred_name = ts_query_string_value_for_id(q, predicate_step[j].value_id, &len);
+				char const *pred_name = ts_query_string_value_for_id(q, predicate_step[j].value_id, &len);
 				if (!func_name) {
 					// Find predicate
 					push_query_predicates(L, query_idx);
@@ -316,7 +316,7 @@ static bool do_predicates(
 			}
 			case TSQueryPredicateStepTypeCapture: {
 				uint32_t len;
-				const char *name = ts_query_capture_name_for_id(q, predicate_step[j].value_id, &len);
+				char const *name = ts_query_capture_name_for_id(q, predicate_step[j].value_id, &len);
 				get_capture_from_table(L, capture_table_index, name, len);
 				++num_args;
 
@@ -362,16 +362,16 @@ deferred:
 
 static int query_iterator_next_match(lua_State *L) {
 	// upvalues: Query, Node, Cursor
-	const int initial_query_idx = lua_upvalueindex(1);
+	int const initial_query_idx = lua_upvalueindex(1);
 	ltreesitter_Query *const q = query_check(L, initial_query_idx);
 	ltreesitter_QueryCursor *c = query_cursor_check(L, lua_upvalueindex(3));
 	TSQueryMatch m;
 	push_kept(L, lua_upvalueindex(2));
-	const int parent_idx = lua_gettop(L);
+	int const parent_idx = lua_gettop(L);
 	(void)tree_check(L, parent_idx, INTERNAL_PARENT_CHECK_ERR_MSG);
 
 	lua_pushvalue(L, initial_query_idx);
-	const int query_idx = lua_gettop(L);
+	int const query_idx = lua_gettop(L);
 
 	do {
 		if (!ts_query_cursor_next_match(c->query_cursor, &m))
@@ -394,13 +394,13 @@ static int query_iterator_next_match(lua_State *L) {
 		m.captures[i].node); \
 } while (0)
 
-		const TSQuantifier quantifier = ts_query_capture_quantifier_for_id(
+		TSQuantifier const quantifier = ts_query_capture_quantifier_for_id(
 			c->query->query,
 			m.pattern_index,
 			m.captures[i].index);
 
 		uint32_t len;
-		const char *name = ts_query_capture_name_for_id(c->query->query, m.captures[i].index, &len);
+		char const *name = ts_query_capture_name_for_id(c->query->query, m.captures[i].index, &len);
 		lua_pushlstring(L, name, len); // {<capture-map>}, name
 		switch (table_rawget(L, -2)) {
 		case LUA_TNIL: // first node, just set it, or set up table
@@ -441,16 +441,16 @@ static int query_iterator_next_match(lua_State *L) {
 
 static int query_iterator_next_capture(lua_State *L) {
 	// upvalues: Query, Node, Cursor
-	const int initial_query_idx = lua_upvalueindex(1);
+	int const initial_query_idx = lua_upvalueindex(1);
 	ltreesitter_Query *const q = query_check(L, initial_query_idx);
 	TSQueryCursor *c = query_cursor_check(L, lua_upvalueindex(3))->query_cursor;
 	push_kept(L, lua_upvalueindex(2));
-	const int parent_idx = lua_gettop(L);
+	int const parent_idx = lua_gettop(L);
 	(void)tree_check(L, -1, INTERNAL_PARENT_CHECK_ERR_MSG);
 	TSQueryMatch m;
 	uint32_t capture_index;
 	lua_pushvalue(L, initial_query_idx);
-	const int query_idx = lua_gettop(L);
+	int const query_idx = lua_gettop(L);
 
 	do {
 		if (!ts_query_cursor_next_capture(c, &m, &capture_index))
@@ -461,7 +461,7 @@ static int query_iterator_next_capture(lua_State *L) {
 		L, parent_idx,
 		m.captures[capture_index].node);
 	uint32_t len;
-	const char *name = ts_query_capture_name_for_id(
+	char const *name = ts_query_capture_name_for_id(
 		q->query, m.captures[capture_index].index, &len);
 	lua_pushlstring(L, name, len);
 	return 2;
@@ -670,7 +670,7 @@ static int query_exec(lua_State *L) {
 	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
 
 	push_kept(L, 2);
-	const int parent_idx = absindex(L, -1);
+	int const parent_idx = absindex(L, -1);
 	(void)tree_check(L, parent_idx, INTERNAL_PARENT_CHECK_ERR_MSG);
 
 	TSQueryMatch m;
@@ -739,7 +739,7 @@ static bool ensure_predicate_arg_string(
 
 // Predicates
 static int eq_predicate(lua_State *L) {
-	const int num_args = lua_gettop(L);
+	int const num_args = lua_gettop(L);
 	if (num_args < 2) {
 		luaL_error(L, "predicate eq? expects 2 or more arguments, got %d", num_args);
 	}
@@ -781,7 +781,7 @@ static inline void open_stringlib(lua_State *L) {
 }
 
 static int match_predicate(lua_State *L) {
-	const int num_args = lua_gettop(L);
+	int const num_args = lua_gettop(L);
 	if (num_args != 2) {
 		luaL_error(L, "predicate match? expects exactly 2 arguments, got %d", num_args);
 	}
@@ -804,7 +804,7 @@ static int match_predicate(lua_State *L) {
 }
 
 static int find_predicate(lua_State *L) {
-	const int num_args = lua_gettop(L);
+	int const num_args = lua_gettop(L);
 	if (num_args != 2) {
 		return luaL_error(L, "predicate find? expects exactly 2 arguments, got %d", num_args);
 	}

@@ -130,7 +130,7 @@ void node_push(lua_State *L, int tree_idx, TSNode n) {
 ]] */
 static int node_child(lua_State *L) {
 	TSNode *parent = node_check(L, 1);
-	const uint32_t idx = luaL_checknumber(L, 2);
+	uint32_t const idx = luaL_checknumber(L, 2);
 	if (idx >= ts_node_child_count(*parent)) {
 		lua_pushnil(L);
 	} else {
@@ -156,7 +156,7 @@ static int node_child_count(lua_State *L) {
 ]] */
 static int node_named_child(lua_State *L) {
 	TSNode *parent = node_check(L, 1);
-	const uint32_t idx = luaL_checknumber(L, 2);
+	uint32_t const idx = luaL_checknumber(L, 2);
 	if (idx >= ts_node_named_child_count(*parent)) {
 		lua_pushnil(L);
 	} else {
@@ -176,7 +176,7 @@ static int node_named_child_count(lua_State *L) {
 }
 
 static int node_children_iterator(lua_State *L) {
-	const bool b = lua_toboolean(L, lua_upvalueindex(2));
+	bool const b = lua_toboolean(L, lua_upvalueindex(2));
 	if (!b) {
 		return 0;
 	}
@@ -184,7 +184,7 @@ static int node_children_iterator(lua_State *L) {
 	lua_settop(L, 0);
 	TSTreeCursor *const c = tree_cursor_check(L, lua_upvalueindex(1));
 
-	const TSNode n = ts_tree_cursor_current_node(c);
+	TSNode const n = ts_tree_cursor_current_node(c);
 	push_kept(L, lua_upvalueindex(1));
 	node_push(L, -1, n);
 
@@ -198,7 +198,7 @@ static int node_named_children_iterator(lua_State *L) {
 	lua_settop(L, 0);
 	TSNode *n = node_check(L, lua_upvalueindex(1));
 
-	const uint32_t idx = lua_tonumber(L, lua_upvalueindex(3));
+	uint32_t const idx = lua_tonumber(L, lua_upvalueindex(3));
 	pushinteger(L, idx + 1);
 	lua_replace(L, lua_upvalueindex(3));
 
@@ -222,7 +222,7 @@ static int node_children(lua_State *L) {
 	TSNode *n = node_check(L, 1);
 	push_kept(L, 1);
 	TSTreeCursor *const c = tree_cursor_push(L, 2, *n);
-	const bool b = ts_tree_cursor_goto_first_child(c);
+	bool const b = ts_tree_cursor_goto_first_child(c);
 	lua_pushboolean(L, b);
 	lua_pushcclosure(L, node_children_iterator, 2);
 	return 1;
@@ -330,7 +330,7 @@ static int node_name(lua_State *L) {
 		return 1;
 	}
 	TSSymbol sym = ts_node_symbol(*n);
-	const char *name = ts_language_symbol_name(ts_tree_language(n->tree), sym);
+	char const *name = ts_language_symbol_name(ts_tree_language(n->tree), sym);
 	lua_pushstring(L, name);
 	return 1;
 }
@@ -341,7 +341,7 @@ static int node_name(lua_State *L) {
 static int node_child_by_field_name(lua_State *L) {
 	lua_settop(L, 2);
 	TSNode *n = node_check(L, 1);
-	const char *name = luaL_checkstring(L, 2);
+	char const *name = luaL_checkstring(L, 2);
 
 	TSNode child = ts_node_child_by_field_name(*n, name, strlen(name));
 	if (ts_node_is_null(child)) {
@@ -358,8 +358,8 @@ MaybeOwnedString node_get_source(lua_State *L) { // node
 	push_kept(L, -1); // node, tree
 	ltreesitter_Tree *const tree = tree_check(L, -1, "Internal error: node child was not a tree");
 	if (tree->text_or_null_if_function_reader) {
-		const uint32_t start = ts_node_start_byte(n);
-		const uint32_t end = ts_node_end_byte(n);
+		uint32_t const start = ts_node_start_byte(n);
+		uint32_t const end = ts_node_end_byte(n);
 		lua_pop(L, 1); // node
 		return (MaybeOwnedString){
 			.owned = false,
@@ -369,9 +369,9 @@ MaybeOwnedString node_get_source(lua_State *L) { // node
 	}
 	push_kept(L, -1); // node, tree, reader
 
-	const uint32_t start_byte = ts_node_start_byte(n);
-	const uint32_t end_byte = ts_node_end_byte(n);
-	const uint32_t expected_byte_length = end_byte - start_byte;
+	uint32_t const start_byte = ts_node_start_byte(n);
+	uint32_t const end_byte = ts_node_end_byte(n);
+	uint32_t const expected_byte_length = end_byte - start_byte;
 	uint32_t needed_bytes = expected_byte_length;
 	TSPoint position = ts_node_start_point(n);
 
@@ -381,7 +381,7 @@ MaybeOwnedString node_get_source(lua_State *L) { // node
 	while (needed_bytes > 0) {
 		lua_pushvalue(L, -1); // ..., reader
 
-		const uint32_t start_index = start_byte + end_byte - needed_bytes;
+		uint32_t const start_index = start_byte + end_byte - needed_bytes;
 
 		pushinteger(L, start_index); // ..., reader, index
 		lua_newtable(L); { // ..., reader, index, point

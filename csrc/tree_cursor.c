@@ -35,7 +35,7 @@ static int tree_cursor_current_node(lua_State *L) {
 ]] */
 static int tree_cursor_current_field_name(lua_State *L) {
 	TSTreeCursor *const c = tree_cursor_check(L, 1);
-	const char *field_name = ts_tree_cursor_current_field_name(c);
+	char const *field_name = ts_tree_cursor_current_field_name(c);
 	if (field_name) {
 		lua_pushstring(L, field_name);
 	} else {

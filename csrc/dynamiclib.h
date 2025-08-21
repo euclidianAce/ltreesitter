@@ -23,8 +23,8 @@ typedef void *Dynlib;
 
 #include <stdbool.h>
 
-bool dynlib_open(const char *name, Dynlib *handle, const char **out_error);
-void *dynlib_sym(Dynlib *handle, const char *sym_name);
+bool dynlib_open(char const *name, Dynlib *handle, char const **out_error);
+void *dynlib_sym(Dynlib *handle, char const *sym_name);
 void dynlib_close(Dynlib *handle);
 
 #endif

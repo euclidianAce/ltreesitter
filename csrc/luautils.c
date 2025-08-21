@@ -1,7 +1,7 @@
 
 #include "luautils.h"
 
-char *str_ldup(const char *s, const size_t len) {
+char *str_ldup(char const *s, const size_t len) {
 	char *dup = malloc(sizeof(char) * (len + 1));
 	if (!dup) return NULL;
 	memcpy(dup, s, len);
@@ -49,9 +49,9 @@ void create_libtable(lua_State *L, const luaL_Reg l[]) {
 
 void create_metatable(
 	lua_State *L,
-	const char *name,
-	const luaL_Reg *metamethods,
-	const luaL_Reg *index) {
+	char const *name,
+	luaL_Reg const *metamethods,
+	luaL_Reg const *index) {
 	luaL_newmetatable(L, name);     // metatable
 	setfuncs(L, metamethods);       // metatable
 	if (index) {
@@ -67,7 +67,7 @@ void create_metatable(
 #endif
 }
 
-int getfield_type(lua_State *L, int idx, const char *field_name) {
+int getfield_type(lua_State *L, int idx, char const *field_name) {
 	lua_getfield(L, idx, field_name);
 	return lua_type(L, -1);
 }
@@ -75,12 +75,12 @@ int getfield_type(lua_State *L, int idx, const char *field_name) {
 // push the field 'field_name' of the object at idx onto the stack and type check it
 // (raises an error if the check fails)
 // leaves the value on the stack whether or not the type check passed
-bool expect_field(lua_State *L, int idx, const char *field_name, int expected_type) {
+bool expect_field(lua_State *L, int idx, char const *field_name, int expected_type) {
 	if (lua_type(L, idx) != LUA_TTABLE) {
 		luaL_error(L, "expected table");
 		return false;
 	}
-	const int actual_type = getfield_type(L, idx, field_name);
+	int const actual_type = getfield_type(L, idx, field_name);
 	if (actual_type != expected_type) {
 		luaL_error(
 			L,
@@ -93,8 +93,8 @@ bool expect_field(lua_State *L, int idx, const char *field_name, int expected_ty
 	return true;
 }
 
-bool expect_nested_field(lua_State *L, int idx, const char *parent_name, const char *field_name, int expected_type) {
-	const int actual_type = getfield_type(L, idx, field_name);
+bool expect_nested_field(lua_State *L, int idx, char const *parent_name, char const *field_name, int expected_type) {
+	int const actual_type = getfield_type(L, idx, field_name);
 	if (actual_type != expected_type) {
 		luaL_error(
 			L,
@@ -113,7 +113,7 @@ int absindex(lua_State *L, int idx) {
 	return idx > 0 ? idx : lua_gettop(L) + 1 + idx;
 }
 
-void setmetatable(lua_State *L, const char *mt_name) {
+void setmetatable(lua_State *L, char const *mt_name) {
 	luaL_getmetatable(L, mt_name);
 	lua_setmetatable(L, -2);
 }
@@ -158,20 +158,20 @@ bool push_ref_from_registry(lua_State *L, int ref) {
 	return type != LUA_TNIL;
 }
 
-void push_registry_field(lua_State *L, const char *f) {
+void push_registry_field(lua_State *L, char const *f) {
 	push_registry_table(L);
 	lua_getfield(L, -1, f);
 	lua_remove(L, -2);
 }
 
-void set_registry_field(lua_State *L, const char *f) {
+void set_registry_field(lua_State *L, char const *f) {
 	push_registry_table(L);
 	lua_pushvalue(L, -2);
 	lua_setfield(L, -2, f);
 	lua_pop(L, 1);
 }
 
-void newtable_with_mode(lua_State *L, const char *mode) {
+void newtable_with_mode(lua_State *L, char const *mode) {
 	lua_newtable(L);
 	lua_newtable(L); // {}, {}
 	lua_pushstring(L, mode);
@@ -226,19 +226,19 @@ bool sb_push_char(StringBuilder *sb, char c) {
 	return true;
 }
 
-bool sb_push_str(StringBuilder *sb, const char *str) {
+bool sb_push_str(StringBuilder *sb, char const *str) {
 	size_t len = strlen(str);
 	return sb_push_lstr(sb, len, str);
 }
 
-bool sb_push_lstr(StringBuilder *sb, size_t len, const char *str) {
+bool sb_push_lstr(StringBuilder *sb, size_t len, char const *str) {
 	if (!sb_ensure_cap(sb, sb->length + len)) return false;
 	memcpy(sb->data + sb->length, str, len);
 	sb->length += len;
 	return true;
 }
 
-bool sb_push_fmt(StringBuilder *sb, const char *fmt, ...) {
+bool sb_push_fmt(StringBuilder *sb, char const *fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
 	int n;

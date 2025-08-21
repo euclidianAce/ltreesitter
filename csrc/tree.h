@@ -7,7 +7,7 @@
 void tree_init_metatable(lua_State *L);
 
 // ( any -- any )
-ltreesitter_Tree *tree_check(lua_State *L, int idx, const char *msg);
+ltreesitter_Tree *tree_check(lua_State *L, int idx, char const *msg);
 
 // ( any -- any )
 ltreesitter_Tree *tree_check_assert(lua_State *L, int idx);
@@ -18,7 +18,7 @@ void tree_push(
 	lua_State *,
 	TSTree *,
 	size_t src_len,
-	const char *src);
+	char const *src);
 
 // ( [reader_function_index]=function | -- tree )
 void tree_push_with_reader(

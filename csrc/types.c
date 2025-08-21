@@ -46,7 +46,7 @@ SourceText *source_text_push_uninitialized(lua_State *L, uint32_t len) {
 	return src_text;
 }
 
-SourceText *source_text_push(lua_State *L, uint32_t len, const char *src) {
+SourceText *source_text_push(lua_State *L, uint32_t len, char const *src) {
 	SourceText *st = source_text_push_uninitialized(L, len);
 	if (!st)
 		return NULL;

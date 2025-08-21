@@ -1,7 +1,7 @@
 #include "object.h"
 #include "luautils.h"
 
-static const char *object_field = "objects";
+static char const *object_field = "objects";
 // map of objects to their parents
 // use when an object relies on its parent being alive
 void setup_object_table(lua_State *L) {
@@ -35,7 +35,7 @@ void bind_lifetimes(lua_State *L, int as_long_as_this_object_lives, int so_shall
 	lua_pop(L, 1);
 }
 
-static const char *parser_cache_index = "parsers";
+static char const *parser_cache_index = "parsers";
 void setup_parser_cache(lua_State *L) {
 	newtable_with_mode(L, "v");
 	set_registry_field(L, parser_cache_index);

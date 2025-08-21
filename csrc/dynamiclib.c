@@ -3,7 +3,7 @@
 
 #include "dynamiclib.h"
 
-bool dynlib_open(const char *name, Dynlib *handle, const char **out_error) {
+bool dynlib_open(char const *name, Dynlib *handle, char const **out_error) {
 #ifdef _WIN32
 	*handle = LoadLibrary(name);
 	if (!lib) *out_error = GetLastError();
@@ -21,7 +21,7 @@ bool dynlib_open(const char *name, Dynlib *handle, const char **out_error) {
 	return !!*handle;
 }
 
-void *dynlib_sym(Dynlib *handle, const char *sym_name) {
+void *dynlib_sym(Dynlib *handle, char const *sym_name) {
 #ifdef _WIN32
 	FARPROC sym = GetProcAddress(*handle, sym_name);
 	return *(void**)(&sym);

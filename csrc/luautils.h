@@ -23,9 +23,9 @@ typedef struct {
 
 bool sb_ensure_cap(StringBuilder *sb, size_t n);
 bool sb_push_char(StringBuilder *sb, char);
-bool sb_push_str(StringBuilder *sb, const char *str);
-bool sb_push_lstr(StringBuilder *sb, size_t len, const char *str);
-bool sb_push_fmt(StringBuilder *sb, const char *fmt, ...);
+bool sb_push_str(StringBuilder *sb, char const *str);
+bool sb_push_lstr(StringBuilder *sb, size_t len, char const *str);
+bool sb_push_fmt(StringBuilder *sb, char const *fmt, ...);
 void sb_push_to_lua(lua_State *L, StringBuilder *sb);
 void sb_free(StringBuilder *sb);
 
@@ -39,7 +39,7 @@ void mos_push_to_lua(lua_State *, MaybeOwnedString);
 void mos_free(MaybeOwnedString *);
 bool mos_eq(MaybeOwnedString, MaybeOwnedString);
 
-char *str_ldup(const char *s, const size_t len);
+char *str_ldup(char const *s, const size_t len);
 
 // ( {T} -- {T} T )
 void table_geti(lua_State *L, int idx, int i);
@@ -57,18 +57,18 @@ void setfuncs(lua_State *L, const luaL_Reg l[]);
 void create_libtable(lua_State *L, const luaL_Reg *l);
 
 // ( -- table )
-void create_metatable(lua_State *L, const char *name, const luaL_Reg *metamethods, const luaL_Reg *index);
+void create_metatable(lua_State *L, char const *name, const luaL_Reg *metamethods, const luaL_Reg *index);
 
-int getfield_type(lua_State *L, int idx, const char *field_name);
-bool expect_field(lua_State *L, int idx, const char *field_name, int expected_type);
-bool expect_nested_field(lua_State *L, int idx, const char *parent_name, const char *field_name, int expected_type);
+int getfield_type(lua_State *L, int idx, char const *field_name);
+bool expect_field(lua_State *L, int idx, char const *field_name, int expected_type);
+bool expect_nested_field(lua_State *L, int idx, char const *parent_name, char const *field_name, int expected_type);
 int absindex(lua_State *L, int idx);
-void setmetatable(lua_State *L, const char *mt_name);
+void setmetatable(lua_State *L, char const *mt_name);
 void setup_registry_index(lua_State *L);
 int push_registry_table(lua_State *L);
-void push_registry_field(lua_State *L, const char *f);
-void set_registry_field(lua_State *L, const char *f);
-void newtable_with_mode(lua_State *L, const char *mode);
+void push_registry_field(lua_State *L, char const *f);
+void set_registry_field(lua_State *L, char const *f);
+void newtable_with_mode(lua_State *L, char const *mode);
 size_t length_of(lua_State *L, int index);
 
 bool push_ref_from_registry(lua_State *, int ref);

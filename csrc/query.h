@@ -12,7 +12,7 @@ void query_init_metatable(lua_State *L);
 ltreesitter_Query *query_check(lua_State *L, int idx);
 
 // ( -- query )
-void query_push(lua_State *L, const TSLanguage *, const char *src, const size_t src_len, TSQuery *, int kept_index);
+void query_push(lua_State *L, const TSLanguage *, char const *src, const size_t src_len, TSQuery *, int kept_index);
 
 void query_setup_predicate_tables(lua_State *L);
 
@@ -22,7 +22,7 @@ bool query_handle_error(
 	TSQuery *,
 	uint32_t err_offset,
 	TSQueryError,
-	const char *query_src,
+	char const *query_src,
 	size_t query_src_len);
 
 #endif
