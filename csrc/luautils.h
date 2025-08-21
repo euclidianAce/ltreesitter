@@ -40,12 +40,25 @@ void mos_free(MaybeOwnedString *);
 bool mos_eq(MaybeOwnedString, MaybeOwnedString);
 
 char *str_ldup(const char *s, const size_t len);
+
+// ( {T} -- {T} T )
 void table_geti(lua_State *L, int idx, int i);
+
+// ( {T} -- {T} T )
 int table_rawget(lua_State *L, int idx);
+
+// ( -- int )
 void pushinteger(lua_State *L, int n);
+
+// ( table -- table )
 void setfuncs(lua_State *L, const luaL_Reg l[]);
+
+// ( -- table )
 void create_libtable(lua_State *L, const luaL_Reg *l);
+
+// ( -- table )
 void create_metatable(lua_State *L, const char *name, const luaL_Reg *metamethods, const luaL_Reg *index);
+
 int getfield_type(lua_State *L, int idx, const char *field_name);
 bool expect_field(lua_State *L, int idx, const char *field_name, int expected_type);
 bool expect_nested_field(lua_State *L, int idx, const char *parent_name, const char *field_name, int expected_type);
@@ -69,7 +82,5 @@ void dump_stack(lua_State *L, int from);
 #ifndef LUA_OK
 #define LUA_OK 0
 #endif
-
-MaybeOwnedString get_node_source(lua_State *);
 
 #endif

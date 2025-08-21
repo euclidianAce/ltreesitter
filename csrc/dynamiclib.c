@@ -1,9 +1,9 @@
 
 #include <stddef.h>
 
-#include <ltreesitter/dynamiclib.h>
+#include "dynamiclib.h"
 
-bool ltreesitter_open_dynamic_lib(const char *name, ltreesitter_Dynlib *handle, const char **out_error) {
+bool dynlib_open(const char *name, Dynlib *handle, const char **out_error) {
 #ifdef _WIN32
 	*handle = LoadLibrary(name);
 	if (!lib) *out_error = GetLastError();
@@ -21,7 +21,7 @@ bool ltreesitter_open_dynamic_lib(const char *name, ltreesitter_Dynlib *handle, 
 	return !!*handle;
 }
 
-void *ltreesitter_dynamic_sym(ltreesitter_Dynlib *handle, const char *sym_name) {
+void *dynlib_sym(Dynlib *handle, const char *sym_name) {
 #ifdef _WIN32
 	FARPROC sym = GetProcAddress(*handle, sym_name);
 	return *(void**)(&sym);
@@ -36,7 +36,7 @@ void *ltreesitter_dynamic_sym(ltreesitter_Dynlib *handle, const char *sym_name) 
 #endif
 }
 
-void ltreesitter_close_dynamic_lib(ltreesitter_Dynlib *handle) {
+void dynlib_close(Dynlib *handle) {
 #ifdef _WIN32
 	FreeLibrary(handle);
 #elif LTREESITTER_USE_LIBUV

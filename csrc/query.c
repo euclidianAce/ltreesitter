@@ -6,12 +6,11 @@
 
 #include "luautils.h"
 #include "object.h"
-#include <ltreesitter/node.h>
-#include <ltreesitter/parser.h>
-#include <ltreesitter/query.h>
-#include <ltreesitter/query_cursor.h>
-#include <ltreesitter/tree.h>
-#include <ltreesitter/types.h>
+#include "tree.h"
+#include "query.h"
+#include "node.h"
+#include "query_cursor.h"
+#include "types.h"
 
 static const char *default_predicate_field = "default_predicates";
 static const char *predicate_field = "predicates";
@@ -24,7 +23,7 @@ static void push_predicate_table(lua_State *L) {
 	push_registry_field(L, predicate_field);
 }
 
-ltreesitter_Query *ltreesitter_check_query(lua_State *L, int idx) {
+ltreesitter_Query *query_check(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_QUERY_METATABLE_NAME);
 }
 
@@ -40,8 +39,7 @@ static inline void offset_to_pos(const char *src, uint32_t offset, uint32_t *row
 	}
 }
 
-// returns true when there is no error
-bool ltreesitter_handle_query_error(
+bool query_handle_error(
 	lua_State *L,
 	TSQuery *q,
 	uint32_t err_offset,
@@ -84,7 +82,7 @@ bool ltreesitter_handle_query_error(
 }
 
 // src will be duplicated
-void ltreesitter_push_query(
+void query_push(
 	lua_State *L,
 	const TSLanguage *lang,
 	const char *src,
@@ -98,7 +96,7 @@ void ltreesitter_push_query(
 
 	bind_lifetimes(L, -1, kept_index); // this query keeps `kept_index` alive
 
-	ltreesitter_SourceText *source = ltreesitter_source_text_push(L, src_len, src); // query, source text
+	SourceText *source = source_text_push(L, src_len, src); // query, source text
 	if (!source) {
 		ALLOC_FAIL(L);
 		return;
@@ -113,9 +111,9 @@ void ltreesitter_push_query(
 }
 
 static void push_query_copy(lua_State *L, int query_idx) {
-	ltreesitter_Query *orig = ltreesitter_check_query(L, query_idx); // query
+	ltreesitter_Query *orig = query_check(L, query_idx); // query
 	push_kept(L, query_idx); // query, sourcetext
-	ltreesitter_SourceText const *source_text = ltreesitter_check_source_text(L, -1);
+	SourceText const *source_text = source_text_check(L, -1);
 	if (!source_text) {
 		luaL_error(L, "Internal error: Query child was not a SourceText");
 		return;
@@ -130,7 +128,7 @@ static void push_query_copy(lua_State *L, int query_idx) {
 		&err_offset,
 		&err_type);
 
-	if (!ltreesitter_handle_query_error(L, q, err_offset, err_type, source_text->text, source_text->length))
+	if (!query_handle_error(L, q, err_offset, err_type, source_text->text, source_text->length))
 		return;
 
 	ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query)); // query, sourcetext, new query
@@ -146,23 +144,23 @@ static void push_query_copy(lua_State *L, int query_idx) {
 }
 
 static int query_gc(lua_State *L) {
-	ltreesitter_Query *q = ltreesitter_check_query(L, 1);
+	ltreesitter_Query *q = query_check(L, 1);
 	ts_query_delete(q->query);
 	return 1;
 }
 
 static int query_pattern_count(lua_State *L) {
-	TSQuery *q = ltreesitter_check_query(L, 1)->query;
+	TSQuery *q = query_check(L, 1)->query;
 	pushinteger(L, ts_query_pattern_count(q));
 	return 1;
 }
 static int query_capture_count(lua_State *L) {
-	TSQuery *q = ltreesitter_check_query(L, 1)->query;
+	TSQuery *q = query_check(L, 1)->query;
 	pushinteger(L, ts_query_capture_count(q));
 	return 1;
 }
 static int query_string_count(lua_State *L) {
-	TSQuery *q = ltreesitter_check_query(L, 1)->query;
+	TSQuery *q = query_check(L, 1)->query;
 	pushinteger(L, ts_query_string_count(q));
 	return 1;
 }
@@ -191,7 +189,7 @@ static void add_capture_to_table(
 	TSNode value
 ) {
 	lua_pushlstring(L, key, key_len);
-	ltreesitter_push_node(L, child_index, value);
+	node_push(L, child_index, value);
 	lua_rawset(L, table_index);
 }
 
@@ -365,12 +363,12 @@ deferred:
 static int query_iterator_next_match(lua_State *L) {
 	// upvalues: Query, Node, Cursor
 	const int initial_query_idx = lua_upvalueindex(1);
-	ltreesitter_Query *const q = ltreesitter_check_query(L, initial_query_idx);
-	ltreesitter_QueryCursor *c = ltreesitter_check_query_cursor(L, lua_upvalueindex(3));
+	ltreesitter_Query *const q = query_check(L, initial_query_idx);
+	ltreesitter_QueryCursor *c = query_cursor_check(L, lua_upvalueindex(3));
 	TSQueryMatch m;
 	push_kept(L, lua_upvalueindex(2));
 	const int parent_idx = lua_gettop(L);
-	(void)ltreesitter_check_tree(L, parent_idx, INTERNAL_PARENT_CHECK_ERR_MSG);
+	(void)tree_check(L, parent_idx, INTERNAL_PARENT_CHECK_ERR_MSG);
 
 	lua_pushvalue(L, initial_query_idx);
 	const int query_idx = lua_gettop(L);
@@ -391,7 +389,7 @@ static int query_iterator_next_match(lua_State *L) {
 
 	for (uint16_t i = 0; i < m.capture_count; ++i) {
 #define push_current_node() do { \
-	ltreesitter_push_node( \
+	node_push( \
 		L, parent_idx, \
 		m.captures[i].node); \
 } while (0)
@@ -444,11 +442,11 @@ static int query_iterator_next_match(lua_State *L) {
 static int query_iterator_next_capture(lua_State *L) {
 	// upvalues: Query, Node, Cursor
 	const int initial_query_idx = lua_upvalueindex(1);
-	ltreesitter_Query *const q = ltreesitter_check_query(L, initial_query_idx);
-	TSQueryCursor *c = ltreesitter_check_query_cursor(L, lua_upvalueindex(3))->query_cursor;
+	ltreesitter_Query *const q = query_check(L, initial_query_idx);
+	TSQueryCursor *c = query_cursor_check(L, lua_upvalueindex(3))->query_cursor;
 	push_kept(L, lua_upvalueindex(2));
 	const int parent_idx = lua_gettop(L);
-	(void)ltreesitter_check_tree(L, -1, INTERNAL_PARENT_CHECK_ERR_MSG);
+	(void)tree_check(L, -1, INTERNAL_PARENT_CHECK_ERR_MSG);
 	TSQueryMatch m;
 	uint32_t capture_index;
 	lua_pushvalue(L, initial_query_idx);
@@ -459,7 +457,7 @@ static int query_iterator_next_capture(lua_State *L) {
 			return 0;
 	} while (!do_predicates(L, query_idx, q->query, parent_idx, &m));
 
-	ltreesitter_push_node(
+	node_push(
 		L, parent_idx,
 		m.captures[capture_index].node);
 	uint32_t len;
@@ -523,8 +521,8 @@ static void query_cursor_set_range(lua_State *L, TSQueryCursor *c) {
    </pre>
 ]]*/
 static int query_match_factory(lua_State *L) {
-	ltreesitter_Query *const q = ltreesitter_check_query(L, 1);
-	TSNode n = *ltreesitter_check_node(L, 2);
+	ltreesitter_Query *const q = query_check(L, 1);
+	TSNode n = *node_check(L, 2);
 	TSQueryCursor *c = ts_query_cursor_new();
 	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
 	lua_settop(L, 2);
@@ -552,8 +550,8 @@ static int query_match_factory(lua_State *L) {
    </pre>
 ]]*/
 static int query_capture_factory(lua_State *L) {
-	ltreesitter_Query *const q = ltreesitter_check_query(L, 1);
-	TSNode n = *ltreesitter_check_node(L, 2);
+	ltreesitter_Query *const q = query_check(L, 1);
+	TSNode n = *node_check(L, 2);
 	TSQueryCursor *c = ts_query_cursor_new();
 	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
 	lua_settop(L, 2);
@@ -665,15 +663,15 @@ static int query_copy_with_predicates(lua_State *L) {
    If you'd like to interact with the matches/captures of a query, see the Query.match and Query.capture iterators
 ]]*/
 static int query_exec(lua_State *L) {
-	TSQuery *const q = ltreesitter_check_query(L, 1)->query;
-	TSNode n = *ltreesitter_check_node(L, 2);
+	TSQuery *const q = query_check(L, 1)->query;
+	TSNode n = *node_check(L, 2);
 
 	TSQueryCursor *c = ts_query_cursor_new();
 	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
 
 	push_kept(L, 2);
 	const int parent_idx = absindex(L, -1);
-	(void)ltreesitter_check_tree(L, parent_idx, INTERNAL_PARENT_CHECK_ERR_MSG);
+	(void)tree_check(L, parent_idx, INTERNAL_PARENT_CHECK_ERR_MSG);
 
 	TSQueryMatch m;
 	ts_query_cursor_exec(c, q, n);
@@ -688,14 +686,14 @@ static int query_exec(lua_State *L) {
    Gets the source that the query was initialized with
 ]]*/
 static int query_source(lua_State *L) {
-	ltreesitter_Query *q = ltreesitter_check_query(L, 1); // query
+	ltreesitter_Query *q = query_check(L, 1); // query
 	if (!q) {
 		int t = lua_type(L, 1);
 		luaL_error(L, "Expected an ltreesitter.Query, got %s", lua_typename(L, t));
 		return 0;
 	}
 	push_kept(L, -1); // query, source
-	ltreesitter_SourceText const *source_text = ltreesitter_check_source_text(L, -1);
+	SourceText const *source_text = source_text_check(L, -1);
 	if (!source_text) {
 		luaL_error(L, "Internal error: Query child was not a SourceText");
 		return 0;
@@ -719,7 +717,7 @@ static bool predicate_arg_to_string(
 		out_str->length = len;
 	} else {
 		lua_pushvalue(L, index);
-		*out_str = get_node_source(L);
+		*out_str = node_get_source(L);
 		lua_pop(L, 1);
 	}
 	return true;
@@ -836,7 +834,7 @@ static const luaL_Reg default_query_predicates[] = {
 	{"find?", find_predicate},
 	{NULL, NULL}};
 
-void ltreesitter_setup_query_predicate_tables(lua_State *L) {
+void query_setup_predicate_tables(lua_State *L) {
 	lua_newtable(L);
 	setfuncs(L, default_query_predicates);
 	set_registry_field(L, default_predicate_field);
@@ -860,6 +858,6 @@ static const luaL_Reg query_metamethods[] = {
 	{"__gc", query_gc},
 	{NULL, NULL}};
 
-void ltreesitter_create_query_metatable(lua_State *L) {
+void query_init_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_QUERY_METATABLE_NAME, query_metamethods, query_methods);
 }

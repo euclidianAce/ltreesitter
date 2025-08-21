@@ -23,7 +23,6 @@
 // 5.1, 5.2, and luajit.
 
 void setup_object_table(lua_State *);
-
 void setup_parser_cache(lua_State *);
 void push_parser_cache(lua_State *);
 
@@ -32,6 +31,7 @@ void push_parser_cache(lua_State *);
 // Neither index may be a pseudo-index (relative indexes are fine though)
 void bind_lifetimes(lua_State *, int as_long_as_this_object_lives, int so_shall_this_one);
 
+// ( [keeper_idx]=any | -- any )
 // Pushes the object kept by the keeper at `keeper_idx`
 //
 // If the object at `keeper_idx` isn't actually a keeper, raises a lua error

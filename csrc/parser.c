@@ -12,9 +12,16 @@
 
 #include "luautils.h"
 #include "object.h"
-#include <ltreesitter/dynamiclib.h>
-#include <ltreesitter/query.h>
-#include <ltreesitter/tree.h>
+#include "parser.h"
+#include "dynamiclib.h"
+
+#include "query.h"
+#include "tree.h"
+
+struct ltreesitter_Parser {
+	TSParser *parser;
+	Dynlib dl;
+};
 
 enum ParserLoadErr {
 	PARSE_LOAD_ERR_BUFLEN,
@@ -37,16 +44,16 @@ static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_f
 		buf[12 + lang_name_len] = 0;
 	}
 
-	if (!ltreesitter_open_dynamic_lib(parser_file, &p->dl, dynlib_open_error)) {
+	if (!dynlib_open(parser_file, &p->dl, dynlib_open_error)) {
 		return PARSE_LOAD_ERR_DLOPEN;
 	}
 
 	// ISO C is not a fan of void * -> function pointer
 	TSLanguage *(*tree_sitter_lang)(void);
-	*(void **)(&tree_sitter_lang) = ltreesitter_dynamic_sym(&p->dl, buf);
+	*(void **)(&tree_sitter_lang) = dynlib_sym(&p->dl, buf);
 
 	if (!tree_sitter_lang) {
-		ltreesitter_close_dynamic_lib(&p->dl);
+		dynlib_close(&p->dl);
 		return PARSE_LOAD_ERR_DLSYM;
 	}
 	TSParser *parser = ts_parser_new();
@@ -56,10 +63,10 @@ static enum ParserLoadErr try_dlopen(ltreesitter_Parser *p, const char *parser_f
 	p->parser = parser;
 
 	if (version < TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION) {
-		ltreesitter_close_dynamic_lib(&p->dl);
+		dynlib_close(&p->dl);
 		return PARSE_LOAD_ERR_LANG_VERSION_TOO_OLD;
 	} else if (version > TREE_SITTER_LANGUAGE_VERSION) {
-		ltreesitter_close_dynamic_lib(&p->dl);
+		dynlib_close(&p->dl);
 		return PARSE_LOAD_ERR_LANG_VERSION_TOO_NEW;
 	}
 
@@ -115,7 +122,7 @@ static bool push_cached_parser(lua_State *L, const char *dl_file, const char *la
    local my_parser = ltreesitter.load("./my_parser.so", "my_language")
    </pre>
 ]] */
-int ltreesitter_load_parser(lua_State *L) {
+int parser_load(lua_State *L) {
 	lua_settop(L, 2);
 	const char *parser_file = luaL_checkstring(L, 1);
 	const char *lang_name = luaL_checkstring(L, 2);
@@ -337,7 +344,7 @@ static bool try_load_from_path_list(
    </pre>
 ]] */
 
-int ltreesitter_require_parser(lua_State *L) {
+int parser_require(lua_State *L) {
 	// grab args
 	lua_settop(L, 2);
 	const char *so_name = luaL_checkstring(L, 1);
@@ -378,12 +385,12 @@ static int parser_gc(lua_State *L) {
 	printf("   p->dl: %p\n", lp->dl);
 #endif
 	ts_parser_delete(lp->parser);
-	ltreesitter_close_dynamic_lib(lp->dl);
+	dynlib_close(lp->dl);
 
 	return 0;
 }
 
-ltreesitter_Parser *ltreesitter_check_parser(lua_State *L, int idx) {
+ltreesitter_Parser *parser_check(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_PARSER_METATABLE_NAME);
 }
 
@@ -441,7 +448,7 @@ static TSInputEncoding encoding_from_str(lua_State *L, int str_index) {
 ]] */
 static int parser_parse_string(lua_State *L) {
 	lua_settop(L, 4);
-	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
+	ltreesitter_Parser *p = parser_check(L, 1);
 	size_t len;
 	const char *to_parse = luaL_checklstring(L, 2, &len);
 
@@ -449,7 +456,7 @@ static int parser_parse_string(lua_State *L) {
 
 	TSTree *const old_tree = lua_type(L, 4) == LUA_TNIL
 		? NULL
-		: ltreesitter_check_tree_arg(L, 4)->tree;
+		: tree_check_assert(L, 4)->tree;
 
 	// #CustomEncoding
 	//if (encoding == TSInputEncodingCustom)
@@ -461,7 +468,7 @@ static int parser_parse_string(lua_State *L) {
 		return 1;
 	}
 
-	ltreesitter_push_tree(L, tree, len, to_parse);
+	tree_push(L, tree, len, to_parse);
 	return 1;
 }
 
@@ -565,11 +572,11 @@ static const char *read_callback(void *payload, uint32_t byte_index, TSPoint pos
 ]] */
 static int parser_parse_with(lua_State *L) {
 	lua_settop(L, 5);
-	ltreesitter_Parser *const p = ltreesitter_check_parser(L, 1);
+	ltreesitter_Parser *const p = parser_check(L, 1);
 	TSTree *old_tree = NULL;
 	TSInputEncoding encoding = encoding_from_str(L, 4);
 	if (!lua_isnil(L, 5)) {
-		old_tree = ltreesitter_check_tree_arg(L, 5)->tree;
+		old_tree = tree_check_assert(L, 5)->tree;
 	}
 	lua_pop(L, 2);
 	struct CallInfo read_payload = {
@@ -620,7 +627,7 @@ static int parser_parse_with(lua_State *L) {
 		lua_pushnil(L);
 		return 1;
 	}
-	ltreesitter_push_tree_with_reader(L, t, 2);
+	tree_push_with_reader(L, t, 2);
 
 	return 1;
 }
@@ -629,7 +636,7 @@ static int parser_parse_with(lua_State *L) {
    Reset the parser, causing the next parse to start from the beginning
 ]] */
 static int parser_reset(lua_State *L) {
-	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
+	ltreesitter_Parser *p = parser_check(L, 1);
 	ts_parser_reset(p->parser);
 	return 0;
 }
@@ -668,7 +675,7 @@ static TSPoint topoint(lua_State *L, const int idx) {
 ]]*/
 static int parser_set_ranges(lua_State *L) {
 	lua_settop(L, 2);
-	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
+	ltreesitter_Parser *p = parser_check(L, 1);
 
 	if (lua_isnil(L, 2)) {
 		lua_pushboolean(L, ts_parser_set_included_ranges(p->parser, NULL, 0));
@@ -743,7 +750,7 @@ static void push_range(lua_State *L, TSRange const *range) {
    Get the ranges of text that the parser will include when parsing
 ]] */
 static int parser_get_ranges(lua_State *L) {
-	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
+	ltreesitter_Parser *p = parser_check(L, 1);
 
 	uint32_t length = 0;
 	const TSRange *ranges = ts_parser_included_ranges(p->parser, &length);
@@ -761,7 +768,7 @@ static int parser_get_ranges(lua_State *L) {
 ]] */
 static int make_query(lua_State *L) {
 	lua_settop(L, 2);
-	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
+	ltreesitter_Parser *p = parser_check(L, 1);
 	size_t len;
 	const char *lua_query_src = luaL_checklstring(L, 2, &len);
 	uint32_t err_offset = 0;
@@ -773,10 +780,10 @@ static int make_query(lua_State *L) {
 		len,
 		&err_offset,
 		&err_type);
-	ltreesitter_handle_query_error(L, q, err_offset, err_type, lua_query_src, len);
+	query_handle_error(L, q, err_offset, err_type, lua_query_src, len);
 
 	if (q)
-		ltreesitter_push_query(L, lang, lua_query_src, len, q, 1);
+		query_push(L, lang, lua_query_src, len, q, 1);
 	else
 		lua_pushnil(L);
 
@@ -787,7 +794,7 @@ static int make_query(lua_State *L) {
    get the api version of the parser's language
 ]] */
 static int get_version(lua_State *L) {
-	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
+	ltreesitter_Parser *p = parser_check(L, 1);
 	pushinteger(L, ts_language_version(ts_parser_language(p->parser)));
 	return 1;
 }
@@ -807,6 +814,6 @@ static const luaL_Reg parser_metamethods[] = {
 	{"__gc", parser_gc},
 	{NULL, NULL}};
 
-void ltreesitter_create_parser_metatable(lua_State *L) {
+void parser_init_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_PARSER_METATABLE_NAME, parser_metamethods, parser_methods);
 }

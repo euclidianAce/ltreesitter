@@ -1,4 +1,3 @@
-
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
@@ -10,8 +9,9 @@
 
 #include "luautils.h"
 #include "object.h"
-#include <ltreesitter/node.h>
-#include <ltreesitter/types.h>
+#include "tree.h"
+#include "node.h"
+#include "types.h"
 
 #ifdef LOG_GC
 #include <stdio.h>
@@ -23,32 +23,13 @@ static void err_if(lua_State *L, const char *msg) {
 	}
 }
 
-ltreesitter_Tree *ltreesitter_check_tree(lua_State *L, int idx, const char *msg) {
-	if (lua_type(L, idx) != LUA_TUSERDATA) {
-		err_if(L, msg);
-		return NULL;
-	}
-	if (lua_getmetatable(L, idx) == 0) {
-		err_if(L, msg);
-		return NULL;
-	}
-	lua_getfield(L, -1, "__name");
-	if (lua_isnil(L, -1)) {
-		lua_pop(L, 1);
-		err_if(L, msg);
-		return NULL;
-	}
-	const char *name = lua_tostring(L, -1);
-	const int cmp = strcmp(name, LTREESITTER_TREE_METATABLE_NAME);
-	lua_pop(L, 2);
-	if (cmp != 0) {
-		err_if(L, msg);
-		return NULL;
-	}
-	return lua_touserdata(L, idx);
+ltreesitter_Tree *tree_check(lua_State *L, int idx, const char *msg) {
+	ltreesitter_Tree *tree = luaL_testudata(L, idx, LTREESITTER_TREE_METATABLE_NAME);
+	if (!tree) err_if(L, msg);
+	return tree;
 }
 
-ltreesitter_Tree *ltreesitter_check_tree_arg(lua_State *L, int idx) {
+ltreesitter_Tree *tree_check_assert(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_TREE_METATABLE_NAME);
 }
 
@@ -59,12 +40,12 @@ static ltreesitter_Tree *push_uninitialized_tree(lua_State *L) {
 }
 
 // src will be duplicated
-void ltreesitter_push_tree(
+void tree_push(
 	lua_State *L,
 	TSTree *t,
 	size_t src_len,
 	const char *src) {
-	ltreesitter_SourceText *source = ltreesitter_source_text_push(L, src_len, src); // source text
+	SourceText *source = source_text_push(L, src_len, src); // source text
 	ltreesitter_Tree *tree = push_uninitialized_tree(L); // source text, tree
 	tree->tree = t;
 	tree->text_or_null_if_function_reader = source;
@@ -74,7 +55,7 @@ void ltreesitter_push_tree(
 	// fprintf(stderr, "Created tree %p with source %p\n", (void*)tree, (void*)tree->source);
 }
 
-void ltreesitter_push_tree_with_reader(
+void tree_push_with_reader(
 	lua_State *L,
 	TSTree *t,
 	int reader_function_index) {
@@ -91,13 +72,13 @@ void ltreesitter_push_tree_with_reader(
    Returns the root node of the given parse tree
 ]] */
 static int tree_push_root(lua_State *L) {
-	ltreesitter_Tree *const t = ltreesitter_check_tree_arg(L, 1);
-	ltreesitter_push_node(L, 1, ts_tree_root_node(t->tree));
+	ltreesitter_Tree *const t = tree_check_assert(L, 1);
+	node_push(L, 1, ts_tree_root_node(t->tree));
 	return 1;
 }
 
 static int tree_to_string(lua_State *L) {
-	TSTree *t = ltreesitter_check_tree_arg(L, 1)->tree;
+	TSTree *t = tree_check_assert(L, 1)->tree;
 	const TSNode root = ts_tree_root_node(t);
 	char *s = ts_node_string(root);
 	lua_pushlstring(L, (const char *)s, strlen(s));
@@ -110,9 +91,9 @@ static int tree_to_string(lua_State *L) {
 ]] */
 static int tree_copy(lua_State *L) {
 	lua_settop(L, 1);
-	ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1); // tree
+	ltreesitter_Tree *t = tree_check_assert(L, 1); // tree
 	push_kept(L, 1); // tree, source text/reader
-	ltreesitter_SourceText const *source_text = ltreesitter_check_source_text(L, -1);
+	SourceText const *source_text = source_text_check(L, -1);
 	if (!source_text) {
 		luaL_error(L, "Internal error: Tree child was not a SourceText");
 		return 0;
@@ -146,7 +127,7 @@ static inline bool is_non_negative(lua_State *L, int i) {
 static int tree_edit_s(lua_State *L) {
 	lua_settop(L, 2);
 	lua_checkstack(L, 15);
-	ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1);
+	ltreesitter_Tree *t = tree_check_assert(L, 1);
 
 	// get the edit struct from table
 	luaL_argcheck(L, lua_type(L, 2) == LUA_TTABLE, 2, "expected table");
@@ -212,7 +193,7 @@ static int tree_edit_s(lua_State *L) {
    Create an edit to the given tree
 ]] */
 static int tree_edit(lua_State *L) {
-	ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1);
+	ltreesitter_Tree *t = tree_check_assert(L, 1);
 	TSInputEdit edit = (TSInputEdit){
 		.start_byte = luaL_checkinteger(L, 2),
 		.old_end_byte = luaL_checkinteger(L, 3),
@@ -231,8 +212,8 @@ static int tree_edit(lua_State *L) {
    This would usually be called right after a set of calls to <code>Tree.edit(_s)</code> and <code>Parser.parse_{string,with}</code>
 ]] */
 static int tree_get_changed_ranges(lua_State *L) {
-	ltreesitter_Tree *old = ltreesitter_check_tree_arg(L, 1);
-	ltreesitter_Tree *new = ltreesitter_check_tree_arg(L, 2);
+	ltreesitter_Tree *old = tree_check_assert(L, 1);
+	ltreesitter_Tree *new = tree_check_assert(L, 2);
 	uint32_t len;
 	TSRange *ranges = ts_tree_get_changed_ranges(old->tree, new->tree, &len);
 
@@ -264,7 +245,7 @@ static int tree_get_changed_ranges(lua_State *L) {
 }
 
 static int tree_gc(lua_State *L) {
-	ltreesitter_Tree *t = ltreesitter_check_tree_arg(L, 1);
+	ltreesitter_Tree *t = tree_check_assert(L, 1);
 #ifdef LOG_GC
 	printf("Tree %p is being garbage collected\n", (void const *)t);
 	printf("    source text=%p\n", (void const *)t->source);
@@ -285,6 +266,6 @@ static const luaL_Reg tree_metamethods[] = {
 	{"__tostring", tree_to_string},
 	{NULL, NULL}};
 
-void ltreesitter_create_tree_metatable(lua_State *L) {
+void tree_init_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_TREE_METATABLE_NAME, tree_metamethods, tree_methods);
 }

@@ -1,15 +1,16 @@
 
 #include "luautils.h"
 #include "object.h"
-#include <ltreesitter/node.h>
-#include <ltreesitter/tree.h>
-#include <ltreesitter/types.h>
+#include "tree.h"
+#include "node.h"
+#include "types.h"
+#include "tree_cursor.h"
 
-TSTreeCursor *ltreesitter_check_tree_cursor(lua_State *L, int idx) {
+TSTreeCursor *tree_cursor_check(lua_State *L, int idx) {
 	return luaL_checkudata(L, idx, LTREESITTER_TREE_CURSOR_METATABLE_NAME);
 }
 
-TSTreeCursor *ltreesitter_push_tree_cursor(lua_State *L, int parent_idx, TSNode n) {
+TSTreeCursor *tree_cursor_push(lua_State *L, int parent_idx, TSNode n) {
 	TSTreeCursor *c = lua_newuserdata(L, sizeof(TSTreeCursor));
 	bind_lifetimes(L, -1, parent_idx);
 	*c = ts_tree_cursor_new(n);
@@ -21,9 +22,9 @@ TSTreeCursor *ltreesitter_push_tree_cursor(lua_State *L, int parent_idx, TSNode 
    Get the current node under the cursor
 ]] */
 static int tree_cursor_current_node(lua_State *L) {
-	TSTreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	TSTreeCursor *const c = tree_cursor_check(L, 1);
 	push_kept(L, 1);
-	ltreesitter_push_node(
+	node_push(
 		L, -1,
 		ts_tree_cursor_current_node(c));
 	return 1;
@@ -33,7 +34,7 @@ static int tree_cursor_current_node(lua_State *L) {
    Get the field name of the current node under the cursor
 ]] */
 static int tree_cursor_current_field_name(lua_State *L) {
-	TSTreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	TSTreeCursor *const c = tree_cursor_check(L, 1);
 	const char *field_name = ts_tree_cursor_current_field_name(c);
 	if (field_name) {
 		lua_pushstring(L, field_name);
@@ -47,8 +48,8 @@ static int tree_cursor_current_field_name(lua_State *L) {
    Position the cursor at the given node
 ]] */
 static int tree_cursor_reset(lua_State *L) {
-	TSTreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
-	TSNode n = *ltreesitter_check_node(L, 2);
+	TSTreeCursor *const c = tree_cursor_check(L, 1);
+	TSNode n = *node_check(L, 2);
 	ts_tree_cursor_reset(c, n);
 	return 0;
 }
@@ -57,7 +58,7 @@ static int tree_cursor_reset(lua_State *L) {
    Position the cursor at the parent of the current node
 ]] */
 static int tree_cursor_goto_parent(lua_State *L) {
-	TSTreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	TSTreeCursor *const c = tree_cursor_check(L, 1);
 	lua_pushboolean(L, ts_tree_cursor_goto_parent(c));
 	return 1;
 }
@@ -66,7 +67,7 @@ static int tree_cursor_goto_parent(lua_State *L) {
    Position the cursor at the sibling of the current node
 ]] */
 static int tree_cursor_goto_next_sibling(lua_State *L) {
-	TSTreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	TSTreeCursor *const c = tree_cursor_check(L, 1);
 	lua_pushboolean(L, ts_tree_cursor_goto_next_sibling(c));
 	return 1;
 }
@@ -75,7 +76,7 @@ static int tree_cursor_goto_next_sibling(lua_State *L) {
    Position the cursor at the first child of the current node
 ]] */
 static int tree_cursor_goto_first_child(lua_State *L) {
-	TSTreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	TSTreeCursor *const c = tree_cursor_check(L, 1);
 	lua_pushboolean(L, ts_tree_cursor_goto_first_child(c));
 	return 1;
 }
@@ -87,7 +88,7 @@ static int tree_cursor_goto_first_child(lua_State *L) {
    Returns the index of the found node, if a node wasn't found, returns nil
 ]] */
 static int tree_cursor_goto_first_child_for_byte(lua_State *L) {
-	TSTreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	TSTreeCursor *const c = tree_cursor_check(L, 1);
 	uint32_t byte = luaL_checknumber(L, 2);
 	int64_t idx = ts_tree_cursor_goto_first_child_for_byte(c, byte);
 	if (idx == -1) {
@@ -108,7 +109,7 @@ static int tree_cursor_goto_first_child_for_byte(lua_State *L) {
 
 /*
 static int tree_cursor_copy(lua_State *L) {
-	TSTreeCursor *src = ltreesitter_check_tree_cursor(L, 1);
+	TSTreeCursor *src = tree_cursor_check(L, 1);
 	push_kept(L, 1);
 
 	TSTreeCursor *copy = lua_newuserdata(L, sizeof(TSTreeCursor));
@@ -121,7 +122,7 @@ static int tree_cursor_copy(lua_State *L) {
 //TSTreeCursor ts_tree_cursor_copy(const TSTreeCursor *cursor);
 
 static int tree_cursor_gc(lua_State *L) {
-	TSTreeCursor *const c = ltreesitter_check_tree_cursor(L, 1);
+	TSTreeCursor *const c = tree_cursor_check(L, 1);
 #ifdef LOG_GC
 	printf("Tree Cursor %p is being garbage collected\n", (void *)c);
 #endif
@@ -142,6 +143,6 @@ static const luaL_Reg tree_cursor_metamethods[] = {
 	{"__gc", tree_cursor_gc},
 	{NULL, NULL}};
 
-void ltreesitter_create_tree_cursor_metatable(lua_State *L) {
+void tree_cursor_init_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_TREE_CURSOR_METATABLE_NAME, tree_cursor_metamethods, tree_cursor_methods);
 }

@@ -3,38 +3,44 @@
 
 #include "luautils.h"
 #include "object.h"
-#include <ltreesitter/module.h>
-#include <ltreesitter/dynamiclib.h>
-#include <ltreesitter/node.h>
-#include <ltreesitter/parser.h>
-#include <ltreesitter/query.h>
-#include <ltreesitter/query_cursor.h>
-#include <ltreesitter/tree.h>
-#include <ltreesitter/tree_cursor.h>
+#include "parser.h"
+#include "tree.h"
+#include "query.h"
+#include "node.h"
+#include "query_cursor.h"
+#include "tree_cursor.h"
 
 // @teal-export version: string
 static const char version_str[] = "0.2.0+dev";
 
 static const luaL_Reg lib_funcs[] = {
-	{"load", ltreesitter_load_parser},
-	{"require", ltreesitter_require_parser},
+	{"load", parser_load},
+	{"require", parser_require},
 	{"_reg", push_registry_table},
 	{NULL, NULL},
 };
 
-LTREESITTER_EXPORT int luaopen_ltreesitter(lua_State *L) {
-	ltreesitter_create_parser_metatable(L);
-	ltreesitter_create_tree_metatable(L);
-	ltreesitter_create_tree_cursor_metatable(L);
-	ltreesitter_create_node_metatable(L);
-	ltreesitter_create_query_metatable(L);
-	ltreesitter_create_query_cursor_metatable(L);
-	ltreesitter_create_source_text_metatable(L);
+#ifdef _WIN32
+__declspec (dllexport)
+#else
+__attribute__ ((visibility("default")))
+#endif
+int luaopen_ltreesitter(lua_State *L);
+
+int luaopen_ltreesitter(lua_State *L) {
+	tree_init_metatable(L);
+	node_init_metatable(L);
+	query_init_metatable(L);
+	parser_init_metatable(L);
+	tree_cursor_init_metatable(L);
+	query_cursor_init_metatable(L);
+	source_text_init_metatable(L);
 
 	setup_registry_index(L);
-	ltreesitter_setup_query_predicate_tables(L);
 	setup_object_table(L);
 	setup_parser_cache(L);
+
+	query_setup_predicate_tables(L);
 
 	create_libtable(L, lib_funcs);
 	lua_pushstring(L, version_str);

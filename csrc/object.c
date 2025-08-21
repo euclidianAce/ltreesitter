@@ -1,4 +1,4 @@
-
+#include "object.h"
 #include "luautils.h"
 
 static const char *object_field = "objects";

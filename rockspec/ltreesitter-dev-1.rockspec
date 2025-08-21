@@ -29,11 +29,10 @@ build = {
 				"csrc/tree_cursor.c",
 				"tree-sitter/lib/src/lib.c",
 			},
-			incdirs = { "include", "tree-sitter/lib/include", "tree-sitter/lib/src" },
+			incdirs = { "tree-sitter/lib/include", "tree-sitter/lib/src" },
 		},
 	},
 	copy_directories = {
 		"docs",
-		"include",
 	},
 }
