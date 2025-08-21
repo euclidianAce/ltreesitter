@@ -75,6 +75,9 @@ bool push_ref_from_registry(lua_State *, int ref);
 int ref_into_registry(lua_State *, int object_to_ref);
 void unref_from_registry(lua_State *, int ref);
 
+// ( [idx]=any -- )
+void *testudata(lua_State *, int idx, char const *);
+
 #if LUA_VERSION_NUM > 501
 void dump_stack(lua_State *L, int from);
 #endif

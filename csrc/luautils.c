@@ -118,6 +118,23 @@ void setmetatable(lua_State *L, char const *mt_name) {
 	lua_setmetatable(L, -2);
 }
 
+void *testudata(lua_State *L, int idx, char const *tname) {
+#if LUA_VERSION_NUM < 502
+	// Adapted from lua 5.4 source
+	void *p = lua_touserdata(L, idx);
+	if (!p) return NULL;
+	if (!lua_getmetatable(L, idx)) // t1
+		return NULL;
+	luaL_getmetatable(L, tname); // t1, t2
+	if (!lua_rawequal(L, -1, -2))
+		p = NULL;
+	lua_pop(L, 2);
+	return p;
+#else
+	return luaL_testudata(L, idx, tname);
+#endif
+}
+
 static const char ltreesitter_registry_index = 'k';
 
 void setup_registry_index(lua_State *L) {
