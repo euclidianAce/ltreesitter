@@ -439,7 +439,7 @@ static TSInputEncoding encoding_from_str(lua_State *L, int str_index) {
    If <code>Tree</code> is provided then it will be used to create a new updated tree
    (but it is the responsibility of the programmer to make the correct <code>Tree:edit</code> calls)
 ]] */
-int ltreesitter_parser_parse_string(lua_State *L) {
+static int parser_parse_string(lua_State *L) {
 	lua_settop(L, 4);
 	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
 	size_t len;
@@ -473,7 +473,7 @@ typedef struct {
 	lua_State *L;
 	bool callback_errored;
 } ProgressInfo;
-static bool ltreesitter_parser_progress_callback(TSParseState *state) {
+static bool progress_callback(TSParseState *state) {
 	// assumed state, lua callback is on top of the stack
 	ProgressInfo *const info = state->payload;
 	lua_State *const L = info->L;
@@ -499,7 +499,7 @@ struct CallInfo {
 	lua_State *L;
 	enum ReadError read_error;
 };
-static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, TSPoint position, uint32_t *bytes_read) {
+static const char *read_callback(void *payload, uint32_t byte_index, TSPoint position, uint32_t *bytes_read) {
 	struct CallInfo *const i = payload;
 	lua_State *const L = i->L;
 	lua_settop(L, 3);
@@ -563,7 +563,7 @@ static const char *ltreesitter_parser_read(void *payload, uint32_t byte_index, T
 
    May return nil if the progress callback cancelled parsing
 ]] */
-int ltreesitter_parser_parse_with(lua_State *L) {
+static int parser_parse_with(lua_State *L) {
 	lua_settop(L, 5);
 	ltreesitter_Parser *const p = ltreesitter_check_parser(L, 1);
 	TSTree *old_tree = NULL;
@@ -582,7 +582,7 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 	//	return luaL_error(L, "Custom encodings are not yet supported");
 
 	TSInput input = {
-		.read = ltreesitter_parser_read,
+		.read = read_callback,
 		.payload = &read_payload,
 		.encoding = encoding,
 		.decode = NULL,
@@ -595,7 +595,7 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 
 	TSParseOptions options = {
 		.payload = &progress_payload,
-		.progress_callback = ltreesitter_parser_progress_callback,
+		.progress_callback = progress_callback,
 	};
 
 	TSTree *t = lua_isnil(L, progress_callback_idx)
@@ -628,7 +628,7 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 /* @teal-export Parser.reset: function(Parser) [[
    Reset the parser, causing the next parse to start from the beginning
 ]] */
-int ltreesitter_parser_reset(lua_State *L) {
+static int parser_reset(lua_State *L) {
 	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
 	ts_parser_reset(p->parser);
 	return 0;
@@ -759,7 +759,7 @@ static int parser_get_ranges(lua_State *L) {
 /* @teal-export Parser.query: function(Parser, string): Query [[
    Create a query out of the given string for the language of the given parser
 ]] */
-int make_query(lua_State *L) {
+static int make_query(lua_State *L) {
 	lua_settop(L, 2);
 	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
 	size_t len;
@@ -793,13 +793,13 @@ static int get_version(lua_State *L) {
 }
 
 static const luaL_Reg parser_methods[] = {
-	{"reset", ltreesitter_parser_reset},
+	{"reset", parser_reset},
 	{"set_ranges", parser_set_ranges},
 	{"get_ranges", parser_get_ranges},
 	{"get_version", get_version},
 
-	{"parse_string", ltreesitter_parser_parse_string},
-	{"parse_with", ltreesitter_parser_parse_with},
+	{"parse_string", parser_parse_string},
+	{"parse_with", parser_parse_with},
 	{"query", make_query},
 
 	{NULL, NULL}};
