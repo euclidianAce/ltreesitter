@@ -7,6 +7,7 @@ local record ltreesitter
       copy: function(Cursor): Cursor
       current_depth: function(Cursor): integer
       current_descendant_index: function(Cursor): integer
+      current_field_id: function(Cursor): FieldId
       current_field_name: function(Cursor): string
       current_node: function(Cursor): Node
       goto_descendant: function(Cursor, integer)
@@ -20,6 +21,7 @@ local record ltreesitter
    end
    record Node is userdata
       child: function(Node, idx: integer): Node
+      child_by_field_id: function(Node, FieldId): Node
       child_by_field_name: function(Node, string): Node
       child_count: function(Node): integer
       children: function(Node): function(): Node
@@ -49,8 +51,10 @@ local record ltreesitter
       get_version: function(Parser): integer
       language_abi_version: function(Parser): integer
       language_field_count: function(Parser): integer
+      language_field_id_for_name: function(Parser, string): FieldId
       language_metadata: function(Parser): LanguageMetadata
       language_name: function(Parser): string
+      language_name_for_field_id: function(Parser, FieldId): string
       language_state_count: function(Parser): integer
       language_symbol_count: function(Parser): integer
       parse_string: function(Parser, string, ?Encoding, ?Tree): Tree

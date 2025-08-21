@@ -39,6 +39,19 @@ describe("Cursor", function()
 			assert.are.equal(c:current_field_name(), "type")
 		end)
 	end)
+	describe("current_field_id", function()
+		it("should return an integer", function()
+			local c = assert(assert(root[1]
+				:child(1), "Unable to get node child")
+				:create_cursor(), "Unable to create cursor from node")
+			-- Note: need to use goto_first_child here because the
+			-- cursor won't see the field of nodes it is
+			-- constructed on
+			c:goto_first_child()
+
+			assert.is.number(c:current_field_id())
+		end)
+	end)
 
 	describe("goto_first_child", function()
 		it("should return true on success and false on failure", function()

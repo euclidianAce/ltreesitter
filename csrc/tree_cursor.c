@@ -171,8 +171,18 @@ static int tree_cursor_copy(lua_State *L) {
 	return 1;
 }
 
-// TODO:
-//TSFieldId ts_tree_cursor_current_field_id(const TSTreeCursor *self);
+/* @teal-export Cursor.current_field_id: function(Cursor): FieldId [[
+   Get the field id of the given cursor's current node
+
+   May return nil
+]] */
+static int tree_cursor_current_field_id(lua_State *L) {
+	TSTreeCursor const *c = tree_cursor_assert(L, 1);
+	TSFieldId id = ts_tree_cursor_current_field_id(c);
+	if (id) pushinteger(L, id);
+	else lua_pushnil(L);
+	return 1;
+}
 
 static int tree_cursor_gc(lua_State *L) {
 	TSTreeCursor *const c = tree_cursor_assert(L, 1);
@@ -187,6 +197,7 @@ static const luaL_Reg tree_cursor_methods[] = {
 	{"copy", tree_cursor_copy},
 	{"current_node", tree_cursor_current_node},
 	{"current_field_name", tree_cursor_current_field_name},
+	{"current_field_id", tree_cursor_current_field_id},
 	{"current_descendant_index", tree_cursor_current_descendant_index},
 	{"current_depth", tree_cursor_current_depth},
 	{"goto_parent", tree_cursor_goto_parent},

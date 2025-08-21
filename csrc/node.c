@@ -357,6 +357,25 @@ static int node_child_by_field_name(lua_State *L) {
 	return 1;
 }
 
+/* @teal-export Node.child_by_field_id: function(Node, FieldId): Node [[
+   Get a node's child given a field id
+]] */
+static int node_child_by_field_id(lua_State *L) {
+	lua_settop(L, 2);
+	TSNode *n = node_assert(L, 1);
+	lua_Integer id = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, id >= 0, 2, "expected a non-negative integer (a FieldId)");
+
+	TSNode child = ts_node_child_by_field_id(*n, (TSFieldId)id);
+	if (ts_node_is_null(child)) {
+		lua_pushnil(L);
+	} else {
+		push_kept(L, 1);
+		node_push(L, -1, child);
+	}
+	return 1;
+}
+
 MaybeOwnedString node_get_source(lua_State *L) { // node
 	TSNode n = *node_assert(L, -1);
 	ltreesitter_Tree *const tree = node_push_tree(L, -1); // node, tree
@@ -481,6 +500,7 @@ static int node_next_parse_state(lua_State *L) {
 static const luaL_Reg node_methods[] = {
 	{"child", node_child},
 	{"child_by_field_name", node_child_by_field_name},
+	{"child_by_field_id", node_child_by_field_id},
 	{"child_count", node_child_count},
 	{"children", node_children},
 	{"create_cursor", node_tree_cursor_create},

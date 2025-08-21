@@ -868,6 +868,30 @@ static int parser_language_metadata(lua_State *L) {
    type FieldId = integer
 ]] */
 
+/* @teal-export Parser.language_field_id_for_name: function(Parser, string): FieldId [[
+   Get the numeric id for the given field name
+]] */
+static int parser_language_field_id_for_name(lua_State *L) {
+	TSLanguage const *l = ts_parser_language(parser_assert(L, 1)->parser);
+	size_t len;
+	const char *name = lua_tolstring(L, 2, &len);
+	pushinteger(L, ts_language_field_id_for_name(l, name, len));
+	return 1;
+}
+
+/* @teal-export Parser.language_name_for_field_id: function(Parser, FieldId): string [[
+   Get the name for a numeric field id
+]] */
+static int parser_language_name_for_field_id(lua_State *L) {
+	TSLanguage const *l = ts_parser_language(parser_assert(L, 1)->parser);
+	lua_Integer id = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, id >= 0, 2, "expected a non-negative integer (a FieldId)");
+	char const *name = ts_language_field_name_for_id(l, (TSFieldId)id);
+	if (name) lua_pushstring(L, name);
+	else lua_pushnil(L);
+	return 1;
+}
+
 static const luaL_Reg parser_methods[] = {
 	{"reset", parser_reset},
 	{"set_ranges", parser_set_ranges},
@@ -884,6 +908,8 @@ static const luaL_Reg parser_methods[] = {
 	{"language_field_count", parser_language_field_count},
 	{"language_abi_version", parser_language_abi_version},
 	{"language_metadata", parser_language_metadata},
+	{"language_field_id_for_name", parser_language_field_id_for_name},
+	{"language_name_for_field_id", parser_language_name_for_field_id},
 
 	{NULL, NULL}};
 static const luaL_Reg parser_metamethods[] = {

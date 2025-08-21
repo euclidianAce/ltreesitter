@@ -44,6 +44,8 @@ h2 {
 <br>
 <a href="index.html#Cursor.current_descendant_index">Cursor.current_descendant_index</a>
 <br>
+<a href="index.html#Cursor.current_field_id">Cursor.current_field_id</a>
+<br>
 <a href="index.html#Cursor.current_field_name">Cursor.current_field_name</a>
 <br>
 <a href="index.html#Cursor.current_node">Cursor.current_node</a>
@@ -68,6 +70,8 @@ h2 {
 <h4>Node</h4>
 <p>
 <a href="index.html#Node.child">Node.child</a>
+<br>
+<a href="index.html#Node.child_by_field_id">Node.child_by_field_id</a>
 <br>
 <a href="index.html#Node.child_by_field_name">Node.child_by_field_name</a>
 <br>
@@ -128,9 +132,13 @@ h2 {
 <br>
 <a href="index.html#Parser.language_field_count">Parser.language_field_count</a>
 <br>
+<a href="index.html#Parser.language_field_id_for_name">Parser.language_field_id_for_name</a>
+<br>
 <a href="index.html#Parser.language_metadata">Parser.language_metadata</a>
 <br>
 <a href="index.html#Parser.language_name">Parser.language_name</a>
+<br>
+<a href="index.html#Parser.language_name_for_field_id">Parser.language_name_for_field_id</a>
 <br>
 <a href="index.html#Parser.language_state_count">Parser.language_state_count</a>
 <br>
@@ -187,6 +195,8 @@ h2 {
 <p>Get the depth of the cursor's current node relative to the node the cursor<br>   was constructed with</p><br>
 <h2><a name="Cursor.current_descendant_index"><code>Cursor.current_descendant_index: function(Cursor): integer</code></a></h2>
 <p>Get the cursor's current node index</p><br>
+<h2><a name="Cursor.current_field_id"><code>Cursor.current_field_id: function(Cursor): FieldId</code></a></h2>
+<p>Get the field id of the given cursor's current node<br><br>   May return nil</p><br>
 <h2><a name="Cursor.current_field_name"><code>Cursor.current_field_name: function(Cursor): string</code></a></h2>
 <p>Get the field name of the current node under the cursor</p><br>
 <h2><a name="Cursor.current_node"><code>Cursor.current_node: function(Cursor): Node</code></a></h2>
@@ -210,6 +220,8 @@ h2 {
 <br>
 <h2><a name="Node.child"><code>Node.child: function(Node, idx: integer): Node</code></a></h2>
 <p>Get the node's idx'th child (0-indexed)</p><br>
+<h2><a name="Node.child_by_field_id"><code>Node.child_by_field_id: function(Node, FieldId): Node</code></a></h2>
+<p>Get a node's child given a field id</p><br>
 <h2><a name="Node.child_by_field_name"><code>Node.child_by_field_name: function(Node, string): Node</code></a></h2>
 <p>Get a node's child given a field name</p><br>
 <h2><a name="Node.child_count"><code>Node.child_count: function(Node): integer</code></a></h2>
@@ -265,10 +277,14 @@ h2 {
 <p>Get the ABI version number for the given parser's language</p><br>
 <h2><a name="Parser.language_field_count"><code>Parser.language_field_count: function(Parser): integer</code></a></h2>
 <p>Get the number of distinct field names in the given parser's language</p><br>
+<h2><a name="Parser.language_field_id_for_name"><code>Parser.language_field_id_for_name: function(Parser, string): FieldId</code></a></h2>
+<p>Get the numeric id for the given field name</p><br>
 <h2><a name="Parser.language_metadata"><code>Parser.language_metadata: function(Parser): LanguageMetadata</code></a></h2>
 <p>Get the metadata for the given parser's language. This information relies on<br>   the language author providing the correct data in the language's<br>   `tree-sitter.json`<br><br>   May return nil</p><br>
 <h2><a name="Parser.language_name"><code>Parser.language_name: function(Parser): string</code></a></h2>
 <p>Get the name of the language this parser is for. May return nil.</p><br>
+<h2><a name="Parser.language_name_for_field_id"><code>Parser.language_name_for_field_id: function(Parser, FieldId): string</code></a></h2>
+<p>Get the name for a numeric field id</p><br>
 <h2><a name="Parser.language_state_count"><code>Parser.language_state_count: function(Parser): integer</code></a></h2>
 <p>Get the number of valid states in the given parser's language</p><br>
 <h2><a name="Parser.language_symbol_count"><code>Parser.language_symbol_count: function(Parser): integer</code></a></h2>
