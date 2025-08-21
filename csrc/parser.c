@@ -782,6 +782,86 @@ static int get_version(lua_State *L) {
 	return 1;
 }
 
+// Language methods:
+//
+// I've made the conscious decision to not expost `TSLanguage` objects
+// directly, so methods are exposed through Parsers
+
+/* @teal-export Parser.language_name: function(Parser): string [[
+   Get the name of the language this parser is for. May return nil.
+]] */
+static int parser_language_name(lua_State *L) {
+	ltreesitter_Parser *p = parser_assert(L, 1);
+	char const *name = ts_language_name(ts_parser_language(p->parser));
+	if (name) lua_pushstring(L, name);
+	else lua_pushnil(L);
+	return 1;
+}
+
+/* @teal-export Parser.language_symbol_count: function(Parser): integer [[
+   Get the number of distinct node types in the given parser's language
+]] */
+static int parser_language_symbol_count(lua_State *L) {
+	ltreesitter_Parser *p = parser_assert(L, 1);
+	lua_pushinteger(L, ts_language_symbol_count(ts_parser_language(p->parser)));
+	return 1;
+}
+
+/* @teal-export Parser.language_state_count: function(Parser): integer [[
+   Get the number of valid states in the given parser's language
+]] */
+static int parser_language_state_count(lua_State *L) {
+	ltreesitter_Parser *p = parser_assert(L, 1);
+	lua_pushinteger(L, ts_language_state_count(ts_parser_language(p->parser)));
+	return 1;
+}
+
+/* @teal-export Parser.language_field_count: function(Parser): integer [[
+	Get the number of distinct field names in the given parser's language
+]] */
+static int parser_language_field_count(lua_State *L) {
+	ltreesitter_Parser *p = parser_assert(L, 1);
+	lua_pushinteger(L, ts_language_field_count(ts_parser_language(p->parser)));
+	return 1;
+}
+
+/* @teal-export Parser.language_abi_version: function(Parser): integer [[
+   Get the ABI version number for the given parser's language
+]] */
+static int parser_language_abi_version(lua_State *L) {
+	ltreesitter_Parser *p = parser_assert(L, 1);
+	lua_pushinteger(L, ts_language_abi_version(ts_parser_language(p->parser)));
+	return 1;
+}
+
+/* @teal-inline [[
+   interface LanguageMetadata
+      major_version: integer
+      minor_version: integer
+      patch_version: integer
+   end
+]] */
+/* @teal-export Parser.language_metadata: function(Parser): LanguageMetadata [[
+   Get the metadata for the given parser's language. This information relies on
+   the language author providing the correct data in the language's
+   `tree-sitter.json`
+
+   May return nil
+]] */
+static int parser_language_metadata(lua_State *L) {
+	ltreesitter_Parser *p = parser_assert(L, 1);
+	TSLanguageMetadata const *meta = ts_language_metadata(ts_parser_language(p->parser));
+	if (meta) {
+		lua_createtable(L, 0, 3);
+		pushinteger(L, meta->major_version); lua_setfield(L, -2, "major_version");
+		pushinteger(L, meta->minor_version); lua_setfield(L, -2, "minor_version");
+		pushinteger(L, meta->patch_version); lua_setfield(L, -2, "patch_version");
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
 static const luaL_Reg parser_methods[] = {
 	{"reset", parser_reset},
 	{"set_ranges", parser_set_ranges},
@@ -791,6 +871,13 @@ static const luaL_Reg parser_methods[] = {
 	{"parse_string", parser_parse_string},
 	{"parse_with", parser_parse_with},
 	{"query", make_query},
+
+	{"language_name", parser_language_name},
+	{"language_symbol_count", parser_language_symbol_count},
+	{"language_state_count", parser_language_state_count},
+	{"language_field_count", parser_language_field_count},
+	{"language_abi_version", parser_language_abi_version},
+	{"language_metadata", parser_language_metadata},
 
 	{NULL, NULL}};
 static const luaL_Reg parser_metamethods[] = {

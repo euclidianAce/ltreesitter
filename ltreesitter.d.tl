@@ -45,6 +45,12 @@ local record ltreesitter
    record Parser is userdata
       get_ranges: function(Parser): {Range}
       get_version: function(Parser): integer
+      language_abi_version: function(Parser): integer
+      language_field_count: function(Parser): integer
+      language_metadata: function(Parser): LanguageMetadata
+      language_name: function(Parser): string
+      language_state_count: function(Parser): integer
+      language_symbol_count: function(Parser): integer
       parse_string: function(Parser, string, ?Encoding, ?Tree): Tree
       parse_with: function(
    Parser,
@@ -103,6 +109,12 @@ local record ltreesitter
 
       start_point: Point
       end_point: Point
+   end
+
+   interface LanguageMetadata
+      major_version: integer
+      minor_version: integer
+      patch_version: integer
    end
 
    interface TreeEdit

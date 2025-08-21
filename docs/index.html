@@ -65,8 +65,6 @@ h2 {
 <a href="index.html#Cursor.reset_to">Cursor.reset_to</a>
 <br>
 </p>
-</td>
-<td valign=top>
 <h4>Node</h4>
 <p>
 <a href="index.html#Node.child">Node.child</a>
@@ -122,6 +120,18 @@ h2 {
 <br>
 <a href="index.html#Parser.get_version">Parser.get_version</a>
 <br>
+<a href="index.html#Parser.language_abi_version">Parser.language_abi_version</a>
+<br>
+<a href="index.html#Parser.language_field_count">Parser.language_field_count</a>
+<br>
+<a href="index.html#Parser.language_metadata">Parser.language_metadata</a>
+<br>
+<a href="index.html#Parser.language_name">Parser.language_name</a>
+<br>
+<a href="index.html#Parser.language_state_count">Parser.language_state_count</a>
+<br>
+<a href="index.html#Parser.language_symbol_count">Parser.language_symbol_count</a>
+<br>
 <a href="index.html#Parser.parse_string">Parser.parse_string</a>
 <br>
 <a href="index.html#Parser.parse_with">Parser.parse_with</a>
@@ -146,6 +156,8 @@ h2 {
 <a href="index.html#Query.with">Query.with</a>
 <br>
 </p>
+</td>
+<td valign=top>
 <h4>Tree</h4>
 <p>
 <a href="index.html#Tree.copy">Tree.copy</a>
@@ -241,6 +253,18 @@ h2 {
 <p>Get the ranges of text that the parser will include when parsing</p><br>
 <h2><a name="Parser.get_version"><code>Parser.get_version: function(Parser): integer</code></a></h2>
 <p>get the api version of the parser's language</p><br>
+<h2><a name="Parser.language_abi_version"><code>Parser.language_abi_version: function(Parser): integer</code></a></h2>
+<p>Get the ABI version number for the given parser's language</p><br>
+<h2><a name="Parser.language_field_count"><code>Parser.language_field_count: function(Parser): integer</code></a></h2>
+<p>Get the number of distinct field names in the given parser's language</p><br>
+<h2><a name="Parser.language_metadata"><code>Parser.language_metadata: function(Parser): LanguageMetadata</code></a></h2>
+<p>Get the metadata for the given parser's language. This information relies on<br>   the language author providing the correct data in the language's<br>   `tree-sitter.json`<br><br>   May return nil</p><br>
+<h2><a name="Parser.language_name"><code>Parser.language_name: function(Parser): string</code></a></h2>
+<p>Get the name of the language this parser is for. May return nil.</p><br>
+<h2><a name="Parser.language_state_count"><code>Parser.language_state_count: function(Parser): integer</code></a></h2>
+<p>Get the number of valid states in the given parser's language</p><br>
+<h2><a name="Parser.language_symbol_count"><code>Parser.language_symbol_count: function(Parser): integer</code></a></h2>
+<p>Get the number of distinct node types in the given parser's language</p><br>
 <h2><a name="Parser.parse_string"><code>Parser.parse_string: function(Parser, string, ?Encoding, ?Tree): Tree</code></a></h2>
 <p>Uses the given parser to parse the string<br><br>   If <code>Tree</code> is provided then it will be used to create a new updated tree<br>   (but it is the responsibility of the programmer to make the correct <code>Tree:edit</code> calls)</p><br>
 <h2><a name="Parser.parse_with"><code>Parser.parse_with: function(
