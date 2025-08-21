@@ -4,65 +4,70 @@ local record ltreesitter
    -- Exports
 
    record Cursor is userdata
-      current_field_name: function(Cursor): string 
-      current_node: function(Cursor): Node 
-      goto_first_child: function(Cursor): boolean 
-      goto_first_child_for_byte: function(Cursor, integer): integer 
-      goto_next_sibling: function(Cursor): boolean 
-      goto_parent: function(Cursor): boolean 
-      reset: function(Cursor, Node) 
+      copy: function(Cursor): Cursor
+      current_depth: function(Cursor): integer
+      current_descendant_index: function(Cursor): integer
+      current_field_name: function(Cursor): string
+      current_node: function(Cursor): Node
+      goto_descendant: function(Cursor, integer)
+      goto_first_child: function(Cursor): boolean
+      goto_first_child_for_byte: function(Cursor, integer): integer
+      goto_first_child_for_point: function(Cursor, Point): integer
+      goto_next_sibling: function(Cursor): boolean
+      goto_parent: function(Cursor): boolean
+      reset: function(Cursor, Node)
+      reset_to: function(Cursor, Cursor)
    end
    record Node is userdata
-      child: function(Node, idx: integer): Node 
-      child_by_field_name: function(Node, string): Node 
-      child_count: function(Node): integer 
-      children: function(Node): function(): Node 
-      create_cursor: function(Node): Cursor 
-      end_byte: function(Node): integer 
-      end_point: function(Node): Point 
-      is_extra: function(Node): boolean 
-      is_missing: function(Node): boolean 
-      is_named: function(Node): boolean 
-      name: function(Node): string 
-      named_child: function(Node, idx: integer): Node 
-      named_child_count: function(Node): integer 
-      named_children: function(Node): function(): Node 
-      next_named_sibling: function(Node): Node 
-      next_sibling: function(Node): Node 
-      prev_named_sibling: function(Node): Node 
-      prev_sibling: function(Node): Node 
-      source: function(Node): string 
-      start_byte: function(Node): integer 
-      start_point: function(Node): Point 
-      type: function(Node): string 
+      child: function(Node, idx: integer): Node
+      child_by_field_name: function(Node, string): Node
+      child_count: function(Node): integer
+      children: function(Node): function(): Node
+      create_cursor: function(Node): Cursor
+      end_byte: function(Node): integer
+      end_point: function(Node): Point
+      is_extra: function(Node): boolean
+      is_missing: function(Node): boolean
+      is_named: function(Node): boolean
+      name: function(Node): string
+      named_child: function(Node, idx: integer): Node
+      named_child_count: function(Node): integer
+      named_children: function(Node): function(): Node
+      next_named_sibling: function(Node): Node
+      next_sibling: function(Node): Node
+      prev_named_sibling: function(Node): Node
+      prev_sibling: function(Node): Node
+      source: function(Node): string
+      start_byte: function(Node): integer
+      start_point: function(Node): Point
+      type: function(Node): string
    end
    record Parser is userdata
-      get_ranges: function(Parser): {Range} 
-      get_version: function(Parser): integer 
-      parse_string: function(Parser, string, ?Encoding, ?Tree): Tree 
+      get_ranges: function(Parser): {Range}
+      get_version: function(Parser): integer
+      parse_string: function(Parser, string, ?Encoding, ?Tree): Tree
       parse_with: function(
    Parser,
    reader: (function(integer, Point): string),
    progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
    encoding?: Encoding,
    old_tree?: Tree
-   ): Tree 
-      query: function(Parser, string): Query 
-      reset: function(Parser) 
-      set_ranges: function(Parser, {Range}): boolean 
-      set_timeout: function(Parser, integer) 
+   ): Tree
+      query: function(Parser, string): Query
+      reset: function(Parser)
+      set_ranges: function(Parser, {Range}): boolean
    end
    record Query is userdata
-      capture: function(Query, Node, start?: integer | Point, end_?: integer | Point): function(): (Node, string) 
-      exec: function(Query, Node, start?: integer | Point, end_?: integer | Point) 
-      match: function(Query, Node, start?: integer | Point, end_?: integer | Point): function(): Match 
-      source: function(Query): string 
-      with: function(Query, {string:function(...: string | Node | {Node}): any...}): Query 
+      capture: function(Query, Node, start?: integer | Point, end_?: integer | Point): function(): (Node, string)
+      exec: function(Query, Node, start?: integer | Point, end_?: integer | Point)
+      match: function(Query, Node, start?: integer | Point, end_?: integer | Point): function(): Match
+      source: function(Query): string
+      with: function(Query, {string:function(...: string | Node | {Node}): any...}): Query
    end
    TREE_SITTER_LANGUAGE_VERSION: integer
    TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION: integer
    record Tree is userdata
-      copy: function(Tree): Tree 
+      copy: function(Tree): Tree
       edit: function(
          Tree,
          start_byte: integer,
@@ -74,13 +79,13 @@ local record ltreesitter
          old_end_point_col: integer,
          new_end_point_row: integer,
          new_end_point_col: integer
-      ) 
-      edit_s: function(Tree, TreeEdit) 
-      get_changed_ranges: function(old: Tree, new: Tree): {Range} 
-      root: function(Tree): Node 
+      )
+      edit_s: function(Tree, TreeEdit)
+      get_changed_ranges: function(old: Tree, new: Tree): {Range}
+      root: function(Tree): Node
    end
-   load: function(file_name: string, language_name: string): Parser, string 
-   require: function(library_file_name: string, language_name?: string): Parser, string 
+   load: function(file_name: string, language_name: string): Parser, string
+   require: function(library_file_name: string, language_name?: string): Parser, string
    tree_sitter_version: string
    version: string
 
@@ -90,7 +95,6 @@ local record ltreesitter
       "utf-8"
       "utf-16le"
       "utf-16be"
-      "custom"
    end
 
    interface Range

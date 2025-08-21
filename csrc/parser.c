@@ -647,19 +647,6 @@ static int parser_reset(lua_State *L) {
    end
 ]]*/
 
-static TSPoint topoint(lua_State *L, const int idx) {
-	int const absidx = absindex(L, idx);
-	expect_field(L, absidx, "row", LUA_TNUMBER);
-	expect_field(L, absidx, "column", LUA_TNUMBER);
-	uint32_t const row = lua_tonumber(L, -2);
-	uint32_t const col = lua_tonumber(L, -1);
-	lua_pop(L, 2);
-	return (TSPoint){
-		.row = row,
-		.column = col,
-	};
-}
-
 /* @teal-export Parser.set_ranges: function(Parser, {Range}): boolean [[
    Sets the ranges that <code>Parser</code> will include when parsing, so you don't have to parse an entire document, but the ranges in the tree will still match the document.
    The array of <code>Range</code>s must satisfy the following relationship: for a positive integer <code>i</code> within the length of <code>ranges: {Range}</code>:

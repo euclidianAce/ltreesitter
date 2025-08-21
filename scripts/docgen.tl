@@ -83,7 +83,7 @@ local directives: {string:function(ts.Node, string, string)} = {
       local documentation: string
       if doc_s then
          documentation = trim(typedef:sub(doc_s+2, doc_e-2)):gsub("\n", "<br>")
-         typedef = typedef:sub(1, doc_s-1)
+         typedef = typedef:sub(1, doc_s-1):gsub("%s*$", "")
       end
       typedef = typedef:gsub("[*/]", "")
       if name then
@@ -99,7 +99,7 @@ local directives: {string:function(ts.Node, string, string)} = {
    ["@teal-inline"] = function(_n: ts.Node, content: string, _fname: string)
       --local start <const> = n:start_point()
       for inline_content in content:gmatch("@teal%-inline%s*%[%[(.-)%]%]") do
-         ti(inlines, (inline_content:gsub("\n*$", ""))) -- .. " -- " .. fname .. ":" .. math.floor(start.row))
+         ti(inlines, (inline_content:gsub("%s*$", ""))) -- .. " -- " .. fname .. ":" .. math.floor(start.row))
       end
    end,
 
