@@ -464,6 +464,20 @@ static int node_tree_cursor_create(lua_State *L) {
 	return 1;
 }
 
+/* @teal-export Node.parse_state: function(Node): StateId [[ Get this node's parse state ]] */
+static int node_parse_state(lua_State *L) {
+	TSNode *n = node_assert(L, 1);
+	lua_pushinteger(L, ts_node_parse_state(*n));
+	return 1;
+}
+
+/* @teal-export Node.next_parse_state: function(Node): StateId [[ Get the parse state after this node ]] */
+static int node_next_parse_state(lua_State *L) {
+	TSNode *n = node_assert(L, 1);
+	lua_pushinteger(L, ts_node_next_parse_state(*n));
+	return 1;
+}
+
 static const luaL_Reg node_methods[] = {
 	{"child", node_child},
 	{"child_by_field_name", node_child_by_field_name},
@@ -487,6 +501,10 @@ static const luaL_Reg node_methods[] = {
 	{"start_byte", node_start_byte},
 	{"start_point", node_start_point},
 	{"type", node_type},
+
+	{"parse_state", node_parse_state},
+	{"next_parse_state", node_next_parse_state},
+
 	{NULL, NULL}};
 static const luaL_Reg node_metamethods[] = {
 	{"__eq", node_eq},

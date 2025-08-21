@@ -34,7 +34,9 @@ local record ltreesitter
       named_child_count: function(Node): integer
       named_children: function(Node): function(): Node
       next_named_sibling: function(Node): Node
+      next_parse_state: function(Node): StateId
       next_sibling: function(Node): Node
+      parse_state: function(Node): StateId
       prev_named_sibling: function(Node): Node
       prev_sibling: function(Node): Node
       source: function(Node): string
@@ -116,6 +118,10 @@ local record ltreesitter
       minor_version: integer
       patch_version: integer
    end
+
+   type StateId = integer
+   type Symbol = integer
+   type FieldId = integer
 
    interface TreeEdit
       start_byte: integer

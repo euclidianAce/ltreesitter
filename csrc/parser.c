@@ -862,6 +862,12 @@ static int parser_language_metadata(lua_State *L) {
 	return 1;
 }
 
+/* @teal-inline [[
+   type StateId = integer
+   type Symbol = integer
+   type FieldId = integer
+]] */
+
 static const luaL_Reg parser_methods[] = {
 	{"reset", parser_reset},
 	{"set_ranges", parser_set_ranges},
