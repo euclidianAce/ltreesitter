@@ -23,14 +23,6 @@ jobs:
         with:
           submodules: "recursive"
 
-      # TODO: are there actions to install parsers anywhere?
-      - name: Install tree-sitter-c
-        run: |
-          git clone --depth=1 https://github.com/tree-sitter/tree-sitter-c.git
-          cd tree-sitter-c
-          mkdir -p ~/.tree-sitter/bin
-          cc src/parser.c -shared -fPIC -o ~/.tree-sitter/bin/c.so
-
       - name: Install Lua
         uses: hishamhm/gh-actions-lua@master
         with:
@@ -39,12 +31,23 @@ jobs:
       - name: Install LuaRocks
         uses: hishamhm/gh-actions-luarocks@master
 
-      - name: Build
+      - name: Build ltreesitter
         run: |
-          luarocks install busted
           luarocks make
 
-      - name: Test
+      # TODO: are there actions to install parsers anywhere?
+      - name: Install tree-sitter-c
+        run: |
+          git clone --depth=1 https://github.com/tree-sitter/tree-sitter-c.git
+          cd tree-sitter-c
+          mkdir -p ~/.tree-sitter/bin
+          cc src/parser.c -shared -fPIC -o ~/.tree-sitter/bin/c.so
+
+      - name: Install busted
+        run: |
+          luarocks install busted
+
+      - name: Run tests
         run: |
           env LTREESITTER_TEST_LOAD_C_PARSER=~/.tree-sitter/bin/c.so busted -o utfTerminal
 
