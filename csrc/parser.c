@@ -955,7 +955,7 @@ static int parser_language_supertypes(lua_State *L) {
 	lua_createtable(L, length, 0);
 	for (uint32_t i = 0; i < length; ++i) {
 		pushinteger(L, syms[i]);
-		lua_rawseti(L, -1, i + 1);
+		lua_rawseti(L, -2, i + 1);
 	}
 	return 1;
 }
@@ -974,7 +974,7 @@ static int parser_language_subtypes(lua_State *L) {
 	lua_createtable(L, length, 0);
 	for (uint32_t i = 0; i < length; ++i) {
 		pushinteger(L, syms[i]);
-		lua_rawseti(L, -1, i + 1);
+		lua_rawseti(L, -2, i + 1);
 	}
 	return 1;
 }
