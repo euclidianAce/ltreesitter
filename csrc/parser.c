@@ -390,10 +390,6 @@ static int parser_gc(lua_State *L) {
 	return 0;
 }
 
-ltreesitter_Parser *parser_check(lua_State *L, int idx) {
-	return luaL_checkudata(L, idx, LTREESITTER_PARSER_METATABLE_NAME);
-}
-
 // TODO: #CustomEncoding via "custom"
 // not possible until https://github.com/tree-sitter/tree-sitter/issues/4721
 // is resolved
@@ -448,7 +444,7 @@ static TSInputEncoding encoding_from_str(lua_State *L, int str_index) {
 ]] */
 static int parser_parse_string(lua_State *L) {
 	lua_settop(L, 4);
-	ltreesitter_Parser *p = parser_check(L, 1);
+	ltreesitter_Parser *p = parser_assert(L, 1);
 	size_t len;
 	char const *to_parse = luaL_checklstring(L, 2, &len);
 
@@ -572,7 +568,7 @@ static char const *read_callback(void *payload, uint32_t byte_index, TSPoint pos
 ]] */
 static int parser_parse_with(lua_State *L) {
 	lua_settop(L, 5);
-	ltreesitter_Parser *const p = parser_check(L, 1);
+	ltreesitter_Parser *const p = parser_assert(L, 1);
 	TSTree *old_tree = NULL;
 	TSInputEncoding encoding = encoding_from_str(L, 4);
 	if (!lua_isnil(L, 5)) {
@@ -636,7 +632,7 @@ static int parser_parse_with(lua_State *L) {
    Reset the parser, causing the next parse to start from the beginning
 ]] */
 static int parser_reset(lua_State *L) {
-	ltreesitter_Parser *p = parser_check(L, 1);
+	ltreesitter_Parser *p = parser_assert(L, 1);
 	ts_parser_reset(p->parser);
 	return 0;
 }
@@ -675,7 +671,7 @@ static TSPoint topoint(lua_State *L, const int idx) {
 ]]*/
 static int parser_set_ranges(lua_State *L) {
 	lua_settop(L, 2);
-	ltreesitter_Parser *p = parser_check(L, 1);
+	ltreesitter_Parser *p = parser_assert(L, 1);
 
 	if (lua_isnil(L, 2)) {
 		lua_pushboolean(L, ts_parser_set_included_ranges(p->parser, NULL, 0));
@@ -750,7 +746,7 @@ static void push_range(lua_State *L, TSRange const *range) {
    Get the ranges of text that the parser will include when parsing
 ]] */
 static int parser_get_ranges(lua_State *L) {
-	ltreesitter_Parser *p = parser_check(L, 1);
+	ltreesitter_Parser *p = parser_assert(L, 1);
 
 	uint32_t length = 0;
 	TSRange const *ranges = ts_parser_included_ranges(p->parser, &length);
@@ -768,7 +764,7 @@ static int parser_get_ranges(lua_State *L) {
 ]] */
 static int make_query(lua_State *L) {
 	lua_settop(L, 2);
-	ltreesitter_Parser *p = parser_check(L, 1);
+	ltreesitter_Parser *p = parser_assert(L, 1);
 	size_t len;
 	char const *lua_query_src = luaL_checklstring(L, 2, &len);
 	uint32_t err_offset = 0;
@@ -794,7 +790,7 @@ static int make_query(lua_State *L) {
    get the api version of the parser's language
 ]] */
 static int get_version(lua_State *L) {
-	ltreesitter_Parser *p = parser_check(L, 1);
+	ltreesitter_Parser *p = parser_assert(L, 1);
 	pushinteger(L, ts_language_version(ts_parser_language(p->parser)));
 	return 1;
 }

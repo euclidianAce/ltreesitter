@@ -15,10 +15,6 @@
 
 #include <tree_sitter/api.h>
 
-TSNode *node_check(lua_State *L, int idx) {
-	return luaL_checkudata(L, idx, LTREESITTER_NODE_METATABLE_NAME);
-}
-
 #define internal_err "ltreesitter internal error: node kept object is not a tree"
 
 // ( [node_idx]=any | -- tree )
@@ -33,7 +29,7 @@ ltreesitter_Tree *node_push_tree(lua_State *L, int node_idx) {
    Get the type of the given node
 ]] */
 static int node_type(lua_State *L) {
-	TSNode n = *node_check(L, 1);
+	TSNode n = *node_assert(L, 1);
 	lua_pushstring(L, ts_node_type(n));
 	return 1;
 }
@@ -42,7 +38,7 @@ static int node_type(lua_State *L) {
    Get the byte of the source string that the given node starts at
 ]] */
 static int node_start_byte(lua_State *L) {
-	TSNode n = *node_check(L, 1);
+	TSNode n = *node_assert(L, 1);
 	pushinteger(L, ts_node_start_byte(n));
 	return 1;
 }
@@ -51,7 +47,7 @@ static int node_start_byte(lua_State *L) {
    Get the byte of the source string that the given node ends at
 ]] */
 static int node_end_byte(lua_State *L) {
-	TSNode n = *node_check(L, 1);
+	TSNode n = *node_assert(L, 1);
 	pushinteger(L, ts_node_end_byte(n));
 	return 1;
 }
@@ -67,7 +63,7 @@ static int node_end_byte(lua_State *L) {
    Get the row and column of where the given node starts
 ]] */
 static int node_start_point(lua_State *L) {
-	TSNode n = *node_check(L, 1);
+	TSNode n = *node_assert(L, 1);
 	TSPoint p = ts_node_start_point(n);
 	lua_newtable(L);
 
@@ -84,7 +80,7 @@ static int node_start_point(lua_State *L) {
    Get the row and column of where the given node ends
 ]] */
 static int node_end_point(lua_State *L) {
-	TSNode n = *node_check(L, 1);
+	TSNode n = *node_assert(L, 1);
 	TSPoint p = ts_node_end_point(n);
 	lua_newtable(L);
 
@@ -100,7 +96,7 @@ static int node_end_point(lua_State *L) {
    Get whether or not the current node is named
 ]] */
 static int node_is_named(lua_State *L) {
-	TSNode n = *node_check(L, 1);
+	TSNode n = *node_assert(L, 1);
 	lua_pushboolean(L, ts_node_is_named(n));
 	return 1;
 }
@@ -109,7 +105,7 @@ static int node_is_named(lua_State *L) {
    Get whether or not the current node is missing
 ]] */
 static int node_is_missing(lua_State *L) {
-	TSNode n = *node_check(L, 1);
+	TSNode n = *node_assert(L, 1);
 	lua_pushboolean(L, ts_node_is_missing(n));
 	return 1;
 }
@@ -118,7 +114,7 @@ static int node_is_missing(lua_State *L) {
    Get whether or not the current node is extra
 ]] */
 static int node_is_extra(lua_State *L) {
-	TSNode n = *node_check(L, 1);
+	TSNode n = *node_assert(L, 1);
 	lua_pushboolean(L, ts_node_is_extra(n));
 	return 1;
 }
@@ -139,15 +135,13 @@ void node_push(lua_State *L, int tree_idx, TSNode n) {
    Get the node's idx'th child (0-indexed)
 ]] */
 static int node_child(lua_State *L) {
-	TSNode *parent = node_check(L, 1);
+	TSNode *parent = node_assert(L, 1);
 	uint32_t const idx = luaL_checknumber(L, 2);
 	if (idx >= ts_node_child_count(*parent)) {
 		lua_pushnil(L);
 	} else {
 		push_kept(L, 1);
-		node_push(
-			L, -1,
-			ts_node_child(*parent, (uint32_t)luaL_checknumber(L, 2)));
+		node_push(L, -1, ts_node_child(*parent, idx));
 	}
 	return 1;
 }
@@ -156,7 +150,7 @@ static int node_child(lua_State *L) {
    Get the number of children a node has
 ]] */
 static int node_child_count(lua_State *L) {
-	TSNode n = *node_check(L, 1);
+	TSNode n = *node_assert(L, 1);
 	pushinteger(L, ts_node_child_count(n));
 	return 1;
 }
@@ -165,7 +159,7 @@ static int node_child_count(lua_State *L) {
    Get the node's idx'th named child (0-indexed)
 ]] */
 static int node_named_child(lua_State *L) {
-	TSNode *parent = node_check(L, 1);
+	TSNode *parent = node_assert(L, 1);
 	uint32_t const idx = luaL_checknumber(L, 2);
 	if (idx >= ts_node_named_child_count(*parent)) {
 		lua_pushnil(L);
@@ -180,7 +174,7 @@ static int node_named_child(lua_State *L) {
    Get the number of named children a node has
 ]] */
 static int node_named_child_count(lua_State *L) {
-	TSNode n = *node_check(L, 1);
+	TSNode n = *node_assert(L, 1);
 	pushinteger(L, ts_node_named_child_count(n));
 	return 1;
 }
@@ -206,7 +200,7 @@ static int node_children_iterator(lua_State *L) {
 
 static int node_named_children_iterator(lua_State *L) {
 	lua_settop(L, 0);
-	TSNode *n = node_check(L, lua_upvalueindex(1));
+	TSNode *n = node_assert(L, lua_upvalueindex(1));
 
 	uint32_t const idx = lua_tonumber(L, lua_upvalueindex(3));
 	pushinteger(L, idx + 1);
@@ -229,7 +223,7 @@ static int node_named_children_iterator(lua_State *L) {
 ]] */
 static int node_children(lua_State *L) {
 	lua_settop(L, 1);
-	TSNode *n = node_check(L, 1);
+	TSNode *n = node_assert(L, 1);
 	push_kept(L, 1);
 	TSTreeCursor *const c = tree_cursor_push(L, 2, *n);
 	bool const b = ts_tree_cursor_goto_first_child(c);
@@ -242,7 +236,7 @@ static int node_children(lua_State *L) {
    Iterate over a node's named children
 ]] */
 static int node_named_children(lua_State *L) {
-	node_check(L, 1);
+	node_assert(L, 1);
 	push_kept(L, 1);
 	pushinteger(L, 0);
 
@@ -254,7 +248,7 @@ static int node_named_children(lua_State *L) {
    Get a node's next sibling
 ]] */
 static int node_next_sibling(lua_State *L) {
-	TSNode *const n = node_check(L, 1);
+	TSNode *const n = node_assert(L, 1);
 	push_kept(L, 1);
 	TSNode sibling = ts_node_next_sibling(*n);
 	if (ts_node_is_null(sibling)) {
@@ -269,7 +263,7 @@ static int node_next_sibling(lua_State *L) {
    Get a node's previous sibling
 ]] */
 static int node_prev_sibling(lua_State *L) {
-	TSNode *const n = node_check(L, 1);
+	TSNode *const n = node_assert(L, 1);
 	push_kept(L, 1);
 	TSNode sibling = ts_node_prev_sibling(*n);
 	if (ts_node_is_null(sibling)) {
@@ -284,7 +278,7 @@ static int node_prev_sibling(lua_State *L) {
    Get a node's next named sibling
 ]] */
 static int node_next_named_sibling(lua_State *L) {
-	TSNode *const n = node_check(L, 1);
+	TSNode *const n = node_assert(L, 1);
 	push_kept(L, 1);
 	TSNode sibling = ts_node_next_named_sibling(*n);
 	if (ts_node_is_null(sibling)) {
@@ -299,7 +293,7 @@ static int node_next_named_sibling(lua_State *L) {
    Get a node's previous named sibling
 ]] */
 static int node_prev_named_sibling(lua_State *L) {
-	TSNode *const n = node_check(L, 1);
+	TSNode *const n = node_assert(L, 1);
 	push_kept(L, 1);
 	TSNode sibling = ts_node_prev_named_sibling(*n);
 	if (ts_node_is_null(sibling)) {
@@ -311,7 +305,7 @@ static int node_prev_named_sibling(lua_State *L) {
 }
 
 static int node_string(lua_State *L) {
-	TSNode n = *node_check(L, 1);
+	TSNode n = *node_assert(L, 1);
 	char *s = ts_node_string(n);
 	lua_pushstring(L, s);
 	free(s);
@@ -319,8 +313,8 @@ static int node_string(lua_State *L) {
 }
 
 static int node_eq(lua_State *L) {
-	TSNode n1 = *node_check(L, 1);
-	TSNode n2 = *node_check(L, 2);
+	TSNode n1 = *node_assert(L, 1);
+	TSNode n2 = *node_assert(L, 2);
 	lua_pushboolean(L, ts_node_eq(n1, n2));
 	return 1;
 }
@@ -334,7 +328,7 @@ static int node_eq(lua_State *L) {
 ]] */
 
 static int node_name(lua_State *L) {
-	TSNode *n = node_check(L, 1);
+	TSNode *n = node_assert(L, 1);
 	if (ts_node_is_null(*n) || !ts_node_is_named(*n)) {
 		lua_pushnil(L);
 		return 1;
@@ -350,7 +344,7 @@ static int node_name(lua_State *L) {
 ]] */
 static int node_child_by_field_name(lua_State *L) {
 	lua_settop(L, 2);
-	TSNode *n = node_check(L, 1);
+	TSNode *n = node_assert(L, 1);
 	char const *name = luaL_checkstring(L, 2);
 
 	TSNode child = ts_node_child_by_field_name(*n, name, strlen(name));
@@ -364,7 +358,7 @@ static int node_child_by_field_name(lua_State *L) {
 }
 
 MaybeOwnedString node_get_source(lua_State *L) { // node
-	TSNode n = *node_check(L, -1);
+	TSNode n = *node_assert(L, -1);
 	ltreesitter_Tree *const tree = node_push_tree(L, -1); // node, tree
 	if (tree->text_or_null_if_function_reader) {
 		uint32_t const start = ts_node_start_byte(n);
@@ -464,7 +458,7 @@ static int node_get_source_method(lua_State *L) {
 ]] */
 static int node_tree_cursor_create(lua_State *L) {
 	lua_settop(L, 1);
-	TSNode *const n = node_check(L, 1);
+	TSNode *const n = node_assert(L, 1);
 	push_kept(L, 1);
 	tree_cursor_push(L, 2, *n);
 	return 1;

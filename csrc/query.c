@@ -23,10 +23,6 @@ static void push_predicate_table(lua_State *L) {
 	push_registry_field(L, predicate_field);
 }
 
-ltreesitter_Query *query_check(lua_State *L, int idx) {
-	return luaL_checkudata(L, idx, LTREESITTER_QUERY_METATABLE_NAME);
-}
-
 static inline void offset_to_pos(char const *src, uint32_t offset, uint32_t *row, uint32_t *col) {
 	*row = *col = 1;
 	for (uint32_t i = 0; i <= offset; ++i) {
@@ -111,9 +107,9 @@ void query_push(
 }
 
 static void push_query_copy(lua_State *L, int query_idx) {
-	ltreesitter_Query *orig = query_check(L, query_idx); // query
+	ltreesitter_Query *orig = query_assert(L, query_idx); // query
 	push_kept(L, query_idx); // query, sourcetext
-	SourceText const *source_text = source_text_check(L, -1);
+	SourceText const *source_text = source_text_assert(L, -1);
 	if (!source_text) {
 		luaL_error(L, "Internal error: Query child was not a SourceText");
 		return;
@@ -144,23 +140,23 @@ static void push_query_copy(lua_State *L, int query_idx) {
 }
 
 static int query_gc(lua_State *L) {
-	ltreesitter_Query *q = query_check(L, 1);
+	ltreesitter_Query *q = query_assert(L, 1);
 	ts_query_delete(q->query);
 	return 1;
 }
 
 static int query_pattern_count(lua_State *L) {
-	TSQuery *q = query_check(L, 1)->query;
+	TSQuery *q = query_assert(L, 1)->query;
 	pushinteger(L, ts_query_pattern_count(q));
 	return 1;
 }
 static int query_capture_count(lua_State *L) {
-	TSQuery *q = query_check(L, 1)->query;
+	TSQuery *q = query_assert(L, 1)->query;
 	pushinteger(L, ts_query_capture_count(q));
 	return 1;
 }
 static int query_string_count(lua_State *L) {
-	TSQuery *q = query_check(L, 1)->query;
+	TSQuery *q = query_assert(L, 1)->query;
 	pushinteger(L, ts_query_string_count(q));
 	return 1;
 }
@@ -361,8 +357,8 @@ deferred:
 static int query_iterator_next_match(lua_State *L) {
 	// upvalues: Query, Node, Cursor
 	int const initial_query_idx = lua_upvalueindex(1);
-	ltreesitter_Query *const q = query_check(L, initial_query_idx);
-	ltreesitter_QueryCursor *c = query_cursor_check(L, lua_upvalueindex(3));
+	ltreesitter_Query *const q = query_assert(L, initial_query_idx);
+	ltreesitter_QueryCursor *c = query_cursor_assert(L, lua_upvalueindex(3));
 	TSQueryMatch m;
 	node_push_tree(L, lua_upvalueindex(2));
 	int const parent_idx = lua_gettop(L);
@@ -439,8 +435,8 @@ static int query_iterator_next_match(lua_State *L) {
 static int query_iterator_next_capture(lua_State *L) {
 	// upvalues: Query, Node, Cursor
 	int const initial_query_idx = lua_upvalueindex(1);
-	ltreesitter_Query *const q = query_check(L, initial_query_idx);
-	TSQueryCursor *c = query_cursor_check(L, lua_upvalueindex(3))->query_cursor;
+	ltreesitter_Query *const q = query_assert(L, initial_query_idx);
+	TSQueryCursor *c = query_cursor_assert(L, lua_upvalueindex(3))->query_cursor;
 	node_push_tree(L, lua_upvalueindex(2));
 	int const parent_idx = lua_gettop(L);
 	TSQueryMatch m;
@@ -517,8 +513,8 @@ static void query_cursor_set_range(lua_State *L, TSQueryCursor *c) {
    </pre>
 ]]*/
 static int query_match_factory(lua_State *L) {
-	ltreesitter_Query *const q = query_check(L, 1);
-	TSNode n = *node_check(L, 2);
+	ltreesitter_Query *const q = query_assert(L, 1);
+	TSNode n = *node_assert(L, 2);
 	TSQueryCursor *c = ts_query_cursor_new();
 	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
 	lua_settop(L, 2);
@@ -546,8 +542,8 @@ static int query_match_factory(lua_State *L) {
    </pre>
 ]]*/
 static int query_capture_factory(lua_State *L) {
-	ltreesitter_Query *const q = query_check(L, 1);
-	TSNode n = *node_check(L, 2);
+	ltreesitter_Query *const q = query_assert(L, 1);
+	TSNode n = *node_assert(L, 2);
 	TSQueryCursor *c = ts_query_cursor_new();
 	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
 	lua_settop(L, 2);
@@ -659,8 +655,8 @@ static int query_copy_with_predicates(lua_State *L) {
    If you'd like to interact with the matches/captures of a query, see the Query.match and Query.capture iterators
 ]]*/
 static int query_exec(lua_State *L) {
-	TSQuery *const q = query_check(L, 1)->query;
-	TSNode n = *node_check(L, 2);
+	TSQuery *const q = query_assert(L, 1)->query;
+	TSNode n = *node_assert(L, 2);
 
 	TSQueryCursor *c = ts_query_cursor_new();
 	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
@@ -681,14 +677,14 @@ static int query_exec(lua_State *L) {
    Gets the source that the query was initialized with
 ]]*/
 static int query_source(lua_State *L) {
-	ltreesitter_Query *q = query_check(L, 1); // query
+	ltreesitter_Query *q = query_assert(L, 1); // query
 	if (!q) {
 		int t = lua_type(L, 1);
 		luaL_error(L, "Expected an ltreesitter.Query, got %s", lua_typename(L, t));
 		return 0;
 	}
 	push_kept(L, -1); // query, source
-	SourceText const *source_text = source_text_check(L, -1);
+	SourceText const *source_text = source_text_assert(L, -1);
 	if (!source_text) {
 		luaL_error(L, "Internal error: Query child was not a SourceText");
 		return 0;

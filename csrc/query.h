@@ -8,8 +8,7 @@
 // ( -- table )
 void query_init_metatable(lua_State *L);
 
-// ( [idx]=any | )
-ltreesitter_Query *query_check(lua_State *L, int idx);
+def_check_assert(ltreesitter_Query, query, LTREESITTER_QUERY_METATABLE_NAME)
 
 // ( -- query )
 void query_push(lua_State *L, const TSLanguage *, char const *src, const size_t src_len, TSQuery *, int kept_index);

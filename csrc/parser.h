@@ -4,7 +4,7 @@
 #include "types.h"
 #include <lua.h>
 
-ltreesitter_Parser *parser_check(lua_State *L, int);
+def_check_assert(ltreesitter_Parser, parser, LTREESITTER_PARSER_METATABLE_NAME)
 
 // ( string ?string -- parser string )
 int parser_load(lua_State *L);

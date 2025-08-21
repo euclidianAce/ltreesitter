@@ -2,6 +2,7 @@
 #define LTREESITTER_TYPES_H
 
 #include <lua.h>
+#include <lauxlib.h>
 #include <tree_sitter/api.h>
 
 #include <stdint.h>
@@ -53,7 +54,8 @@ struct ltreesitter_QueryCursor {
 // will push nil and return NULL on allocation failure
 SourceText *source_text_push_uninitialized(lua_State *, uint32_t length);
 SourceText *source_text_push(lua_State *, uint32_t, char const *);
-SourceText *source_text_check(lua_State *, int index);
 void source_text_init_metatable(lua_State *);
+
+def_check_assert(SourceText, source_text, LTREESITTER_SOURCE_TEXT_METATABLE_NAME)
 
 #endif

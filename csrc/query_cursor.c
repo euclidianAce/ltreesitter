@@ -3,12 +3,8 @@
 #include "object.h"
 #include "types.h"
 
-ltreesitter_QueryCursor *query_cursor_check(lua_State *L, int idx) {
-	return luaL_checkudata(L, idx, LTREESITTER_QUERY_CURSOR_METATABLE_NAME);
-}
-
 static int query_cursor_gc(lua_State *L) {
-	ltreesitter_QueryCursor *c = query_cursor_check(L, 1);
+	ltreesitter_QueryCursor *c = query_cursor_assert(L, 1);
 	ts_query_cursor_delete(c->query_cursor);
 	return 0;
 }

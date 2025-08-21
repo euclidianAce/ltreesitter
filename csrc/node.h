@@ -7,8 +7,7 @@
 // ( -- table )
 void node_init_metatable(lua_State *L);
 
-// ( any -- any )
-TSNode *node_check(lua_State *L, int idx);
+def_check_assert(TSNode, node, LTREESITTER_NODE_METATABLE_NAME)
 
 // ( -- Node )
 void node_push(lua_State *L, int tree_idx, TSNode n);

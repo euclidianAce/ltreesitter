@@ -3,13 +3,9 @@
 #include <string.h>
 #include <lauxlib.h>
 
-SourceText *source_text_check(lua_State *L, int index) {
-	return luaL_checkudata(L, index, LTREESITTER_SOURCE_TEXT_METATABLE_NAME);
-}
-
 #ifdef LOG_GC
 static int ltreesitter_source_text_gc(lua_State *L) {
-	SourceText *st = source_text_check(L, -1);
+	SourceText *st = source_text_assert(L, -1);
 	printf("SourceText %p is being garbage collected\n", (void const *)st);
 	printf("   text: %.*s...\n", (int)st->length >= 10 ? 10 : (int)st->length, st->text);
 	return 0;
@@ -17,12 +13,7 @@ static int ltreesitter_source_text_gc(lua_State *L) {
 #endif
 
 static int ltreesitter_source_text_tostring(lua_State *L) {
-	SourceText *st = source_text_check(L, -1);
-	if (!st) {
-		lua_pushlstring(L, "", 0);
-		return 1;
-	}
-
+	SourceText *st = source_text_assert(L, -1);
 	lua_pushlstring(L, st->text, st->length);
 	return 1;
 }

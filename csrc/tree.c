@@ -77,7 +77,7 @@ static int tree_copy(lua_State *L) {
 	lua_settop(L, 1);
 	ltreesitter_Tree *t = tree_assert(L, 1); // tree
 	push_kept(L, 1); // tree, source text/reader
-	SourceText const *source_text = source_text_check(L, -1);
+	SourceText const *source_text = source_text_assert(L, -1);
 	if (!source_text) {
 		luaL_error(L, "Internal error: Tree child was not a SourceText");
 		return 0;
