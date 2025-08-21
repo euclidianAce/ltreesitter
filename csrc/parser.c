@@ -400,6 +400,13 @@ static int parser_gc(lua_State *L) {
       "utf-16le"
       "utf-16be"
    end
+
+   enum SymbolType
+      "regular"
+      "anonymous"
+      "supertype"
+      "auxiliary"
+   end
 ]]*/
 
 static TSInputEncoding encoding_from_str(lua_State *L, int str_index) {
@@ -892,6 +899,104 @@ static int parser_language_name_for_field_id(lua_State *L) {
 	return 1;
 }
 
+/* @teal-export Parser.language_symbol_for_name: function(Parser, string, is_named: boolean): Symbol [[
+   Get the numerical id for the given node type string
+]] */
+static int parser_language_symbol_for_name(lua_State *L) {
+	TSLanguage const *l = ts_parser_language(parser_assert(L, 1)->parser);
+	size_t len;
+	char const *name = lua_tolstring(L, 2, &len);
+	bool is_named = lua_toboolean(L, 3);
+	TSSymbol sym = ts_language_symbol_for_name(l, name, (uint32_t)len, is_named);
+	if (sym) lua_pushinteger(L, sym);
+	else lua_pushnil(L);
+	return 1;
+}
+
+/* @teal-export Parser.language_symbol_name: function(Parser, Symbol): string [[
+   Get a node type string for the given symbol id
+]] */
+static int parser_language_symbol_name(lua_State *L) {
+	TSLanguage const *l = ts_parser_language(parser_assert(L, 1)->parser);
+	lua_Integer id = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, id >= 0, 2, "expected a non-negative integer (a Symbol)");
+	char const *name = ts_language_symbol_name(l, (TSSymbol)id);
+	if (name) lua_pushstring(L, name);
+	else lua_pushnil(L);
+	return 1;
+}
+
+/* @teal-export Parser.language_symbol_type: function(Parser, Symbol): SymbolType [[
+   Check whether the given node type id belongs to named nodes, anonymous nodes,
+   or hidden nodes
+]] */
+static int parser_language_symbol_type(lua_State *L) {
+	TSLanguage const *l = ts_parser_language(parser_assert(L, 1)->parser);
+	lua_Integer id = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, id >= 0, 2, "expected a non-negative integer (a Symbol)");
+
+	switch (ts_language_symbol_type(l, (TSSymbol)id)) {
+	case TSSymbolTypeRegular:   lua_pushliteral(L, "regular");   break;
+	case TSSymbolTypeAnonymous: lua_pushliteral(L, "anonymous"); break;
+	case TSSymbolTypeSupertype: lua_pushliteral(L, "supertype"); break;
+	case TSSymbolTypeAuxiliary: lua_pushliteral(L, "auxiliary"); break;
+	default:                    lua_pushnil(L); break;
+	}
+	return 1;
+}
+
+/* @teal-export Parser.language_supertypes: function(Parser): {Symbol} [[
+   Get a list of all supertype symbols for the given parser's language
+]] */
+static int parser_language_supertypes(lua_State *L) {
+	TSLanguage const *l = ts_parser_language(parser_assert(L, 1)->parser);
+	uint32_t length;
+	TSSymbol const *syms = ts_language_supertypes(l, &length);
+	lua_createtable(L, length, 0);
+	for (uint32_t i = 0; i < length; ++i) {
+		pushinteger(L, syms[i]);
+		lua_rawseti(L, -1, i + 1);
+	}
+	return 1;
+}
+
+/* @teal-export Parser.language_subtypes: function(Parser, supertype: Symbol): {Symbol} [[
+   Get a list of all supertype symbols for the given parser's language
+]] */
+static int parser_language_subtypes(lua_State *L) {
+	TSLanguage const *l = ts_parser_language(parser_assert(L, 1)->parser);
+	lua_Integer id = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, id >= 0, 2, "expected a non-negative integer (a Symbol)");
+
+	uint32_t length;
+	TSSymbol const *syms = ts_language_subtypes(l, (TSSymbol)id, &length);
+
+	lua_createtable(L, length, 0);
+	for (uint32_t i = 0; i < length; ++i) {
+		pushinteger(L, syms[i]);
+		lua_rawseti(L, -1, i + 1);
+	}
+	return 1;
+}
+
+/* @teal-export Parser.language_next_state: function(Parser, StateId, Symbol): StateId [[
+   Get the next parse state
+]] */
+static int parser_language_next_state(lua_State *L) {
+	TSLanguage const *l = ts_parser_language(parser_assert(L, 1)->parser);
+
+	lua_Integer state_id = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, state_id >= 0, 2, "expected a non-negative integer (a StateId)");
+
+	lua_Integer sym_id = luaL_checkinteger(L, 3);
+	luaL_argcheck(L, sym_id >= 0, 2, "expected a non-negative integer (a Symbol)");
+
+	TSStateId result = ts_language_next_state(l, (TSStateId)state_id, (TSSymbol)sym_id);
+	pushinteger(L, result);
+
+	return 1;
+}
+
 static const luaL_Reg parser_methods[] = {
 	{"reset", parser_reset},
 	{"set_ranges", parser_set_ranges},
@@ -910,6 +1015,12 @@ static const luaL_Reg parser_methods[] = {
 	{"language_metadata", parser_language_metadata},
 	{"language_field_id_for_name", parser_language_field_id_for_name},
 	{"language_name_for_field_id", parser_language_name_for_field_id},
+	{"language_symbol_for_name", parser_language_symbol_for_name},
+	{"language_symbol_name", parser_language_symbol_name},
+	{"language_symbol_type", parser_language_symbol_type},
+	{"language_supertypes", parser_language_supertypes},
+	{"language_subtypes", parser_language_subtypes},
+	{"language_next_state", parser_language_next_state},
 
 	{NULL, NULL}};
 static const luaL_Reg parser_metamethods[] = {

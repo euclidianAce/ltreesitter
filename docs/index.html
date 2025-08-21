@@ -85,6 +85,10 @@ h2 {
 <br>
 <a href="index.html#Node.end_point">Node.end_point</a>
 <br>
+<a href="index.html#Node.grammar_symbol">Node.grammar_symbol</a>
+<br>
+<a href="index.html#Node.grammar_type">Node.grammar_type</a>
+<br>
 <a href="index.html#Node.is_extra">Node.is_extra</a>
 <br>
 <a href="index.html#Node.is_missing">Node.is_missing</a>
@@ -117,6 +121,8 @@ h2 {
 <br>
 <a href="index.html#Node.start_point">Node.start_point</a>
 <br>
+<a href="index.html#Node.symbol">Node.symbol</a>
+<br>
 <a href="index.html#Node.type">Node.type</a>
 <br>
 </p>
@@ -140,9 +146,21 @@ h2 {
 <br>
 <a href="index.html#Parser.language_name_for_field_id">Parser.language_name_for_field_id</a>
 <br>
+<a href="index.html#Parser.language_next_state">Parser.language_next_state</a>
+<br>
 <a href="index.html#Parser.language_state_count">Parser.language_state_count</a>
 <br>
+<a href="index.html#Parser.language_subtypes">Parser.language_subtypes</a>
+<br>
+<a href="index.html#Parser.language_supertypes">Parser.language_supertypes</a>
+<br>
 <a href="index.html#Parser.language_symbol_count">Parser.language_symbol_count</a>
+<br>
+<a href="index.html#Parser.language_symbol_for_name">Parser.language_symbol_for_name</a>
+<br>
+<a href="index.html#Parser.language_symbol_name">Parser.language_symbol_name</a>
+<br>
+<a href="index.html#Parser.language_symbol_type">Parser.language_symbol_type</a>
 <br>
 <a href="index.html#Parser.parse_string">Parser.parse_string</a>
 <br>
@@ -155,6 +173,8 @@ h2 {
 <a href="index.html#Parser.set_ranges">Parser.set_ranges</a>
 <br>
 </p>
+</td>
+<td valign=top>
 <h4>Query</h4>
 <p>
 <a href="index.html#Query.capture">Query.capture</a>
@@ -168,8 +188,6 @@ h2 {
 <a href="index.html#Query.with">Query.with</a>
 <br>
 </p>
-</td>
-<td valign=top>
 <h4>Tree</h4>
 <p>
 <a href="index.html#Tree.copy">Tree.copy</a>
@@ -234,6 +252,10 @@ h2 {
 <p>Get the byte of the source string that the given node ends at</p><br>
 <h2><a name="Node.end_point"><code>Node.end_point: function(Node): Point</code></a></h2>
 <p>Get the row and column of where the given node ends</p><br>
+<h2><a name="Node.grammar_symbol"><code>Node.grammar_symbol: function(Node): Symbol</code></a></h2>
+<p>Returns the type of a given node as a numeric id as it appears in the grammar ignoring aliases<br><br>   This is what should be used in `Parser:language_next_state` instead of `Node:symbol`</p><br>
+<h2><a name="Node.grammar_type"><code>Node.grammar_type: function(Node): string</code></a></h2>
+<p>Returns the type of a given node as a string as it appears in the grammar ignoring aliases</p><br>
 <h2><a name="Node.is_extra"><code>Node.is_extra: function(Node): boolean</code></a></h2>
 <p>Get whether or not the current node is extra</p><br>
 <h2><a name="Node.is_missing"><code>Node.is_missing: function(Node): boolean</code></a></h2>
@@ -241,7 +263,7 @@ h2 {
 <h2><a name="Node.is_named"><code>Node.is_named: function(Node): boolean</code></a></h2>
 <p>Get whether or not the current node is named</p><br>
 <h2><a name="Node.name"><code>Node.name: function(Node): string</code></a></h2>
-<p>Returns the name of a given node<br>   <pre><br>   print(node) -- => (comment)<br>   print(node:name()) -- => comment<br>   </pre></p><br>
+<p>Returns the type of a given node as a string<br>   <pre><br>   print(node) -- => (comment)<br>   print(node:name()) -- => comment<br>   </pre></p><br>
 <h2><a name="Node.named_child"><code>Node.named_child: function(Node, idx: integer): Node</code></a></h2>
 <p>Get the node's idx'th named child (0-indexed)</p><br>
 <h2><a name="Node.named_child_count"><code>Node.named_child_count: function(Node): integer</code></a></h2>
@@ -266,6 +288,8 @@ h2 {
 <p>Get the byte of the source string that the given node starts at</p><br>
 <h2><a name="Node.start_point"><code>Node.start_point: function(Node): Point</code></a></h2>
 <p>Get the row and column of where the given node starts</p><br>
+<h2><a name="Node.symbol"><code>Node.symbol: function(Node): Symbol</code></a></h2>
+<p>Returns the type of a given node as a numeric id</p><br>
 <h2><a name="Node.type"><code>Node.type: function(Node): string</code></a></h2>
 <p>Get the type of the given node</p><br>
 <br>
@@ -285,10 +309,22 @@ h2 {
 <p>Get the name of the language this parser is for. May return nil.</p><br>
 <h2><a name="Parser.language_name_for_field_id"><code>Parser.language_name_for_field_id: function(Parser, FieldId): string</code></a></h2>
 <p>Get the name for a numeric field id</p><br>
+<h2><a name="Parser.language_next_state"><code>Parser.language_next_state: function(Parser, StateId, Symbol): StateId</code></a></h2>
+<p>Get the next parse state</p><br>
 <h2><a name="Parser.language_state_count"><code>Parser.language_state_count: function(Parser): integer</code></a></h2>
 <p>Get the number of valid states in the given parser's language</p><br>
+<h2><a name="Parser.language_subtypes"><code>Parser.language_subtypes: function(Parser, supertype: Symbol): {Symbol}</code></a></h2>
+<p>Get a list of all supertype symbols for the given parser's language</p><br>
+<h2><a name="Parser.language_supertypes"><code>Parser.language_supertypes: function(Parser): {Symbol}</code></a></h2>
+<p>Get a list of all supertype symbols for the given parser's language</p><br>
 <h2><a name="Parser.language_symbol_count"><code>Parser.language_symbol_count: function(Parser): integer</code></a></h2>
 <p>Get the number of distinct node types in the given parser's language</p><br>
+<h2><a name="Parser.language_symbol_for_name"><code>Parser.language_symbol_for_name: function(Parser, string, is_named: boolean): Symbol</code></a></h2>
+<p>Get the numerical id for the given node type string</p><br>
+<h2><a name="Parser.language_symbol_name"><code>Parser.language_symbol_name: function(Parser, Symbol): string</code></a></h2>
+<p>Get a node type string for the given symbol id</p><br>
+<h2><a name="Parser.language_symbol_type"><code>Parser.language_symbol_type: function(Parser, Symbol): SymbolType</code></a></h2>
+<p>Check whether the given node type id belongs to named nodes, anonymous nodes,<br>   or hidden nodes</p><br>
 <h2><a name="Parser.parse_string"><code>Parser.parse_string: function(Parser, string, ?Encoding, ?Tree): Tree</code></a></h2>
 <p>Uses the given parser to parse the string<br><br>   If <code>Tree</code> is provided then it will be used to create a new updated tree<br>   (but it is the responsibility of the programmer to make the correct <code>Tree:edit</code> calls)</p><br>
 <h2><a name="Parser.parse_with"><code>Parser.parse_with: function(

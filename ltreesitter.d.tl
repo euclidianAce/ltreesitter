@@ -28,6 +28,8 @@ local record ltreesitter
       create_cursor: function(Node): Cursor
       end_byte: function(Node): integer
       end_point: function(Node): Point
+      grammar_symbol: function(Node): Symbol
+      grammar_type: function(Node): string
       is_extra: function(Node): boolean
       is_missing: function(Node): boolean
       is_named: function(Node): boolean
@@ -44,6 +46,7 @@ local record ltreesitter
       source: function(Node): string
       start_byte: function(Node): integer
       start_point: function(Node): Point
+      symbol: function(Node): Symbol
       type: function(Node): string
    end
    record Parser is userdata
@@ -55,8 +58,14 @@ local record ltreesitter
       language_metadata: function(Parser): LanguageMetadata
       language_name: function(Parser): string
       language_name_for_field_id: function(Parser, FieldId): string
+      language_next_state: function(Parser, StateId, Symbol): StateId
       language_state_count: function(Parser): integer
+      language_subtypes: function(Parser, supertype: Symbol): {Symbol}
+      language_supertypes: function(Parser): {Symbol}
       language_symbol_count: function(Parser): integer
+      language_symbol_for_name: function(Parser, string, is_named: boolean): Symbol
+      language_symbol_name: function(Parser, Symbol): string
+      language_symbol_type: function(Parser, Symbol): SymbolType
       parse_string: function(Parser, string, ?Encoding, ?Tree): Tree
       parse_with: function(
    Parser,
@@ -107,6 +116,13 @@ local record ltreesitter
       "utf-8"
       "utf-16le"
       "utf-16be"
+   end
+
+   enum SymbolType
+      "regular"
+      "anonymous"
+      "supertype"
+      "auxiliary"
    end
 
    interface Range
