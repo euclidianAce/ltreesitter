@@ -625,18 +625,6 @@ int ltreesitter_parser_parse_with(lua_State *L) {
 	return 1;
 }
 
-// TODO: Deprecated
-/* @teal-export Parser.set_timeout: function(Parser, integer) [[
-   Sets how long the parser is allowed to take in microseconds
-]] */
-int ltreesitter_parser_set_timeout(lua_State *L) {
-	ltreesitter_Parser *p = ltreesitter_check_parser(L, 1);
-	const lua_Number n = luaL_checknumber(L, 2);
-	luaL_argcheck(L, n >= 0, 2, "expected non-negative integer");
-	ts_parser_set_timeout_micros(p->parser, (uint64_t)n);
-	return 0;
-}
-
 /* @teal-export Parser.reset: function(Parser) [[
    Reset the parser, causing the next parse to start from the beginning
 ]] */
@@ -806,7 +794,6 @@ static int get_version(lua_State *L) {
 
 static const luaL_Reg parser_methods[] = {
 	{"reset", ltreesitter_parser_reset},
-	{"set_timeout", ltreesitter_parser_set_timeout},
 	{"set_ranges", parser_set_ranges},
 	{"get_ranges", parser_get_ranges},
 	{"get_version", get_version},
