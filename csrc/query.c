@@ -358,17 +358,14 @@ deferred:
    end
 ]] */
 
-#define INTERNAL_PARENT_CHECK_ERR_MSG "Internal error: node parent is not a tree"
-
 static int query_iterator_next_match(lua_State *L) {
 	// upvalues: Query, Node, Cursor
 	int const initial_query_idx = lua_upvalueindex(1);
 	ltreesitter_Query *const q = query_check(L, initial_query_idx);
 	ltreesitter_QueryCursor *c = query_cursor_check(L, lua_upvalueindex(3));
 	TSQueryMatch m;
-	push_kept(L, lua_upvalueindex(2));
+	node_push_tree(L, lua_upvalueindex(2));
 	int const parent_idx = lua_gettop(L);
-	(void)tree_check(L, parent_idx, INTERNAL_PARENT_CHECK_ERR_MSG);
 
 	lua_pushvalue(L, initial_query_idx);
 	int const query_idx = lua_gettop(L);
@@ -444,9 +441,8 @@ static int query_iterator_next_capture(lua_State *L) {
 	int const initial_query_idx = lua_upvalueindex(1);
 	ltreesitter_Query *const q = query_check(L, initial_query_idx);
 	TSQueryCursor *c = query_cursor_check(L, lua_upvalueindex(3))->query_cursor;
-	push_kept(L, lua_upvalueindex(2));
+	node_push_tree(L, lua_upvalueindex(2));
 	int const parent_idx = lua_gettop(L);
-	(void)tree_check(L, -1, INTERNAL_PARENT_CHECK_ERR_MSG);
 	TSQueryMatch m;
 	uint32_t capture_index;
 	lua_pushvalue(L, initial_query_idx);
@@ -669,9 +665,8 @@ static int query_exec(lua_State *L) {
 	TSQueryCursor *c = ts_query_cursor_new();
 	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
 
-	push_kept(L, 2);
+	node_push_tree(L, 2);
 	int const parent_idx = absindex(L, -1);
-	(void)tree_check(L, parent_idx, INTERNAL_PARENT_CHECK_ERR_MSG);
 
 	TSQueryMatch m;
 	ts_query_cursor_exec(c, q, n);

@@ -6,6 +6,10 @@
 
 #include <stdint.h>
 
+#define def_check_assert(t, prefix, name) \
+	static inline t *(prefix##_check)(lua_State *L, int idx) { return luaL_testudata(L, idx, name); } \
+	static inline t *(prefix##_assert)(lua_State *L, int idx) { return luaL_checkudata(L, idx, name); }
+
 typedef struct ltreesitter_Parser ltreesitter_Parser;
 typedef struct ltreesitter_Tree ltreesitter_Tree;
 typedef struct ltreesitter_Query ltreesitter_Query;

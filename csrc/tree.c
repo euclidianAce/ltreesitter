@@ -17,22 +17,6 @@
 #include <stdio.h>
 #endif
 
-static void err_if(lua_State *L, char const *msg) {
-	if (msg) {
-		luaL_error(L, "%s", msg);
-	}
-}
-
-ltreesitter_Tree *tree_check(lua_State *L, int idx, char const *msg) {
-	ltreesitter_Tree *tree = luaL_testudata(L, idx, LTREESITTER_TREE_METATABLE_NAME);
-	if (!tree) err_if(L, msg);
-	return tree;
-}
-
-ltreesitter_Tree *tree_check_assert(lua_State *L, int idx) {
-	return luaL_checkudata(L, idx, LTREESITTER_TREE_METATABLE_NAME);
-}
-
 static ltreesitter_Tree *push_uninitialized_tree(lua_State *L) {
 	ltreesitter_Tree *tree = lua_newuserdata(L, sizeof *tree);
 	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
@@ -72,13 +56,13 @@ void tree_push_with_reader(
    Returns the root node of the given parse tree
 ]] */
 static int tree_push_root(lua_State *L) {
-	ltreesitter_Tree *const t = tree_check_assert(L, 1);
+	ltreesitter_Tree *const t = tree_assert(L, 1);
 	node_push(L, 1, ts_tree_root_node(t->tree));
 	return 1;
 }
 
 static int tree_to_string(lua_State *L) {
-	TSTree *t = tree_check_assert(L, 1)->tree;
+	TSTree *t = tree_assert(L, 1)->tree;
 	TSNode const root = ts_tree_root_node(t);
 	char *s = ts_node_string(root);
 	lua_pushlstring(L, (char const *)s, strlen(s));
@@ -91,7 +75,7 @@ static int tree_to_string(lua_State *L) {
 ]] */
 static int tree_copy(lua_State *L) {
 	lua_settop(L, 1);
-	ltreesitter_Tree *t = tree_check_assert(L, 1); // tree
+	ltreesitter_Tree *t = tree_assert(L, 1); // tree
 	push_kept(L, 1); // tree, source text/reader
 	SourceText const *source_text = source_text_check(L, -1);
 	if (!source_text) {
@@ -127,7 +111,7 @@ static inline bool is_non_negative(lua_State *L, int i) {
 static int tree_edit_s(lua_State *L) {
 	lua_settop(L, 2);
 	lua_checkstack(L, 15);
-	ltreesitter_Tree *t = tree_check_assert(L, 1);
+	ltreesitter_Tree *t = tree_assert(L, 1);
 
 	// get the edit struct from table
 	luaL_argcheck(L, lua_type(L, 2) == LUA_TTABLE, 2, "expected table");
@@ -193,7 +177,7 @@ static int tree_edit_s(lua_State *L) {
    Create an edit to the given tree
 ]] */
 static int tree_edit(lua_State *L) {
-	ltreesitter_Tree *t = tree_check_assert(L, 1);
+	ltreesitter_Tree *t = tree_assert(L, 1);
 	TSInputEdit edit = (TSInputEdit){
 		.start_byte = luaL_checkinteger(L, 2),
 		.old_end_byte = luaL_checkinteger(L, 3),
@@ -212,8 +196,8 @@ static int tree_edit(lua_State *L) {
    This would usually be called right after a set of calls to <code>Tree.edit(_s)</code> and <code>Parser.parse_{string,with}</code>
 ]] */
 static int tree_get_changed_ranges(lua_State *L) {
-	ltreesitter_Tree *old = tree_check_assert(L, 1);
-	ltreesitter_Tree *new = tree_check_assert(L, 2);
+	ltreesitter_Tree *old = tree_assert(L, 1);
+	ltreesitter_Tree *new = tree_assert(L, 2);
 	uint32_t len;
 	TSRange *ranges = ts_tree_get_changed_ranges(old->tree, new->tree, &len);
 
@@ -245,7 +229,7 @@ static int tree_get_changed_ranges(lua_State *L) {
 }
 
 static int tree_gc(lua_State *L) {
-	ltreesitter_Tree *t = tree_check_assert(L, 1);
+	ltreesitter_Tree *t = tree_assert(L, 1);
 #ifdef LOG_GC
 	printf("Tree %p is being garbage collected\n", (void const *)t);
 	printf("    source text=%p\n", (void const *)t->source);

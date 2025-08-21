@@ -6,11 +6,7 @@
 // ( -- table )
 void tree_init_metatable(lua_State *L);
 
-// ( any -- any )
-ltreesitter_Tree *tree_check(lua_State *L, int idx, char const *msg);
-
-// ( any -- any )
-ltreesitter_Tree *tree_check_assert(lua_State *L, int idx);
+def_check_assert(ltreesitter_Tree, tree, LTREESITTER_TREE_METATABLE_NAME)
 
 // ( -- tree )
 // this function copies `src`
