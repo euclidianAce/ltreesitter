@@ -7,6 +7,6 @@
 // ( -- table )
 void query_cursor_init_metatable(lua_State *L);
 
-def_check_assert(ltreesitter_QueryCursor, query_cursor, LTREESITTER_QUERY_CURSOR_METATABLE_NAME)
+def_check_assert(TSQueryCursor *, query_cursor, LTREESITTER_QUERY_CURSOR_METATABLE_NAME)
 
 #endif

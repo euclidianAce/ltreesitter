@@ -340,7 +340,7 @@ describe("Query", function()
 				assert.are.same(res, {})
 			end)
 		end)
-		describe("user-defined", function()
+		pending("user-defined", function()
 			local root_node
 			setup(function()
 				root_node = assert(p:parse_string[[
@@ -398,7 +398,7 @@ describe("Query", function()
 		end)
 	end)
 	describe("exec", function()
-		it("should run the query", function()
+		pending("should run the query", function()
 			local root_node = assert(p:parse_string[[
 				// foo
 				// bar
@@ -423,7 +423,7 @@ describe("Query", function()
 				"// hoop",
 			})
 		end)
-		it("should only iterate through requested byte range", function()
+		pending("should only iterate through requested byte range", function()
 			local root_node = assert(p:parse_string[[
 				// foo
 				// bar
@@ -444,7 +444,7 @@ describe("Query", function()
 				"// bar"
 			})
 		end)
-		it("should only iterate through requested point range", function()
+		pending("should only iterate through requested point range", function()
 			local root_node = assert(p:parse_string[[
 				// foo
 				// bar

@@ -4,8 +4,8 @@
 #include "types.h"
 
 static int query_cursor_gc(lua_State *L) {
-	ltreesitter_QueryCursor *c = query_cursor_assert(L, 1);
-	ts_query_cursor_delete(c->query_cursor);
+	TSQueryCursor *c = *query_cursor_assert(L, 1);
+	ts_query_cursor_delete(c);
 	return 0;
 }
 

@@ -362,7 +362,7 @@ static int query_iterator_next_match(lua_State *L) {
 	// upvalues: Query, Node, Cursor
 	int const initial_query_idx = lua_upvalueindex(1);
 	ltreesitter_Query *const q = query_assert(L, initial_query_idx);
-	ltreesitter_QueryCursor *c = query_cursor_assert(L, lua_upvalueindex(3));
+	TSQueryCursor *c = *query_cursor_assert(L, lua_upvalueindex(3));
 	TSQueryMatch m;
 	node_push_tree(L, lua_upvalueindex(2));
 	int const parent_idx = lua_gettop(L);
@@ -371,7 +371,7 @@ static int query_iterator_next_match(lua_State *L) {
 	int const query_idx = lua_gettop(L);
 
 	do {
-		if (!ts_query_cursor_next_match(c->query_cursor, &m))
+		if (!ts_query_cursor_next_match(c, &m))
 			return 0;
 	} while (!do_predicates(L, query_idx, q->query, parent_idx, &m));
 
@@ -392,12 +392,12 @@ static int query_iterator_next_match(lua_State *L) {
 } while (0)
 
 		TSQuantifier const quantifier = ts_query_capture_quantifier_for_id(
-			c->query->query,
+			q->query,
 			m.pattern_index,
 			m.captures[i].index);
 
 		uint32_t len;
-		char const *name = ts_query_capture_name_for_id(c->query->query, m.captures[i].index, &len);
+		char const *name = ts_query_capture_name_for_id(q->query, m.captures[i].index, &len);
 		lua_pushlstring(L, name, len); // {<capture-map>}, name
 		switch (table_rawget(L, -2)) {
 		case LUA_TNIL: // first node, just set it, or set up table
@@ -440,7 +440,7 @@ static int query_iterator_next_capture(lua_State *L) {
 	// upvalues: Query, Node, Cursor
 	int const initial_query_idx = lua_upvalueindex(1);
 	ltreesitter_Query *const q = query_assert(L, initial_query_idx);
-	TSQueryCursor *c = query_cursor_assert(L, lua_upvalueindex(3))->query_cursor;
+	TSQueryCursor *c = *query_cursor_assert(L, lua_upvalueindex(3));
 	node_push_tree(L, lua_upvalueindex(2));
 	int const parent_idx = lua_gettop(L);
 	TSQueryMatch m;
@@ -522,10 +522,9 @@ static int query_match_factory(lua_State *L) {
 	TSQueryCursor *c = ts_query_cursor_new();
 	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
 	lua_settop(L, 2);
-	ltreesitter_QueryCursor *lc = lua_newuserdata(L, sizeof(struct ltreesitter_QueryCursor));
+	TSQueryCursor **lc = lua_newuserdata(L, sizeof(TSQueryCursor *));
 	setmetatable(L, LTREESITTER_QUERY_CURSOR_METATABLE_NAME);
-	lc->query_cursor = c;
-	lc->query = q;
+	*lc = c;
 	ts_query_cursor_exec(c, q->query, n);
 	lua_pushcclosure(L, query_iterator_next_match, 3);
 	return 1;
@@ -551,10 +550,9 @@ static int query_capture_factory(lua_State *L) {
 	TSQueryCursor *c = ts_query_cursor_new();
 	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
 	lua_settop(L, 2);
-	ltreesitter_QueryCursor *lc = lua_newuserdata(L, sizeof(struct ltreesitter_QueryCursor));
+	TSQueryCursor **lc = lua_newuserdata(L, sizeof(TSQueryCursor *));
 	setmetatable(L, LTREESITTER_QUERY_CURSOR_METATABLE_NAME);
-	lc->query_cursor = c;
-	lc->query = q;
+	*lc = c;
 	ts_query_cursor_exec(c, q->query, n);
 	lua_pushcclosure(L, query_iterator_next_capture, 3); // prevent the node + query from being gc'ed
 	return 1;

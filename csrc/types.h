@@ -42,11 +42,6 @@ struct ltreesitter_Query {
 	TSLanguage const *lang;
 };
 #define LTREESITTER_QUERY_METATABLE_NAME "ltreesitter.Query"
-
-struct ltreesitter_QueryCursor {
-	ltreesitter_Query *query;
-	TSQueryCursor *query_cursor;
-};
 #define LTREESITTER_QUERY_CURSOR_METATABLE_NAME "ltreesitter.QueryCursor"
 
 // TODO: TSLookaheadIterator
