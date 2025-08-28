@@ -107,6 +107,9 @@ void query_push(
 }
 
 static void push_query_copy(lua_State *L, int query_idx) {
+	(void)query_idx;
+	luaL_error(L, "Query copying is not currently implemented");
+#if 0
 	ltreesitter_Query *orig = query_assert(L, query_idx); // query
 	push_kept(L, query_idx); // query, sourcetext
 	SourceText const *source_text = source_text_assert(L, -1);
@@ -137,6 +140,7 @@ static void push_query_copy(lua_State *L, int query_idx) {
 		.lang = orig->lang,
 		.query = q,
 	};
+#endif
 }
 
 static int query_gc(lua_State *L) {

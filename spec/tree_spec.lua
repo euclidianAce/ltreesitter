@@ -5,7 +5,8 @@ local util = require("spec.util")
 describe("Tree", function()
 	local p, t
 	setup(function()
-		p = util.c_parser
+		local _
+		_, p = util.load_c_parser()
 		t = assert(p:parse_string[[ int main(void) { return 0; } ]])
 	end)
 	it("copy should return a ltreesitter.TSTree", function()

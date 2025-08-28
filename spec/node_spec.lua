@@ -3,7 +3,6 @@ local ts = require("ltreesitter")
 local util = require("spec.util")
 
 describe("Node", function()
-	local p
 	local str = {
 		[[ /* hello world */ ]],
 		[[ /* hello world */ int main(void) { return 0; } ]],
@@ -11,8 +10,9 @@ describe("Node", function()
 	}
 	local tree = {}
 	local root = {}
+	local c_lang, p
 	setup(function()
-		p = util.c_parser
+		c_lang, p = util.load_c_parser()
 		for i, v in ipairs(str) do
 			tree[i] = assert(p:parse_string(v), "Failed parsing string: " .. v)
 			root[i] = assert(tree[i]:root(), "Failed getting root of tree " .. tostring(i))
@@ -48,16 +48,15 @@ describe("Node", function()
 	describe("child_by_field_id", function()
 		it("should return an ltreesitter.Node", function()
 			local n = assert(root[3]:child(0))
-			local id = assert(p:language_field_id_for_name("type"))
+			local id = assert(c_lang:field_id_for_name("type"))
 			util.assert_userdata_type(n:child_by_field_id(id), "ltreesitter.Node")
 		end)
 		it("should return the correct node", function()
 			local n = assert(root[3]:child(0))
-			local id = assert(p:language_field_id_for_name("type"))
+			local id = assert(c_lang:field_id_for_name("type"))
 			assert.are.equal(n:child_by_field_id(id):type(), "primitive_type")
 		end)
 	end)
-
 
 	it("children should iterate over all the children of a node", function()
 		-- TODO: find a case where children and named_children differ

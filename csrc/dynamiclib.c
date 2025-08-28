@@ -6,19 +6,26 @@
 bool dynlib_open(char const *name, Dynlib *handle, char const **out_error) {
 #ifdef _WIN32
 	*handle = LoadLibrary(name);
-	if (!lib) *out_error = GetLastError();
+	if (!*handle) {
+		*out_error = GetLastError();
+		return false;
+	}
 #elif LTREESITTER_USE_LIBUV
 	if (uv_dlopen(name, handle) != 0) {
 		*out_error = uv_dlerror(handle);
+		return false;
 	} else if (!*handle) {
 		*out_error = "Out of memory";
+		return false;
 	}
 #else
 	*handle = dlopen(name, RTLD_NOW | RTLD_LOCAL);
-	if (!*handle)
+	if (!*handle) {
 		*out_error = dlerror();
+		return false;
+	}
 #endif
-	return !!*handle;
+	return true;
 }
 
 void *dynlib_sym(Dynlib *handle, char const *sym_name) {

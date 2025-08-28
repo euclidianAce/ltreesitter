@@ -13,11 +13,11 @@
 	static inline t *(prefix##_check)(lua_State *L, int idx) { return testudata(L, idx, name); } \
 	static inline t *(prefix##_assert)(lua_State *L, int idx) { return luaL_checkudata(L, idx, name); }
 
-typedef struct ltreesitter_Parser ltreesitter_Parser;
 typedef struct ltreesitter_Tree ltreesitter_Tree;
 typedef struct ltreesitter_Query ltreesitter_Query;
 typedef struct ltreesitter_QueryCursor ltreesitter_QueryCursor;
 
+#define LTREESITTER_LANGUAGE_METATABLE_NAME "ltreesitter.Language"
 #define LTREESITTER_PARSER_METATABLE_NAME "ltreesitter.Parser"
 
 // garbage collected source text for trees and queries to hold on to
@@ -39,7 +39,6 @@ struct ltreesitter_Tree {
 
 struct ltreesitter_Query {
 	TSQuery *query;
-
 	TSLanguage const *lang;
 };
 #define LTREESITTER_QUERY_METATABLE_NAME "ltreesitter.Query"

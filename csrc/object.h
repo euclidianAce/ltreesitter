@@ -23,8 +23,6 @@
 // 5.1, 5.2, and luajit.
 
 void setup_object_table(lua_State *);
-void setup_parser_cache(lua_State *);
-void push_parser_cache(lua_State *);
 
 // Creates a keeper-kept relationship between two objects
 //

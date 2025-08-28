@@ -2,9 +2,9 @@ local assert = require("luassert")
 local util = require("spec.util")
 
 describe("Query", function()
-	local p
+	local l, p
 	setup(function()
-		p = util.c_parser
+		l, p = util.load_c_parser()
 	end)
 	describe("match", function()
 		it("should return an iterator", function()
@@ -18,7 +18,7 @@ describe("Query", function()
 					return 0;
 				}
 			]])
-			local m = p:query[[ (comment) @a ]]:match(tree:root())
+			local m = l:query[[ (comment) @a ]]:match(tree:root())
 			assert.is["function"](m)
 		end)
 		it("should never be empty", function()
@@ -32,7 +32,7 @@ describe("Query", function()
 					return 0;
 				}
 			]])
-			for match in p
+			for match in l
 				:query[[ (comment) @a ]]
 				:match(tree:root())
 			do
@@ -49,7 +49,7 @@ describe("Query", function()
 				// hello
 				// world
 			]])
-			for match in p
+			for match in l
 				:query[[ (comment) @a ]]
 				:match(tree:root())
 			do
@@ -72,7 +72,7 @@ describe("Query", function()
 				// world
 			]])
 			local count = 0
-			for match in p
+			for match in l
 				:query[[ (comment) @a ]]
 				:match(tree:root(), 4, 11)
 			do
@@ -93,7 +93,7 @@ describe("Query", function()
 				// world
 			]])
 			local count = 0
-			for match in p
+			for match in l
 				:query[[ (comment) @a ]]
 				:match(
 					tree:root(),
@@ -111,7 +111,7 @@ describe("Query", function()
 	describe("capture", function()
 		it("should return a function", function()
 			local tree = assert(p:parse_string[[]])
-			local c = p
+			local c = l
 				:query[[ (comment) @a ]]
 				:capture(tree:root())
 			assert.is["function"](c)
@@ -125,7 +125,7 @@ describe("Query", function()
 				// hello
 				// world
 			]])
-			for c in p
+			for c in l
 				:query[[ (comment) @a ]]
 				:capture(tree:root())
 			do
@@ -147,7 +147,7 @@ describe("Query", function()
 				// hello
 				// world
 			]])
-			for _, name in p
+			for _, name in l
 				:query[[ (comment) @a ]]
 				:capture(tree:root())
 			do
@@ -160,7 +160,7 @@ describe("Query", function()
 					return 0;
 				}
 			]])
-			local q_iter = p:query[[
+			local q_iter = l:query[[
 				(translation_unit
 					(function_definition
 						declarator: (function_declarator
@@ -184,7 +184,7 @@ describe("Query", function()
 				// world
 			]])
 			local count = 0
-			for node, name in p
+			for node, name in l
 				:query[[ (comment) @a ]]
 				:capture(tree:root(), 4, 11)
 			do
@@ -203,7 +203,7 @@ describe("Query", function()
 				// world
 			]])
 			local count = 0
-			for node, name in p
+			for node, name in l
 				:query[[ (comment) @a ]]
 				:capture(
 					tree:root(),
@@ -232,7 +232,7 @@ describe("Query", function()
 			end)
 			it("should work with trivially equal literals", function()
 				local done_something = false
-				for _ in p
+				for _ in l
 					:query[[(
 						(comment)
 						(#eq? "a" "a")
@@ -244,7 +244,7 @@ describe("Query", function()
 				assert(done_something, 'Trivial equality failed ("a" == "a")')
 			end)
 			it("should work with trivially inequal literals", function()
-				for _ in p
+				for _ in l
 					:query[[(
 						(comment) @a
 						(#eq? "a" "b")
@@ -256,7 +256,7 @@ describe("Query", function()
 			end)
 			it("should work with @capture and a literal", function()
 				local count = 0
-				for _ in p
+				for _ in l
 					:query[[(
 						(comment) @a
 						(#eq? @a "// hello")
@@ -270,7 +270,7 @@ describe("Query", function()
 			end)
 			it("should work with multiple @captures", function()
 				local count = 0
-				for _ in p
+				for _ in l
 					:query[[(
 						(comment) @a
 						.
@@ -285,7 +285,7 @@ describe("Query", function()
 			end)
 			it("should fail when only 1 argument is given", function()
 				assert.is["false"](pcall(function()
-					p:query[[(
+					l:query[[(
 						(comment) @a
 						(#eq? @a)
 					)]]
@@ -307,7 +307,7 @@ describe("Query", function()
 			end)
 			it("matches basic patterns", function()
 				local res = {}
-				for c in p:query[[ ((comment) @a (#match? @a ".a.")) ]]:capture(root_node) do
+				for c in l:query[[ ((comment) @a (#match? @a ".a.")) ]]:capture(root_node) do
 					table.insert(res, c:source())
 				end
 				assert.are.same(res, {"// bar", "// baz", "// bang", "// blah"})
@@ -327,14 +327,14 @@ describe("Query", function()
 			end)
 			it("matches when a substring is found", function()
 				local res = {}
-				for c in p:query[[ ((comment) @a (#find? @a "oo")) ]]:capture(root_node) do
+				for c in l:query[[ ((comment) @a (#find? @a "oo")) ]]:capture(root_node) do
 					table.insert(res, c:source())
 				end
 				assert.are.same(res, {"// foo", "// hoop"})
 			end)
 			it("doesn't match patterns", function()
 				local res = {}
-				for c in p:query[[ ((comment) @a (#find? @a "....")) ]]:capture(root_node) do
+				for c in l:query[[ ((comment) @a (#find? @a "....")) ]]:capture(root_node) do
 					table.insert(res, c:source())
 				end
 				assert.are.same(res, {})
@@ -354,7 +354,7 @@ describe("Query", function()
 			end)
 			it("should consider predicates that end in '?' as functions that need to return truthy values to match", function()
 				local captures = {}
-				for m in p
+				for m in l
 					:query[[((comment) @the-comment
 						(#starts_with? @the-comment "b"))]]
 					:with{
@@ -377,7 +377,7 @@ describe("Query", function()
 			end)
 			it("should not remove default predicates", function()
 				local captures = {}
-				for m in p
+				for m in l
 					:query[[((comment) @the-comment
 						(#eq? @the-comment "// bar")
 						(#starts_with? @the-comment "b"))]]
@@ -408,7 +408,7 @@ describe("Query", function()
 				// hoop
 				]]):root()
 			local res = {}
-			p:query[[ ((comment) @a (#insert! @a)) ]]
+			l:query[[ ((comment) @a (#insert! @a)) ]]
 				:with{["insert!"] = function(a)
 					util.assert_userdata_type(a, "ltreesitter.Node")
 					table.insert(res, a:source())
@@ -433,7 +433,7 @@ describe("Query", function()
 				// hoop
 				]]):root()
 			local res = {}
-			p:query[[ ((comment) @a (#insert! @a)) ]]
+			l:query[[ ((comment) @a (#insert! @a)) ]]
 				:with{["insert!"] = function(a)
 					util.assert_userdata_type(a, "ltreesitter.Node")
 					table.insert(res, a:source())
@@ -454,7 +454,7 @@ describe("Query", function()
 				// hoop
 				]]):root()
 			local res = {}
-			p:query[[ ((comment) @a (#insert! @a)) ]]
+			l:query[[ ((comment) @a (#insert! @a)) ]]
 				:with{["insert!"] = function(a)
 					util.assert_userdata_type(a, "ltreesitter.Node")
 					table.insert(res, a:source())

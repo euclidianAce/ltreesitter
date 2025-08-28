@@ -1,6 +1,8 @@
 #ifndef DYNAMICLIB_H
 #define DYNAMICLIB_H
 
+#include <stdbool.h>
+
 #ifdef LTREESITTER_USE_LIBUV
 #include <uv.h>
 typedef uv_lib_t Dynlib;
@@ -20,8 +22,6 @@ typedef void *Dynlib;
 #else
 #define LTREESITTER_DL_EXT "so"
 #endif
-
-#include <stdbool.h>
 
 bool dynlib_open(char const *name, Dynlib *handle, char const **out_error);
 void *dynlib_sym(Dynlib *handle, char const *sym_name);

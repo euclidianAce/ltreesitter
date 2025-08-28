@@ -9,14 +9,17 @@
 #include "node.h"
 #include "query_cursor.h"
 #include "tree_cursor.h"
+#include "language.h"
 
 // @teal-export version: string
 static const char version_str[] = "0.2.0+dev";
 
 static const luaL_Reg lib_funcs[] = {
-	{"load", parser_load},
-	{"require", parser_require},
 	{"_reg", push_registry_table},
+
+	{"load", language_load},
+	{"require", language_require},
+
 	{NULL, NULL},
 };
 
@@ -35,10 +38,10 @@ int luaopen_ltreesitter(lua_State *L) {
 	tree_cursor_init_metatable(L);
 	query_cursor_init_metatable(L);
 	source_text_init_metatable(L);
+	language_init_metatable(L);
 
 	setup_registry_index(L);
 	setup_object_table(L);
-	setup_parser_cache(L);
 
 	query_setup_predicate_tables(L);
 

@@ -29,6 +29,9 @@ bool sb_push_fmt(StringBuilder *sb, char const *fmt, ...);
 void sb_push_to_lua(lua_State *L, StringBuilder *sb);
 void sb_free(StringBuilder *sb);
 
+#define sb_push_lit(sb, lit) \
+	sb_push_lstr((sb), sizeof(""lit""), (""lit""))
+
 typedef struct {
 	char const *data;
 	uint32_t length;
@@ -63,7 +66,10 @@ int getfield_type(lua_State *L, int idx, char const *field_name);
 bool expect_field(lua_State *L, int idx, char const *field_name, int expected_type);
 bool expect_nested_field(lua_State *L, int idx, char const *parent_name, char const *field_name, int expected_type);
 int absindex(lua_State *L, int idx);
+
+// ( T -- T )
 void setmetatable(lua_State *L, char const *mt_name);
+
 void setup_registry_index(lua_State *L);
 int push_registry_table(lua_State *L);
 void push_registry_field(lua_State *L, char const *f);

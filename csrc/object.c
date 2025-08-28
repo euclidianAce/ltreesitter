@@ -34,12 +34,3 @@ void bind_lifetimes(lua_State *L, int as_long_as_this_object_lives, int so_shall
 	lua_rawset(L, -3);                              // objtable
 	lua_pop(L, 1);
 }
-
-static char const *parser_cache_index = "parsers";
-void setup_parser_cache(lua_State *L) {
-	newtable_with_mode(L, "v");
-	set_registry_field(L, parser_cache_index);
-}
-void push_parser_cache(lua_State *L) {
-	push_registry_field(L, parser_cache_index);
-}
