@@ -110,7 +110,7 @@ static inline bool is_non_negative(lua_State *L, int i) {
 ]] */
 static int tree_edit_s(lua_State *L) {
 	lua_settop(L, 2);
-	lua_checkstack(L, 15);
+	luaL_checkstack(L, 15, "Internal allocation failed");
 	ltreesitter_Tree *t = tree_assert(L, 1);
 
 	// get the edit struct from table
