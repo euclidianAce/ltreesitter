@@ -1,5 +1,5 @@
-#include "dynamiclib.h"
 #include "language.h"
+#include "dynamiclib.h"
 #include "object.h"
 #include "query.h"
 
@@ -48,19 +48,19 @@ void dynlib_init_metatable(lua_State *L) {
 // ( -- Dynlib )
 static void cache_dynlib(lua_State *L, char const *path_loaded_from, Dynlib dl) {
 	// TODO: should we even attempt to normalize the path?
-	push_registry_field(L, dynlib_registry_field); // cache
+	push_registry_field(L, dynlib_registry_field);      // cache
 	*(Dynlib *)lua_newuserdata(L, sizeof(Dynlib)) = dl; // cache, dynlib
 	setmetatable(L, LTREESITTER_DYNLIB_METATABLE_NAME);
-	lua_pushvalue(L, -1); // cache, dynlib, dynlib
+	lua_pushvalue(L, -1);                  // cache, dynlib, dynlib
 	lua_setfield(L, -3, path_loaded_from); // cache, dynlib
-	lua_remove(L, -2); // dynlib
+	lua_remove(L, -2);                     // dynlib
 }
 
 // ( -- Dynlib )
 static Dynlib *get_cached_dynlib(lua_State *L, char const *path) {
 	push_registry_field(L, dynlib_registry_field); // cache
-	lua_getfield(L, -1, path); // cache, ?Dynlib
-	lua_remove(L, -2); // ?Dynlib
+	lua_getfield(L, -1, path);                     // cache, ?Dynlib
+	lua_remove(L, -2);                             // ?Dynlib
 	void *data = testudata(L, -1, LTREESITTER_DYNLIB_METATABLE_NAME);
 	return data;
 }
@@ -77,14 +77,15 @@ static Dynlib *get_cached_dynlib(lua_State *L, char const *path) {
    </pre>
 ]] */
 TSLanguage const *language_load_from(Dynlib dl, size_t lang_name_len, char const *language_name) {
-	char buf[TREE_SITTER_SYM_LEN + MAX_LANG_NAME_LEN + 1] = { 't', 'r', 'e', 'e', '_', 's', 'i', 't', 't', 'e', 'r', '_' };
+	char buf[TREE_SITTER_SYM_LEN + MAX_LANG_NAME_LEN + 1] = {'t', 'r', 'e', 'e', '_', 's', 'i', 't', 't', 'e', 'r', '_'};
 	{
 		assert(lang_name_len <= MAX_LANG_NAME_LEN);
 		memcpy(buf + TREE_SITTER_SYM_LEN, language_name, lang_name_len);
 		buf[TREE_SITTER_SYM_LEN + lang_name_len] = 0;
 	}
 	void *sym = dynlib_sym(&dl, buf);
-	if (!sym) return NULL;
+	if (!sym)
+		return NULL;
 	TSLanguage *(*tree_sitter_lang)(void);
 	*(void **)(&tree_sitter_lang) = sym;
 	return tree_sitter_lang();
@@ -121,7 +122,8 @@ int language_load(lua_State *L) {
 	if (!lang) {
 		lua_pushnil(L);
 		lua_pushfstring(L, "Symbol not found in %s", dl_file);
-		if (!cached) dynlib_close(&opened);
+		if (!cached)
+			dynlib_close(&opened);
 		return 1;
 	}
 
@@ -145,8 +147,7 @@ static bool try_load_from_path(
 	char const *dl_file,
 	size_t lang_name_len,
 	char const *lang_name,
-	StringBuilder *err_buf
-) {
+	StringBuilder *err_buf) {
 	char const *dynlib_error = NULL;
 	TSLanguage const *lang = NULL;
 	bool should_cache_dl = false;
@@ -179,24 +180,24 @@ static bool try_load_from_path(
 
 	uint32_t const version = ts_language_version(lang);
 	if (version < TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION) {
-		if (should_cache_dl) dynlib_close(&dl);
+		if (should_cache_dl)
+			dynlib_close(&dl);
 		sb_push_fmt(
 			err_buf,
-			"\n\tFound %s, but the version is too old, language version: %"PRIu32", minimum version: %d",
+			"\n\tFound %s, but the version is too old, language version: %" PRIu32 ", minimum version: %d",
 			dl_file,
 			version,
-			TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION
-		);
+			TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION);
 		return false;
 	} else if (version > TREE_SITTER_LANGUAGE_VERSION) {
-		if (should_cache_dl) dynlib_close(&dl);
+		if (should_cache_dl)
+			dynlib_close(&dl);
 		sb_push_fmt(
 			err_buf,
-			"\n\tFound %s, but the version is too new, language version: %"PRIu32", maximum version: %d",
+			"\n\tFound %s, but the version is too new, language version: %" PRIu32 ", maximum version: %d",
 			dl_file,
 			version,
-			TREE_SITTER_LANGUAGE_VERSION
-		);
+			TREE_SITTER_LANGUAGE_VERSION);
 		return false;
 	}
 
@@ -221,7 +222,8 @@ static bool try_load_from_path(
 
 static size_t find_char(char const *str, size_t len, char c) {
 	char const *ptr = memchr(str, c, len);
-	if (!ptr) return len;
+	if (!ptr)
+		return len;
 	return (size_t)(ptr - str);
 }
 
@@ -229,8 +231,7 @@ static void substitute_question_marks(
 	StringBuilder *buf,
 	char const *path_pattern,
 	size_t path_pattern_len,
-	char const *to_replace_with
-) {
+	char const *to_replace_with) {
 	size_t i = 0;
 	while (i < path_pattern_len) {
 		size_t const prev_i = i;
@@ -248,17 +249,17 @@ static void substitute_question_marks(
 	sb_push_char(buf, 0);
 
 	// fprintf(
-		// stderr,
-		// "substitute_question_marks(buf=%p,\n"
-		// "                          path_pattern=\"%.*s\",\n"
-		// "                          path_pattern_len=%zu,\n"
-		// "                          to_replace_with=\"%s\") -> \"%s\"\n"
-		// ,
-		// (void *)buf,
-		// (int)path_pattern_len, path_pattern,
-		// path_pattern_len,
-		// to_replace_with,
-		// buf->data
+	// stderr,
+	// "substitute_question_marks(buf=%p,\n"
+	// "                          path_pattern=\"%.*s\",\n"
+	// "                          path_pattern_len=%zu,\n"
+	// "                          to_replace_with=\"%s\") -> \"%s\"\n"
+	// ,
+	// (void *)buf,
+	// (int)path_pattern_len, path_pattern,
+	// path_pattern_len,
+	// to_replace_with,
+	// buf->data
 	// );
 }
 
@@ -271,8 +272,7 @@ static bool try_load_from_path_list(
 	size_t lang_name_len,
 	char const *lang_name,
 	StringBuilder *path_buf,
-	StringBuilder *err_buf
-) {
+	StringBuilder *err_buf) {
 	size_t start = 0;
 	size_t end = 0;
 	bool result = false;
@@ -312,7 +312,6 @@ static bool try_load_from_path_list(
 	return result;
 }
 
-
 /* @teal-export require: function(library_file_name: string, language_name?: string): Language, string [[
    Search <code>package.cpath</code> for a parser with the filename <code>library_file_name.so</code> or <code>parsers/library_file_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_'language_name'</code>
    <code>language_name</code> is optional and will be set to <code>library_file_name</code> if not provided.
@@ -342,14 +341,17 @@ int language_require(lua_State *L) {
 		return 0;
 	}
 
-	lua_getglobal(L, "package");  // lang_name, <ts path>, package
-	if (lua_isnil(L, -1)) return luaL_error(L, "Unable to load language %s, `package` was nil", lang_name);
+	lua_getglobal(L, "package"); // lang_name, <ts path>, package
+	if (lua_isnil(L, -1))
+		return luaL_error(L, "Unable to load language %s, `package` was nil", lang_name);
 	lua_getfield(L, -1, "cpath"); // lang_name, <ts path>, package, package.cpath
-	if (lua_isnil(L, -1)) return luaL_error(L, "Unable to load language %s, `package.cpath` was nil", lang_name);
-	lua_remove(L, -2);            // lang_name, <ts path>, package.cpath
+	if (lua_isnil(L, -1))
+		return luaL_error(L, "Unable to load language %s, `package.cpath` was nil", lang_name);
+	lua_remove(L, -2); // lang_name, <ts path>, package.cpath
 	size_t cpath_len;
 	char const *cpath = lua_tolstring(L, -1, &cpath_len);
-	if (!cpath) return luaL_error(L, "Unable to load language %s, `package.cpath` was not a string", lang_name);
+	if (!cpath)
+		return luaL_error(L, "Unable to load language %s, `package.cpath` was not a string", lang_name);
 
 	StringBuilder path = {0};
 	// buffer to build up search paths in error message
@@ -399,8 +401,10 @@ static int language_gc(lua_State *L) {
 static int language_name(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
 	char const *name = ts_language_name(l);
-	if (name) lua_pushstring(L, name);
-	else lua_pushnil(L);
+	if (name)
+		lua_pushstring(L, name);
+	else
+		lua_pushnil(L);
 	return 1;
 }
 
@@ -423,7 +427,7 @@ static int language_state_count(lua_State *L) {
 }
 
 /* @teal-export Language.field_count: function(Language): integer [[
-	Get the number of distinct field names in the given parser's language
+   Get the number of distinct field names in the given parser's language
 ]] */
 static int language_field_count(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
@@ -459,9 +463,12 @@ static int language_metadata(lua_State *L) {
 	TSLanguageMetadata const *meta = ts_language_metadata(l);
 	if (meta) {
 		lua_createtable(L, 0, 3);
-		pushinteger(L, meta->major_version); lua_setfield(L, -2, "major_version");
-		pushinteger(L, meta->minor_version); lua_setfield(L, -2, "minor_version");
-		pushinteger(L, meta->patch_version); lua_setfield(L, -2, "patch_version");
+		pushinteger(L, meta->major_version);
+		lua_setfield(L, -2, "major_version");
+		pushinteger(L, meta->minor_version);
+		lua_setfield(L, -2, "minor_version");
+		pushinteger(L, meta->patch_version);
+		lua_setfield(L, -2, "patch_version");
 	} else {
 		lua_pushnil(L);
 	}
@@ -487,8 +494,10 @@ static int language_name_for_field_id(lua_State *L) {
 	lua_Integer id = luaL_checkinteger(L, 2);
 	luaL_argcheck(L, id >= 0, 2, "expected a non-negative integer (a FieldId)");
 	char const *name = ts_language_field_name_for_id(l, (TSFieldId)id);
-	if (name) lua_pushstring(L, name);
-	else lua_pushnil(L);
+	if (name)
+		lua_pushstring(L, name);
+	else
+		lua_pushnil(L);
 	return 1;
 }
 
@@ -501,8 +510,10 @@ static int language_symbol_for_name(lua_State *L) {
 	char const *name = lua_tolstring(L, 2, &len);
 	bool is_named = lua_toboolean(L, 3);
 	TSSymbol sym = ts_language_symbol_for_name(l, name, (uint32_t)len, is_named);
-	if (sym) lua_pushinteger(L, sym);
-	else lua_pushnil(L);
+	if (sym)
+		lua_pushinteger(L, sym);
+	else
+		lua_pushnil(L);
 	return 1;
 }
 
@@ -514,8 +525,10 @@ static int language_symbol_name(lua_State *L) {
 	lua_Integer id = luaL_checkinteger(L, 2);
 	luaL_argcheck(L, id >= 0, 2, "expected a non-negative integer (a Symbol)");
 	char const *name = ts_language_symbol_name(l, (TSSymbol)id);
-	if (name) lua_pushstring(L, name);
-	else lua_pushnil(L);
+	if (name)
+		lua_pushstring(L, name);
+	else
+		lua_pushnil(L);
 	return 1;
 }
 
@@ -529,11 +542,13 @@ static int language_symbol_type(lua_State *L) {
 	luaL_argcheck(L, id >= 0, 2, "expected a non-negative integer (a Symbol)");
 
 	switch (ts_language_symbol_type(l, (TSSymbol)id)) {
+	// clang-format: off
 	case TSSymbolTypeRegular:   lua_pushliteral(L, "regular");   break;
 	case TSSymbolTypeAnonymous: lua_pushliteral(L, "anonymous"); break;
 	case TSSymbolTypeSupertype: lua_pushliteral(L, "supertype"); break;
 	case TSSymbolTypeAuxiliary: lua_pushliteral(L, "auxiliary"); break;
 	default:                    lua_pushnil(L); break;
+	// clang-format: on
 	}
 	return 1;
 }

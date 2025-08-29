@@ -5,7 +5,7 @@
 
 bool dynlib_open(char const *name, Dynlib *handle, char const **out_error) {
 #ifdef _WIN32
-	*handle = (Dynlib){ .opaque_handle = LoadLibrary(name) };
+	*handle = (Dynlib){.opaque_handle = LoadLibrary(name)};
 	if (!handle->opaque_handle) {
 		*out_error = GetLastError();
 		return false;
@@ -19,7 +19,7 @@ bool dynlib_open(char const *name, Dynlib *handle, char const **out_error) {
 		return false;
 	}
 #else
-	*handle = (Dynlib){ .opaque_handle = dlopen(name, RTLD_NOW | RTLD_LOCAL) };
+	*handle = (Dynlib){.opaque_handle = dlopen(name, RTLD_NOW | RTLD_LOCAL)};
 	if (!handle->opaque_handle) {
 		*out_error = dlerror();
 		return false;
@@ -31,7 +31,7 @@ bool dynlib_open(char const *name, Dynlib *handle, char const **out_error) {
 void *dynlib_sym(Dynlib *handle, char const *sym_name) {
 #ifdef _WIN32
 	FARPROC sym = GetProcAddress(handle->opaque_handle, sym_name);
-	return *(void**)(&sym);
+	return *(void **)(&sym);
 #elif LTREESITTER_USE_LIBUV
 	void *sym = NULL;
 	if (uv_dlsym(handle, sym_name, &sym) == 0) {

@@ -1,8 +1,8 @@
 #ifndef LTREESITTER_LANGUAGE_H
 #define LTREESITTER_LANGUAGE_H
 
-#include "types.h"
 #include "dynamiclib.h"
+#include "types.h"
 #include <lua.h>
 
 // ( -- table )

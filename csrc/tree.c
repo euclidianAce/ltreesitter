@@ -8,9 +8,9 @@
 #include <string.h>
 
 #include "luautils.h"
+#include "node.h"
 #include "object.h"
 #include "tree.h"
-#include "node.h"
 #include "types.h"
 
 #ifdef LOG_GC
@@ -30,11 +30,11 @@ void tree_push(
 	size_t src_len,
 	char const *src) {
 	SourceText *source = source_text_push(L, src_len, src); // source text
-	ltreesitter_Tree *tree = push_uninitialized_tree(L); // source text, tree
+	ltreesitter_Tree *tree = push_uninitialized_tree(L);    // source text, tree
 	tree->tree = t;
 	tree->text_or_null_if_function_reader = source;
 	bind_lifetimes(L, -1, -2); // tree keeps source text alive
-	lua_remove(L, -2); // tree
+	lua_remove(L, -2);         // tree
 
 	// fprintf(stderr, "Created tree %p with source %p\n", (void*)tree, (void*)tree->source);
 }
@@ -49,7 +49,7 @@ void tree_push_with_reader(
 	tree->text_or_null_if_function_reader = NULL;
 
 	bind_lifetimes(L, -1, -2); // tree keeps reader alive
-	lua_remove(L, -2); // tree
+	lua_remove(L, -2);         // tree
 }
 
 /* @teal-export Tree.root: function(Tree): Node [[
@@ -76,7 +76,7 @@ static int tree_to_string(lua_State *L) {
 static int tree_copy(lua_State *L) {
 	lua_settop(L, 1);
 	ltreesitter_Tree *t = tree_assert(L, 1); // tree
-	push_kept(L, 1); // tree, source text/reader
+	push_kept(L, 1);                         // tree, source text/reader
 	SourceText const *source_text = source_text_assert(L, -1);
 	if (!source_text) {
 		luaL_error(L, "Internal error: Tree child was not a SourceText");
@@ -214,13 +214,13 @@ static int tree_get_changed_ranges(lua_State *L) {
 		pushinteger(L, ranges[i].start_point.column);
 		lua_setfield(L, -2, "column");
 		lua_setfield(L, -2, "start_point"); // { range }, range
-		lua_createtable(L, 0, 2); // { range }, range, end_point
+		lua_createtable(L, 0, 2);           // { range }, range, end_point
 		pushinteger(L, ranges[i].end_point.row);
 		lua_setfield(L, -2, "row");
 		pushinteger(L, ranges[i].end_point.column);
 		lua_setfield(L, -2, "column");
 		lua_setfield(L, -2, "end_point"); // { range }, range
-		lua_rawseti(L, -2, i + 1); // { range }
+		lua_rawseti(L, -2, i + 1);        // { range }
 	}
 
 	free(ranges);

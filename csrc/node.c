@@ -7,9 +7,9 @@
 #include <stdlib.h>
 
 #include "luautils.h"
+#include "node.h"
 #include "object.h"
 #include "tree.h"
-#include "node.h"
 #include "tree_cursor.h"
 #include "types.h"
 
@@ -21,7 +21,8 @@
 ltreesitter_Tree *node_push_tree(lua_State *L, int node_idx) {
 	push_kept(L, node_idx);
 	ltreesitter_Tree *const tree = tree_check(L, -1);
-	if (!tree) luaL_error(L, internal_err);
+	if (!tree)
+		luaL_error(L, internal_err);
 	return tree;
 }
 
@@ -132,12 +133,13 @@ void node_push(lua_State *L, int tree_idx, TSNode n) {
 	lua_pushvalue(L, tree_idx); // tree
 	tree_idx = lua_gettop(L);
 
-	if (!tree_check(L, tree_idx)) luaL_error(L, internal_err);
+	if (!tree_check(L, tree_idx))
+		luaL_error(L, internal_err);
 	TSNode *node = lua_newuserdata(L, sizeof(TSNode)); // tree, node
 	*node = n;
 	setmetatable(L, LTREESITTER_NODE_METATABLE_NAME); // tree, node
-	bind_lifetimes(L, -1, tree_idx); // node keeps tree alive
-	lua_remove(L, -2); // node
+	bind_lifetimes(L, -1, tree_idx);                  // node keeps tree alive
+	lua_remove(L, -2);                                // node
 }
 
 /* @teal-export Node.child: function(Node, idx: integer): Node [[
@@ -435,7 +437,8 @@ MaybeOwnedString node_get_source(lua_State *L) { // node
 	TSPoint position = ts_node_start_point(n);
 
 	StringBuilder sb = {0};
-	if (!sb_ensure_cap(&sb, expected_byte_length)) ALLOC_FAIL(L);
+	if (!sb_ensure_cap(&sb, expected_byte_length))
+		ALLOC_FAIL(L);
 
 	while (needed_bytes > 0) {
 		lua_pushvalue(L, -1); // ..., reader
@@ -443,9 +446,12 @@ MaybeOwnedString node_get_source(lua_State *L) { // node
 		uint32_t const start_index = start_byte + end_byte - needed_bytes;
 
 		pushinteger(L, start_index); // ..., reader, index
-		lua_newtable(L); { // ..., reader, index, point
-			pushinteger(L, position.row); lua_setfield(L, -2, "row");
-			pushinteger(L, position.column); lua_setfield(L, -2, "column");
+		lua_newtable(L);
+		{ // ..., reader, index, point
+			pushinteger(L, position.row);
+			lua_setfield(L, -2, "row");
+			pushinteger(L, position.column);
+			lua_setfield(L, -2, "column");
 		} // ..., reader, index, point
 
 		if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
@@ -460,29 +466,27 @@ MaybeOwnedString node_get_source(lua_State *L) { // node
 		case LUA_TNIL:
 			needed_bytes = 0;
 			break;
-		case LUA_TSTRING:
-			{
-				size_t len;
-				char const *str = lua_tolstring(L, -1, &len);
-				if (len > needed_bytes)
-					len = needed_bytes;
-				sb_push_lstr(&sb, len, str);
-				needed_bytes -= len;
+		case LUA_TSTRING: {
+			size_t len;
+			char const *str = lua_tolstring(L, -1, &len);
+			if (len > needed_bytes)
+				len = needed_bytes;
+			sb_push_lstr(&sb, len, str);
+			needed_bytes -= len;
 
-				// According to https://github.com/tree-sitter/tree-sitter/discussions/1286
-				// `column` is just a byte offset
-				//
-				// TODO: what about utf-16?
-				for (size_t i = 0; i < len; ++i) {
-					if (str[i] == '\n') {
-						position.row += 1;
-						position.column = 0;
-					} else {
-						position.column += 1;
-					}
+			// According to https://github.com/tree-sitter/tree-sitter/discussions/1286
+			// `column` is just a byte offset
+			//
+			// TODO: what about utf-16?
+			for (size_t i = 0; i < len; ++i) {
+				if (str[i] == '\n') {
+					position.row += 1;
+					position.column = 0;
+				} else {
+					position.column += 1;
 				}
 			}
-			break;
+		} break;
 		default:
 			sb_free(&sb);
 			luaL_error(L, "Reader function returned %s (expected string)", lua_typename(L, ret_type));

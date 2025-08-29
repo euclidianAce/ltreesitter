@@ -1,9 +1,9 @@
 #ifndef LTREESITTER_LUAUTILS_H
 #define LTREESITTER_LUAUTILS_H
 
+#include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
-#include <lauxlib.h>
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -30,7 +30,7 @@ void sb_push_to_lua(lua_State *L, StringBuilder *sb);
 void sb_free(StringBuilder *sb);
 
 #define sb_push_lit(sb, lit) \
-	sb_push_lstr((sb), sizeof(""lit""), (""lit""))
+	sb_push_lstr((sb), sizeof("" lit ""), ("" lit ""))
 
 typedef struct {
 	char const *data;

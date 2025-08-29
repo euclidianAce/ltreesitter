@@ -10,10 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "dynamiclib.h"
 #include "luautils.h"
 #include "object.h"
 #include "parser.h"
-#include "dynamiclib.h"
 
 #include "query.h"
 #include "tree.h"
@@ -52,24 +52,28 @@ static TSInputEncoding encoding_from_str(lua_State *L, int str_index) {
 
 	if (!encoding_str) {
 		int type = lua_type(L, str_index);
-		if (type == LUA_TNIL) return TSInputEncodingUTF8;
+		if (type == LUA_TNIL)
+			return TSInputEncodingUTF8;
 		luaL_error(L, "Expected one of `utf-8`, `utf-16le`, `utf-16be`, got %s", lua_typename(L, type));
 		return TSInputEncodingUTF8;
 	}
 
 	switch (len) {
 	case 5:
-		if (memcmp(encoding_str, "utf-8", 5) == 0) return TSInputEncodingUTF8;
+		if (memcmp(encoding_str, "utf-8", 5) == 0)
+			return TSInputEncodingUTF8;
 		break;
 
-	// #CustomEncoding
-	//case 6:
-	//	if (memcmp(encoding_str, "custom", 6) == 0) return TSInputEncodingCustom;
-	//	break;
+		// #CustomEncoding
+		// case 6:
+		//	if (memcmp(encoding_str, "custom", 6) == 0) return TSInputEncodingCustom;
+		//	break;
 
 	case 8:
-		if (memcmp(encoding_str, "utf-16le", 8) == 0) return TSInputEncodingUTF16LE;
-		if (memcmp(encoding_str, "utf-16be", 8) == 0) return TSInputEncodingUTF16BE;
+		if (memcmp(encoding_str, "utf-16le", 8) == 0)
+			return TSInputEncodingUTF16LE;
+		if (memcmp(encoding_str, "utf-16be", 8) == 0)
+			return TSInputEncodingUTF16BE;
 		break;
 
 	default:
@@ -99,7 +103,7 @@ static int parser_parse_string(lua_State *L) {
 		: tree_assert(L, 4)->tree;
 
 	// #CustomEncoding
-	//if (encoding == TSInputEncodingCustom)
+	// if (encoding == TSInputEncodingCustom)
 	//	return luaL_error(L, "Custom encodings are only usable with `parse_with`");
 
 	TSTree *const tree = ts_parser_parse_string_encoding(p, old_tree, to_parse, len, encoding);
@@ -114,7 +118,7 @@ static int parser_parse_string(lua_State *L) {
 
 #define read_callback_idx 2
 #define progress_callback_idx 3
-//#define decode_callback_idx 4
+// #define decode_callback_idx 4
 
 typedef struct {
 	lua_State *L;
@@ -225,7 +229,7 @@ static int parser_parse_with(lua_State *L) {
 	};
 
 	// #CustomEncoding
-	//if (encoding == TSInputEncodingCustom)
+	// if (encoding == TSInputEncodingCustom)
 	//	return luaL_error(L, "Custom encodings are not yet supported");
 
 	TSInput input = {

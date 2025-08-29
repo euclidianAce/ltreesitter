@@ -1,8 +1,8 @@
 #ifndef LTREESITTER_TYPES_H
 #define LTREESITTER_TYPES_H
 
-#include <lua.h>
 #include <lauxlib.h>
+#include <lua.h>
 #include <tree_sitter/api.h>
 
 #include <stdint.h>

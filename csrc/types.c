@@ -1,7 +1,7 @@
 #include "types.h"
 #include "luautils.h"
-#include <string.h>
 #include <lauxlib.h>
+#include <string.h>
 
 #ifdef LOG_GC
 static int ltreesitter_source_text_gc(lua_State *L) {
@@ -61,4 +61,3 @@ TSPoint topoint(lua_State *L, int const idx) {
 		.column = col,
 	};
 }
-

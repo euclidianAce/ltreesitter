@@ -1,15 +1,15 @@
 #include <lauxlib.h>
 #include <lua.h>
 
+#include "language.h"
 #include "luautils.h"
+#include "node.h"
 #include "object.h"
 #include "parser.h"
-#include "tree.h"
 #include "query.h"
-#include "node.h"
 #include "query_cursor.h"
+#include "tree.h"
 #include "tree_cursor.h"
-#include "language.h"
 
 // @teal-export version: string
 static const char version_str[] = "0.2.0+dev";
@@ -24,9 +24,9 @@ static const luaL_Reg lib_funcs[] = {
 };
 
 #ifdef _WIN32
-__declspec (dllexport)
+__declspec(dllexport)
 #else
-__attribute__ ((visibility("default")))
+__attribute__((visibility("default")))
 #endif
 int luaopen_ltreesitter(lua_State *L);
 

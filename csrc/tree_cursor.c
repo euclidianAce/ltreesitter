@@ -1,9 +1,9 @@
+#include "tree_cursor.h"
 #include "luautils.h"
+#include "node.h"
 #include "object.h"
 #include "tree.h"
-#include "node.h"
 #include "types.h"
-#include "tree_cursor.h"
 
 TSTreeCursor *tree_cursor_push(lua_State *L, int kept_idx, TSNode n) {
 	TSTreeCursor *c = lua_newuserdata(L, sizeof(TSTreeCursor));
@@ -100,7 +100,6 @@ static int tree_cursor_goto_first_child_for_byte(lua_State *L) {
 
    Returns the index of the child node or nil if no such child was found
 ]] */
-//int64_t ts_tree_cursor_goto_first_child_for_point(TSTreeCursor *self, TSPoint goal_point);
 static int tree_cursor_goto_first_child_for_point(lua_State *L) {
 	TSTreeCursor *const c = tree_cursor_assert(L, 1);
 	TSPoint goal = topoint(L, 2);
@@ -112,7 +111,6 @@ static int tree_cursor_goto_first_child_for_point(lua_State *L) {
 	}
 	return 1;
 }
-
 
 /* @teal-export Cursor.reset_to: function(Cursor, Cursor) [[
    Re-initialize a tree cursor to the same position as another cursor.
@@ -131,7 +129,7 @@ static int tree_cursor_reset_to(lua_State *L) {
 static int tree_cursor_goto_descendant(lua_State *L) {
 	TSTreeCursor *c = tree_cursor_assert(L, 1);
 	lua_Integer index = luaL_checkinteger(L, 2);
-    luaL_argcheck(L, index >= 0, 2, "index must be positive");
+	luaL_argcheck(L, index >= 0, 2, "index must be positive");
 	ts_tree_cursor_goto_descendant(c, (uint32_t)index);
 	return 0;
 }
@@ -179,8 +177,10 @@ static int tree_cursor_copy(lua_State *L) {
 static int tree_cursor_current_field_id(lua_State *L) {
 	TSTreeCursor const *c = tree_cursor_assert(L, 1);
 	TSFieldId id = ts_tree_cursor_current_field_id(c);
-	if (id) pushinteger(L, id);
-	else lua_pushnil(L);
+	if (id)
+		pushinteger(L, id);
+	else
+		lua_pushnil(L);
 	return 1;
 }
 

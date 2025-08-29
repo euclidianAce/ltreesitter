@@ -1,8 +1,8 @@
 #ifndef LTREESITTER_QUERY_CURSOR_H
 #define LTREESITTER_QUERY_CURSOR_H
 
-#include <lua.h>
 #include "types.h"
+#include <lua.h>
 
 // ( -- table )
 void query_cursor_init_metatable(lua_State *L);

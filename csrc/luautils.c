@@ -3,7 +3,8 @@
 
 char *str_ldup(char const *s, const size_t len) {
 	char *dup = malloc(sizeof(char) * (len + 1));
-	if (!dup) return NULL;
+	if (!dup)
+		return NULL;
 	memcpy(dup, s, len);
 	dup[len] = '\0';
 	return dup;
@@ -52,8 +53,8 @@ void create_metatable(
 	char const *name,
 	luaL_Reg const *metamethods,
 	luaL_Reg const *index) {
-	luaL_newmetatable(L, name);     // metatable
-	setfuncs(L, metamethods);       // metatable
+	luaL_newmetatable(L, name); // metatable
+	setfuncs(L, metamethods);   // metatable
 	if (index) {
 		lua_newtable(L);                // metatable, table
 		setfuncs(L, index);             // metatable, table
@@ -62,8 +63,8 @@ void create_metatable(
 
 	// lua <=5.2 doesn't set the __name field which we rely upon for the tests to pass
 #if LUA_VERSION_NUM < 503
-	lua_pushstring(L, name);        // metatable, name
-	lua_setfield(L, -2, "__name");  // metatable
+	lua_pushstring(L, name);       // metatable, name
+	lua_setfield(L, -2, "__name"); // metatable
 #endif
 }
 
@@ -122,7 +123,8 @@ void *testudata(lua_State *L, int idx, char const *tname) {
 #if LUA_VERSION_NUM < 502
 	// Adapted from lua 5.4 source
 	void *p = lua_touserdata(L, idx);
-	if (!p) return NULL;
+	if (!p)
+		return NULL;
 	if (!lua_getmetatable(L, idx)) // t1
 		return NULL;
 	luaL_getmetatable(L, tname); // t1, t2
@@ -162,9 +164,9 @@ int ref_into_registry(lua_State *L, int object_to_ref) {
 }
 
 void unref_from_registry(lua_State *L, int ref_to_unref) {
-	push_registry_table(L);          // { <ltreesitter registry> }
+	push_registry_table(L); // { <ltreesitter registry> }
 	luaL_unref(L, -1, ref_to_unref);
-	lua_pop(L, 1);                   // <empty>
+	lua_pop(L, 1); // <empty>
 }
 
 bool push_ref_from_registry(lua_State *L, int ref) {
@@ -237,7 +239,8 @@ bool sb_ensure_cap(StringBuilder *sb, size_t n) {
 }
 
 bool sb_push_char(StringBuilder *sb, char c) {
-	if (!sb_ensure_cap(sb, sb->length + 1)) return false;
+	if (!sb_ensure_cap(sb, sb->length + 1))
+		return false;
 	sb->data[sb->length] = c;
 	sb->length += 1;
 	return true;
@@ -249,7 +252,8 @@ bool sb_push_str(StringBuilder *sb, char const *str) {
 }
 
 bool sb_push_lstr(StringBuilder *sb, size_t len, char const *str) {
-	if (!sb_ensure_cap(sb, sb->length + len)) return false;
+	if (!sb_ensure_cap(sb, sb->length + len))
+		return false;
 	memcpy(sb->data + sb->length, str, len);
 	sb->length += len;
 	return true;
@@ -284,7 +288,8 @@ void sb_push_to_lua(lua_State *L, StringBuilder *sb) {
 }
 
 void mos_free(MaybeOwnedString *s) {
-	if (s->owned) free((void *)s->data);
+	if (s->owned)
+		free((void *)s->data);
 	s->data = NULL;
 	s->length = 0;
 	s->owned = false;
