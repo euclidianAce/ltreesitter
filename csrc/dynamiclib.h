@@ -7,7 +7,7 @@
 #include <uv.h>
 typedef uv_lib_t Dynlib;
 #else
-typedef void *Dynlib;
+typedef struct { void *opaque_handle; } Dynlib;
 #ifdef _WIN32
 #include <windows.h>
 #else

@@ -232,7 +232,7 @@ static int tree_gc(lua_State *L) {
 	ltreesitter_Tree *t = tree_assert(L, 1);
 #ifdef LOG_GC
 	printf("Tree %p is being garbage collected\n", (void const *)t);
-	printf("    source text=%p\n", (void const *)t->source);
+	printf("    source text=%p\n", (void const *)t->text_or_null_if_function_reader);
 #endif
 	ts_tree_delete(t->tree);
 	return 0;

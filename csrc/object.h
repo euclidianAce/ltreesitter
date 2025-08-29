@@ -27,6 +27,7 @@ void setup_object_table(lua_State *);
 // Creates a keeper-kept relationship between two objects
 //
 // Neither index may be a pseudo-index (relative indexes are fine though)
+// ( -- )
 void bind_lifetimes(lua_State *, int as_long_as_this_object_lives, int so_shall_this_one);
 
 // ( [keeper_idx]=any | -- any )

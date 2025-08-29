@@ -19,6 +19,24 @@ local record ltreesitter
       reset: function(Cursor, Node)
       reset_to: function(Cursor, Cursor)
    end
+   record Language is userdata
+      abi_version: function(Language): integer
+      field_count: function(Language): integer
+      field_id_for_name: function(Language, string): FieldId
+      metadata: function(Language): LanguageMetadata
+      name: function(Language): string
+      name_for_field_id: function(Language, FieldId): string
+      next_state: function(Language, StateId, Symbol): StateId
+      parser: function(Language): Parser
+      query: function(Language, string): Query
+      state_count: function(Language): integer
+      subtypes: function(Language, supertype: Symbol): {Symbol}
+      supertypes: function(Language): {Symbol}
+      symbol_count: function(Language): integer
+      symbol_for_name: function(Language, string, is_named: boolean): Symbol
+      symbol_name: function(Language, Symbol): string
+      symbol_type: function(Language, Symbol): SymbolType
+   end
    record Node is userdata
       child: function(Node, idx: integer): Node
       child_by_field_id: function(Node, FieldId): Node
@@ -51,21 +69,6 @@ local record ltreesitter
    end
    record Parser is userdata
       get_ranges: function(Parser): {Range}
-      get_version: function(Parser): integer
-      language_abi_version: function(Parser): integer
-      language_field_count: function(Parser): integer
-      language_field_id_for_name: function(Parser, string): FieldId
-      language_metadata: function(Parser): LanguageMetadata
-      language_name: function(Parser): string
-      language_name_for_field_id: function(Parser, FieldId): string
-      language_next_state: function(Parser, StateId, Symbol): StateId
-      language_state_count: function(Parser): integer
-      language_subtypes: function(Parser, supertype: Symbol): {Symbol}
-      language_supertypes: function(Parser): {Symbol}
-      language_symbol_count: function(Parser): integer
-      language_symbol_for_name: function(Parser, string, is_named: boolean): Symbol
-      language_symbol_name: function(Parser, Symbol): string
-      language_symbol_type: function(Parser, Symbol): SymbolType
       parse_string: function(Parser, string, ?Encoding, ?Tree): Tree
       parse_with: function(
    Parser,
@@ -74,16 +77,14 @@ local record ltreesitter
    encoding?: Encoding,
    old_tree?: Tree
    ): Tree
-      query: function(Parser, string): Query
       reset: function(Parser)
       set_ranges: function(Parser, {Range}): boolean
    end
    record Query is userdata
-      capture: function(Query, Node, start?: integer | Point, end_?: integer | Point): function(): (Node, string)
-      exec: function(Query, Node, start?: integer | Point, end_?: integer | Point)
-      match: function(Query, Node, start?: integer | Point, end_?: integer | Point): function(): Match
-      source: function(Query): string
-      with: function(Query, {string:function(...: string | Node | {Node}): any...}): Query
+      _with: function(Query, {string:Predicate}): Query
+      capture: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): (Node, string)
+      exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point)
+      match: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): Match
    end
    TREE_SITTER_LANGUAGE_VERSION: integer
    TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION: integer
@@ -105,8 +106,8 @@ local record ltreesitter
       get_changed_ranges: function(old: Tree, new: Tree): {Range}
       root: function(Tree): Node
    end
-   load: function(file_name: string, language_name: string): Parser, string
-   require: function(library_file_name: string, language_name?: string): Parser, string
+   load: function(file_name: string, language_name: string): Language, string
+   require: function(library_file_name: string, language_name?: string): Language, string
    tree_sitter_version: string
    version: string
 
@@ -133,16 +134,6 @@ local record ltreesitter
       end_point: Point
    end
 
-   interface LanguageMetadata
-      major_version: integer
-      minor_version: integer
-      patch_version: integer
-   end
-
-   type StateId = integer
-   type Symbol = integer
-   type FieldId = integer
-
    interface TreeEdit
       start_byte: integer
       old_end_byte: integer
@@ -160,9 +151,21 @@ local record ltreesitter
       captures: {string:Node|{Node}}
    end
 
+   type Predicate = function(...: string | Node | {Node}): any...
+
    interface Point
       row: integer
       column: integer
+   end
+
+   type StateId = integer
+   type Symbol = integer
+   type FieldId = integer
+
+   interface LanguageMetadata
+      major_version: integer
+      minor_version: integer
+      patch_version: integer
    end
 end
 

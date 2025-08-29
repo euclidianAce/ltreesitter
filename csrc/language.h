@@ -18,4 +18,7 @@ int language_load(lua_State *L);
 // ( string ?string -- language string )
 int language_require(lua_State *L);
 
+void setup_dynlib_cache(lua_State *L);
+void dynlib_init_metatable(lua_State *L);
+
 #endif

@@ -14,11 +14,15 @@
 	static inline t *(prefix##_assert)(lua_State *L, int idx) { return luaL_checkudata(L, idx, name); }
 
 typedef struct ltreesitter_Tree ltreesitter_Tree;
-typedef struct ltreesitter_Query ltreesitter_Query;
-typedef struct ltreesitter_QueryCursor ltreesitter_QueryCursor;
 
 #define LTREESITTER_LANGUAGE_METATABLE_NAME "ltreesitter.Language"
 #define LTREESITTER_PARSER_METATABLE_NAME "ltreesitter.Parser"
+#define LTREESITTER_TREE_METATABLE_NAME "ltreesitter.Tree"
+#define LTREESITTER_TREE_CURSOR_METATABLE_NAME "ltreesitter.TreeCursor"
+#define LTREESITTER_NODE_METATABLE_NAME "ltreesitter.Node"
+#define LTREESITTER_QUERY_METATABLE_NAME "ltreesitter.Query"
+#define LTREESITTER_QUERY_CURSOR_METATABLE_NAME "ltreesitter.QueryCursor"
+#define LTREESITTER_DYNLIB_METATABLE_NAME "ltreesitter.Dynlib"
 
 // garbage collected source text for trees and queries to hold on to
 typedef struct {
@@ -29,20 +33,9 @@ typedef struct {
 
 struct ltreesitter_Tree {
 	TSTree *tree;
+	// TODO: the source text is kept in the registry, we don't need this
 	SourceText const *text_or_null_if_function_reader;
 };
-#define LTREESITTER_TREE_METATABLE_NAME "ltreesitter.Tree"
-
-#define LTREESITTER_TREE_CURSOR_METATABLE_NAME "ltreesitter.TreeCursor"
-
-#define LTREESITTER_NODE_METATABLE_NAME "ltreesitter.Node"
-
-struct ltreesitter_Query {
-	TSQuery *query;
-	TSLanguage const *lang;
-};
-#define LTREESITTER_QUERY_METATABLE_NAME "ltreesitter.Query"
-#define LTREESITTER_QUERY_CURSOR_METATABLE_NAME "ltreesitter.QueryCursor"
 
 // TODO: TSLookaheadIterator
 

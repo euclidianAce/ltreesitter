@@ -1,7 +1,8 @@
 
 local lfs <const> = require("lfs")
 local ts <const> = require("ltreesitter")
-local p <const> = ts.require("c")
+local c_lang <const> = ts.require("c")
+local p <const> = c_lang:parser()
 
 local ti <const> = table.insert
 
@@ -107,7 +108,7 @@ local directives: {string:function(ts.Node, string, string)} = {
 
 local function proc_file(file: string)
    local tree <const> = parse_file(file)
-   for c in p
+   for c in c_lang
       :query[[ (comment) @the-comment ]]
       :capture(tree:root())
    do

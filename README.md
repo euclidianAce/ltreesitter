@@ -38,18 +38,19 @@ local ltreesitter = require("ltreesitter")
 #### `ltreesitter.require`
 Assuming you have a compiled c parser named `c.so` (or `c.dll` on windows) in `~/.tree-sitter/bin/` or `package.cpath`
 ```lua
-local c_parser = ltreesitter.require("c")
+local c_language = ltreesitter.require("c")
+local c_parser = c_language:parser()
 ```
 
 You have a `parser.so` (or `.dll`) with the symbol `tree_sitter_lua` to load the language
 ```lua
-local lua_parser = ltreesitter.require("parser", "lua")
+local lua_language = ltreesitter.require("parser", "lua")
 ```
 
 #### `ltreesitter.load`
 `load` will just directly load from the filename given.
 ```lua
-local local_c_parser = ltreesitter.load("./c-parser.so", "c")
+local local_c = ltreesitter.load("./c-parser.so", "c")
 ```
 Using a path without a path separator may have unintended consequences, so when in doubt, include a leading `./` or use an absolute path.
 

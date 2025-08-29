@@ -13,14 +13,9 @@
 #include "types.h"
 
 static char const *default_predicate_field = "default_predicates";
-static char const *predicate_field = "predicates";
 
 static void push_default_predicate_table(lua_State *L) {
 	push_registry_field(L, default_predicate_field);
-}
-
-static void push_predicate_table(lua_State *L) {
-	push_registry_field(L, predicate_field);
 }
 
 static inline void offset_to_pos(char const *src, uint32_t offset, uint32_t *row, uint32_t *col) {
@@ -80,14 +75,12 @@ bool query_handle_error(
 // src will be duplicated
 void query_push(
 	lua_State *L,
-	TSLanguage const *lang,
 	char const *src,
 	size_t const src_len,
 	TSQuery *q,
 	int kept_index) {
-
 	kept_index = absindex(L, kept_index);
-	ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query)); // query
+	TSQuery **lq = lua_newuserdata(L, sizeof(TSQuery *)); // query
 	setmetatable(L, LTREESITTER_QUERY_METATABLE_NAME);
 
 	bind_lifetimes(L, -1, kept_index); // this query keeps `kept_index` alive
@@ -100,81 +93,29 @@ void query_push(
 	bind_lifetimes(L, -2, -1); // query keeps source text alive
 	lua_pop(L, 1); // query
 
-	*lq = (ltreesitter_Query){
-		.query = q,
-		.lang = lang,
-	};
-}
-
-static void push_query_copy(lua_State *L, int query_idx) {
-	(void)query_idx;
-	luaL_error(L, "Query copying is not currently implemented");
-#if 0
-	ltreesitter_Query *orig = query_assert(L, query_idx); // query
-	push_kept(L, query_idx); // query, sourcetext
-	SourceText const *source_text = source_text_assert(L, -1);
-	if (!source_text) {
-		luaL_error(L, "Internal error: Query child was not a SourceText");
-		return;
-	}
-
-	uint32_t err_offset;
-	TSQueryError err_type;
-	TSQuery *q = ts_query_new(
-		orig->lang,
-		source_text->text,
-		source_text->length,
-		&err_offset,
-		&err_type);
-
-	if (!query_handle_error(L, q, err_offset, err_type, source_text->text, source_text->length))
-		return;
-
-	ltreesitter_Query *lq = lua_newuserdata(L, sizeof(struct ltreesitter_Query)); // query, sourcetext, new query
-	setmetatable(L, LTREESITTER_QUERY_METATABLE_NAME);
-
-	bind_lifetimes(L, -1, -2); // new query keeps the same source text alive
-	lua_remove(L, -2); // query, new query
-
-	*lq = (ltreesitter_Query){
-		.lang = orig->lang,
-		.query = q,
-	};
-#endif
+	*lq = q;
 }
 
 static int query_gc(lua_State *L) {
-	ltreesitter_Query *q = query_assert(L, 1);
-	ts_query_delete(q->query);
+	TSQuery *q = *query_assert(L, 1);
+	ts_query_delete(q);
 	return 1;
 }
 
 static int query_pattern_count(lua_State *L) {
-	TSQuery *q = query_assert(L, 1)->query;
+	TSQuery *q = *query_assert(L, 1);
 	pushinteger(L, ts_query_pattern_count(q));
 	return 1;
 }
 static int query_capture_count(lua_State *L) {
-	TSQuery *q = query_assert(L, 1)->query;
+	TSQuery *q = *query_assert(L, 1);
 	pushinteger(L, ts_query_capture_count(q));
 	return 1;
 }
 static int query_string_count(lua_State *L) {
-	TSQuery *q = query_assert(L, 1)->query;
+	TSQuery *q = *query_assert(L, 1);
 	pushinteger(L, ts_query_string_count(q));
 	return 1;
-}
-
-static void push_query_predicates(lua_State *L, int query_idx) {
-	lua_pushvalue(L, query_idx); // <Query>
-	push_predicate_table(L);     // <Query>, { <Predicates> }
-	lua_insert(L, -2);           // { <Predicates> }, <Query>
-	lua_gettable(L, -2);         // { <Predicates> }, <Predicate>
-	lua_remove(L, -2);           // <Predicate>
-	if (lua_isnil(L, -1)) {
-		lua_pop(L, 1);                   // (nothing)
-		push_default_predicate_table(L); // <Default Predicate>
-	}
 }
 
 // the capture table is just a map of @name -> Node
@@ -203,15 +144,19 @@ static void get_capture_from_table(
 	lua_rawget(L, table_index);
 }
 
-// TODO: this function cannot handle upvalue indexes for query_idx nor tree_idx
+// TODO: this function cannot handle upvalue indexes for query_idx, tree_idx, nor predicate_table_idx
 static bool do_predicates(
 	lua_State *L,
 	int query_idx,
 	TSQuery const *const q,
 	int tree_idx,
-	TSQueryMatch const *const m) {
+	TSQueryMatch const *const m,
+	int predicate_table_idx
+) {
 	query_idx = absindex(L, query_idx);
 	tree_idx = absindex(L, tree_idx);
+	predicate_table_idx = absindex(L, predicate_table_idx);
+	bool const predicates_provided = lua_type(L, predicate_table_idx) != LUA_TNIL;
 	bool result = true;
 
 #define RETURN(value) do { result = (value); goto deferred; } while (0)
@@ -243,17 +188,10 @@ static bool do_predicates(
 	{
 		// count the max number of args we need to prep for
 		int current_args = 0;
-		bool need_func_name = true;
 		int max_args = 0;
 		for (uint32_t j = 0; j < num_steps; ++j) {
 			switch (predicate_step[j].type) {
 			case TSQueryPredicateStepTypeString:
-				if (need_func_name)
-					need_func_name = false;
-				else
-					current_args += 1;
-				break;
-
 			case TSQueryPredicateStepTypeCapture:
 				current_args += 1;
 				break;
@@ -261,7 +199,6 @@ static bool do_predicates(
 			case TSQueryPredicateStepTypeDone:
 				if (current_args > max_args)
 					max_args = current_args;
-				need_func_name = true;
 				current_args = 0;
 				break;
 			}
@@ -283,18 +220,19 @@ static bool do_predicates(
 				uint32_t len;
 				char const *pred_name = ts_query_string_value_for_id(q, predicate_step[j].value_id, &len);
 				if (!func_name) {
-					// Find predicate
-					push_query_predicates(L, query_idx);
-					lua_getfield(L, -1, pred_name);
-					if (lua_isnil(L, -1)) {
-						lua_pop(L, 1);
-						// try to grab default value
-						push_default_predicate_table(L);
-						lua_getfield(L, -1, pred_name);
-						lua_remove(L, -2);
-						if (lua_isnil(L, -1))
-							luaL_error(L, "Query doesn't have predicate '%s'", pred_name);
+					bool predicate_found = false;
+					if (predicates_provided) {
+						lua_getfield(L, predicate_table_idx, pred_name);
+						if (lua_isnil(L, -1)) lua_pop(L, 1);
+						else predicate_found = true;
 					}
+					if (!predicate_found) {
+						push_default_predicate_table(L);
+						predicate_found = getfield_type(L, -1, pred_name) != LUA_TNIL;
+						lua_remove(L, -2);
+					}
+					if (!predicate_found)
+						luaL_error(L, "Query doesn't have predicate '%s'", pred_name);
 					func_name = pred_name;
 					if (func_name[len - 1] == '?') {
 						is_question = true;
@@ -359,21 +297,24 @@ deferred:
 ]] */
 
 static int query_iterator_next_match(lua_State *L) {
-	// upvalues: Query, Node, Cursor
+	// upvalues: Query, Node, Predicate Map, Cursor
 	int const initial_query_idx = lua_upvalueindex(1);
-	ltreesitter_Query *const q = query_assert(L, initial_query_idx);
-	TSQueryCursor *c = *query_cursor_assert(L, lua_upvalueindex(3));
+	TSQuery *const q = *query_assert(L, initial_query_idx);
+	TSQueryCursor *c = *query_cursor_assert(L, lua_upvalueindex(4));
 	TSQueryMatch m;
 	node_push_tree(L, lua_upvalueindex(2));
-	int const parent_idx = lua_gettop(L);
+	int const tree_index = lua_gettop(L);
 
 	lua_pushvalue(L, initial_query_idx);
 	int const query_idx = lua_gettop(L);
 
+	lua_pushvalue(L, lua_upvalueindex(3));
+	int const predicate_table_index = lua_gettop(L);
+
 	do {
 		if (!ts_query_cursor_next_match(c, &m))
 			return 0;
-	} while (!do_predicates(L, query_idx, q->query, parent_idx, &m));
+	} while (!do_predicates(L, query_idx, q, tree_index, &m, predicate_table_index));
 
 	lua_createtable(L, 0, 5); // { <match> }
 	pushinteger(L, m.id);
@@ -387,17 +328,17 @@ static int query_iterator_next_match(lua_State *L) {
 	for (uint16_t i = 0; i < m.capture_count; ++i) {
 #define push_current_node() do { \
 	node_push( \
-		L, parent_idx, \
+		L, tree_index, \
 		m.captures[i].node); \
 } while (0)
 
 		TSQuantifier const quantifier = ts_query_capture_quantifier_for_id(
-			q->query,
+			q,
 			m.pattern_index,
 			m.captures[i].index);
 
 		uint32_t len;
-		char const *name = ts_query_capture_name_for_id(q->query, m.captures[i].index, &len);
+		char const *name = ts_query_capture_name_for_id(q, m.captures[i].index, &len);
 		lua_pushlstring(L, name, len); // {<capture-map>}, name
 		switch (table_rawget(L, -2)) {
 		case LUA_TNIL: // first node, just set it, or set up table
@@ -437,55 +378,58 @@ static int query_iterator_next_match(lua_State *L) {
 }
 
 static int query_iterator_next_capture(lua_State *L) {
-	// upvalues: Query, Node, Cursor
+	// upvalues: Query, Node, Predicate Map, Cursor
 	int const initial_query_idx = lua_upvalueindex(1);
-	ltreesitter_Query *const q = query_assert(L, initial_query_idx);
-	TSQueryCursor *c = *query_cursor_assert(L, lua_upvalueindex(3));
+	TSQuery *const q = *query_assert(L, initial_query_idx);
+	TSQueryCursor *c = *query_cursor_assert(L, lua_upvalueindex(4));
 	node_push_tree(L, lua_upvalueindex(2));
-	int const parent_idx = lua_gettop(L);
+	int const tree_index = lua_gettop(L);
 	TSQueryMatch m;
 	uint32_t capture_index;
 	lua_pushvalue(L, initial_query_idx);
 	int const query_idx = lua_gettop(L);
 
+	lua_pushvalue(L, lua_upvalueindex(3));
+	int const predicate_table_idx = lua_gettop(L);
+
 	do {
 		if (!ts_query_cursor_next_capture(c, &m, &capture_index))
 			return 0;
-	} while (!do_predicates(L, query_idx, q->query, parent_idx, &m));
+	} while (!do_predicates(L, query_idx, q, tree_index, &m, predicate_table_idx));
 
 	node_push(
-		L, parent_idx,
+		L, tree_index,
 		m.captures[capture_index].node);
 	uint32_t len;
 	char const *name = ts_query_capture_name_for_id(
-		q->query, m.captures[capture_index].index, &len);
+		q, m.captures[capture_index].index, &len);
 	lua_pushlstring(L, name, len);
 	return 2;
 }
 
 static void query_cursor_set_range(lua_State *L, TSQueryCursor *c) {
-	if (lua_isnumber(L, 3)) {
+	if (lua_isnumber(L, 4)) {
 		ts_query_cursor_set_byte_range(
 			c,
-			luaL_checkinteger(L, 3),
-			luaL_checkinteger(L, 4));
+			luaL_checkinteger(L, 4),
+			luaL_checkinteger(L, 5));
 	} else {
-		luaL_argcheck(L, lua_type(L, 3) == LUA_TTABLE, 3, "expected number or table");
-		luaL_argcheck(L, lua_type(L, 4) == LUA_TTABLE, 4, "expected table");
-		expect_field(L, 3, "row", LUA_TNUMBER);
-		expect_field(L, 3, "column", LUA_TNUMBER);
+		luaL_argcheck(L, lua_type(L, 4) == LUA_TTABLE, 4, "expected number or table");
+		luaL_argcheck(L, lua_type(L, 5) == LUA_TTABLE, 5, "expected table");
 		expect_field(L, 4, "row", LUA_TNUMBER);
 		expect_field(L, 4, "column", LUA_TNUMBER);
+		expect_field(L, 5, "row", LUA_TNUMBER);
+		expect_field(L, 5, "column", LUA_TNUMBER);
 
 		ts_query_cursor_set_point_range(
 			c,
-			(TSPoint){.row = lua_tointeger(L, 5), .column = lua_tointeger(L, 6)},
-			(TSPoint){.row = lua_tointeger(L, 7), .column = lua_tointeger(L, 8)}
+			(TSPoint){.row = lua_tointeger(L, 6), .column = lua_tointeger(L, 7)},
+			(TSPoint){.row = lua_tointeger(L, 8), .column = lua_tointeger(L, 9)}
 		);
 	}
 }
 
-/* @teal-export Query.match: function(Query, Node, start?: integer | Point, end_?: integer | Point): function(): Match [[
+/* @teal-export Query.match: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): Match [[
    Iterate over the matches of a given query.
    <code>start</code> and <code>end</code> are optional.
    They must be passed together with the same type, describing either two bytes or two points.
@@ -505,7 +449,7 @@ static void query_cursor_set_range(lua_State *L, TSQueryCursor *c) {
    If a capture can only contain at most one node (as is the case with regular <code>(node) @capture-name</code> patterns and <code>(node)? @capture-name</code> patterns),
    it will either be <code>nil</code> or that <code>Node</code>.
 
-   If a capture can containe multiple nodes (as is the case with <code>(node)* @capture-name</code> and <code>(node)+ @capture-name</code> patterns)
+   If a capture can contain multiple nodes (as is the case with <code>(node)* @capture-name</code> and <code>(node)+ @capture-name</code> patterns)
    it will either be <code>nil</code> or an array of <code>Node</code>
 
    Example:
@@ -515,51 +459,8 @@ static void query_cursor_set_range(lua_State *L, TSQueryCursor *c) {
       print(match.captures.my_match)
    end
    </pre>
-]]*/
-static int query_match_factory(lua_State *L) {
-	ltreesitter_Query *const q = query_assert(L, 1);
-	TSNode n = *node_assert(L, 2);
-	TSQueryCursor *c = ts_query_cursor_new();
-	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
-	lua_settop(L, 2);
-	TSQueryCursor **lc = lua_newuserdata(L, sizeof(TSQueryCursor *));
-	setmetatable(L, LTREESITTER_QUERY_CURSOR_METATABLE_NAME);
-	*lc = c;
-	ts_query_cursor_exec(c, q->query, n);
-	lua_pushcclosure(L, query_iterator_next_match, 3);
-	return 1;
-}
 
-/* @teal-export Query.capture: function(Query, Node, start?: integer | Point, end_?: integer | Point): function(): (Node, string) [[
-   Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs.
-   <code>start</code> and <code>end</code> are optional.
-   They must be passed together with the same type, describing either two bytes or two points.
-   If passed, the query will be executed within the range denoted.
-   If not passed, the default behaviour is to execute the query through the entire range of the node.
-
-   <pre>
-   local q = parser:query[[ (comment) @my_match ]]
-   for capture, name in q:capture(node) do
-      print(capture, name) -- => (comment), "my_match"
-   end
-   </pre>
-]]*/
-static int query_capture_factory(lua_State *L) {
-	ltreesitter_Query *const q = query_assert(L, 1);
-	TSNode n = *node_assert(L, 2);
-	TSQueryCursor *c = ts_query_cursor_new();
-	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
-	lua_settop(L, 2);
-	TSQueryCursor **lc = lua_newuserdata(L, sizeof(TSQueryCursor *));
-	setmetatable(L, LTREESITTER_QUERY_CURSOR_METATABLE_NAME);
-	*lc = c;
-	ts_query_cursor_exec(c, q->query, n);
-	lua_pushcclosure(L, query_iterator_next_capture, 3); // prevent the node + query from being gc'ed
-	return 1;
-}
-
-/* @teal-export Query.with: function(Query, {string:function(...: string | Node | {Node}): any...}): Query [[
-   Creates a new query equipped with predicates defined in the <code>{string:function}</code> map given
+   <code>predicates</code> is a map of functions to determine whether a query matches and/or execute side effects
 
    Predicates that end in a <code>'?'</code> character will be seen as conditions that must be met for the pattern to be matched.
    Predicates that don't will be seen just as functions to be executed given the matches provided.
@@ -578,7 +479,7 @@ static int query_capture_factory(lua_State *L) {
    Example:
    The following snippet will match lua functions that have a single LDoc/EmmyLua style comment above them
    <pre>
-   local parser = ltreesitter.require("lua")
+   local parser = ltreesitter.require("lua"):parser()
 
    -- grab a node to query against
    local root_node = parser:parse_string[[
@@ -596,32 +497,67 @@ static int query_capture_factory(lua_State *L) {
             (function_name) @the-function-name)
          (#is-doc-comment? @the-comment)
       )]]
-      :with{
+      :match(root_node, {
          ["is-doc-comment?"] = function(str)
             return str:source():sub(1, 4) == "---@"
          end
-      }
-      :match(root_node)
+      })
    do
       print("Function: " .. match.captures["the-function-name"] .. " has documentation")
       print("   " .. match.captures["the-comment"])
    end
    </pre>
 ]]*/
-
-static int query_copy_with_predicates(lua_State *L) {
-	lua_settop(L, 2);        // <Orig>, <Predicates>
-	push_predicate_table(L); // <Orig>, <Predicates>, { <RegistryPredicates> }
-	push_query_copy(L, 1);   // <Orig>, <Predicates>, { <RegistryPredicates> }, <Copy>
-	lua_pushvalue(L, -1);    // <Orig>, <Predicates>, { <RegistryPredicates> }, <Copy>, <Copy>
-	lua_insert(L, -3);       // <Orig>, <Predicates>, <Copy>, { <RegistryPredicates> }, <Copy>
-	lua_pushvalue(L, 2);     // <Orig>, <Predicates>, <Copy>, { <RegistryPredicates> }, <Copy>, <Predicates>
-	lua_settable(L, -3);     // <Orig>, <Predicates>, <Copy>, { <RegistryPredicates> }
-	lua_pop(L, 1);           // <Orig>, <Predicates>, <Copy>
+static int query_match_factory(lua_State *L) {
+	TSQuery *const q = *query_assert(L, 1);
+	TSNode n = *node_assert(L, 2);
+	TSQueryCursor *c = ts_query_cursor_new();
+	if (lua_gettop(L) > 3) query_cursor_set_range(L, c);
+	lua_settop(L, 3);
+	TSQueryCursor **lc = lua_newuserdata(L, sizeof(TSQueryCursor *));
+	setmetatable(L, LTREESITTER_QUERY_CURSOR_METATABLE_NAME);
+	*lc = c;
+	ts_query_cursor_exec(c, q, n);
+	lua_pushcclosure(L, query_iterator_next_match, 4);
 	return 1;
 }
 
-/* @teal-export Query.exec: function(Query, Node, start?: integer | Point, end_?: integer | Point) [[
+/* @teal-export Query.capture: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): (Node, string) [[
+   Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs.
+   <code>start</code> and <code>end</code> are optional.
+   They must be passed together with the same type, describing either two bytes or two points.
+   If passed, the query will be executed within the range denoted.
+   If not passed, the default behaviour is to execute the query through the entire range of the node.
+
+   <pre>
+   local q = parser:query[[ (comment) @my_match ]]
+   for capture, name in q:capture(node) do
+      print(capture, name) -- => (comment), "my_match"
+   end
+   </pre>
+]]*/
+static int query_capture_factory(lua_State *L) {
+	TSQuery *const q = *query_assert(L, 1);
+	TSNode n = *node_assert(L, 2);
+	TSQueryCursor *c = ts_query_cursor_new();
+	if (lua_gettop(L) > 3) query_cursor_set_range(L, c);
+	lua_settop(L, 3);
+	TSQueryCursor **lc = lua_newuserdata(L, sizeof(TSQueryCursor *));
+	setmetatable(L, LTREESITTER_QUERY_CURSOR_METATABLE_NAME);
+	*lc = c;
+	ts_query_cursor_exec(c, q, n);
+	lua_pushcclosure(L, query_iterator_next_capture, 4); // prevent the node + query from being gc'ed
+	return 1;
+}
+
+/* @teal-inline [[
+   type Predicate = function(...: string | Node | {Node}): any...
+]] */
+
+/* @teal-export Query._with: function(Query, {string:Predicate}): Query [[
+]]*/
+
+/* @teal-export Query.exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point) [[
    Runs a query. That's it. Nothing more, nothing less.
    This is intended to be used with the <code>Query.with</code> method and predicates that have side effects,
    i.e. for when you would use Query.match or Query.capture, but do nothing in the for loop.
@@ -631,7 +567,7 @@ static int query_copy_with_predicates(lua_State *L) {
    If not passed, the default behaviour is to execute the query through the entire range of the node.
 
    <pre>
-   local parser = ltreesitter.require("teal")
+   local parser = ltreesitter.require("teal"):parser()
 
    -- grab a node to query against
    local root_node = parser:parse_string[[
@@ -646,8 +582,7 @@ static int query_copy_with_predicates(lua_State *L) {
             (string) @value)
          (#set! @var-name @value)
       )]]
-      :with{["set!"] = function(a, b) _G[a] = b:sub(2, -2) end}
-      :exec(root_node)
+      :exec(root_node, {["set!"] = function(a, b) _G[a] = b:sub(2, -2) end})
 
    print(x) -- => foo
    print(y) -- => bar
@@ -657,11 +592,11 @@ static int query_copy_with_predicates(lua_State *L) {
    If you'd like to interact with the matches/captures of a query, see the Query.match and Query.capture iterators
 ]]*/
 static int query_exec(lua_State *L) {
-	TSQuery *const q = query_assert(L, 1)->query;
+	TSQuery *const q = *query_assert(L, 1);
 	TSNode n = *node_assert(L, 2);
 
 	TSQueryCursor *c = ts_query_cursor_new();
-	if (lua_gettop(L) > 2) query_cursor_set_range(L, c);
+	if (lua_gettop(L) > 3) query_cursor_set_range(L, c);
 
 	node_push_tree(L, 2);
 	int const parent_idx = absindex(L, -1);
@@ -669,30 +604,10 @@ static int query_exec(lua_State *L) {
 	TSQueryMatch m;
 	ts_query_cursor_exec(c, q, n);
 	while (ts_query_cursor_next_match(c, &m)) {
-		do_predicates(L, 1, q, parent_idx, &m);
+		do_predicates(L, 1, q, parent_idx, &m, 3);
 	}
 
 	return 0;
-}
-
-/* @teal-export Query.source: function(Query): string [[
-   Gets the source that the query was initialized with
-]]*/
-static int query_source(lua_State *L) {
-	ltreesitter_Query *q = query_assert(L, 1); // query
-	if (!q) {
-		int t = lua_type(L, 1);
-		luaL_error(L, "Expected an ltreesitter.Query, got %s", lua_typename(L, t));
-		return 0;
-	}
-	push_kept(L, -1); // query, source
-	SourceText const *source_text = source_text_assert(L, -1);
-	if (!source_text) {
-		luaL_error(L, "Internal error: Query child was not a SourceText");
-		return 0;
-	}
-	lua_pushlstring(L, source_text->text, source_text->length); // query, source, string
-	return 1;
 }
 
 static bool predicate_arg_to_string(
@@ -831,9 +746,6 @@ void query_setup_predicate_tables(lua_State *L) {
 	lua_newtable(L);
 	setfuncs(L, default_query_predicates);
 	set_registry_field(L, default_predicate_field);
-
-	newtable_with_mode(L, "k");
-	set_registry_field(L, predicate_field);
 }
 
 static const luaL_Reg query_methods[] = {
@@ -842,9 +754,7 @@ static const luaL_Reg query_methods[] = {
 	{"string_count", query_string_count},
 	{"match", query_match_factory},
 	{"capture", query_capture_factory},
-	{"with", query_copy_with_predicates},
 	{"exec", query_exec},
-	{"source", query_source},
 	{NULL, NULL}};
 
 static const luaL_Reg query_metamethods[] = {

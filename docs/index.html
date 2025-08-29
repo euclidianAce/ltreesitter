@@ -67,6 +67,43 @@ h2 {
 <a href="index.html#Cursor.reset_to">Cursor.reset_to</a>
 <br>
 </p>
+<h4>Language</h4>
+<p>
+<a href="index.html#Language.abi_version">Language.abi_version</a>
+<br>
+<a href="index.html#Language.field_count">Language.field_count</a>
+<br>
+<a href="index.html#Language.field_id_for_name">Language.field_id_for_name</a>
+<br>
+<a href="index.html#Language.metadata">Language.metadata</a>
+<br>
+<a href="index.html#Language.name">Language.name</a>
+<br>
+<a href="index.html#Language.name_for_field_id">Language.name_for_field_id</a>
+<br>
+<a href="index.html#Language.next_state">Language.next_state</a>
+<br>
+<a href="index.html#Language.parser">Language.parser</a>
+<br>
+<a href="index.html#Language.query">Language.query</a>
+<br>
+<a href="index.html#Language.state_count">Language.state_count</a>
+<br>
+<a href="index.html#Language.subtypes">Language.subtypes</a>
+<br>
+<a href="index.html#Language.supertypes">Language.supertypes</a>
+<br>
+<a href="index.html#Language.symbol_count">Language.symbol_count</a>
+<br>
+<a href="index.html#Language.symbol_for_name">Language.symbol_for_name</a>
+<br>
+<a href="index.html#Language.symbol_name">Language.symbol_name</a>
+<br>
+<a href="index.html#Language.symbol_type">Language.symbol_type</a>
+<br>
+</p>
+</td>
+<td valign=top>
 <h4>Node</h4>
 <p>
 <a href="index.html#Node.child">Node.child</a>
@@ -132,60 +169,24 @@ h2 {
 <p>
 <a href="index.html#Parser.get_ranges">Parser.get_ranges</a>
 <br>
-<a href="index.html#Parser.get_version">Parser.get_version</a>
-<br>
-<a href="index.html#Parser.language_abi_version">Parser.language_abi_version</a>
-<br>
-<a href="index.html#Parser.language_field_count">Parser.language_field_count</a>
-<br>
-<a href="index.html#Parser.language_field_id_for_name">Parser.language_field_id_for_name</a>
-<br>
-<a href="index.html#Parser.language_metadata">Parser.language_metadata</a>
-<br>
-<a href="index.html#Parser.language_name">Parser.language_name</a>
-<br>
-<a href="index.html#Parser.language_name_for_field_id">Parser.language_name_for_field_id</a>
-<br>
-<a href="index.html#Parser.language_next_state">Parser.language_next_state</a>
-<br>
-<a href="index.html#Parser.language_state_count">Parser.language_state_count</a>
-<br>
-<a href="index.html#Parser.language_subtypes">Parser.language_subtypes</a>
-<br>
-<a href="index.html#Parser.language_supertypes">Parser.language_supertypes</a>
-<br>
-<a href="index.html#Parser.language_symbol_count">Parser.language_symbol_count</a>
-<br>
-<a href="index.html#Parser.language_symbol_for_name">Parser.language_symbol_for_name</a>
-<br>
-<a href="index.html#Parser.language_symbol_name">Parser.language_symbol_name</a>
-<br>
-<a href="index.html#Parser.language_symbol_type">Parser.language_symbol_type</a>
-<br>
 <a href="index.html#Parser.parse_string">Parser.parse_string</a>
 <br>
 <a href="index.html#Parser.parse_with">Parser.parse_with</a>
-<br>
-<a href="index.html#Parser.query">Parser.query</a>
 <br>
 <a href="index.html#Parser.reset">Parser.reset</a>
 <br>
 <a href="index.html#Parser.set_ranges">Parser.set_ranges</a>
 <br>
 </p>
-</td>
-<td valign=top>
 <h4>Query</h4>
 <p>
+<a href="index.html#Query._with">Query._with</a>
+<br>
 <a href="index.html#Query.capture">Query.capture</a>
 <br>
 <a href="index.html#Query.exec">Query.exec</a>
 <br>
 <a href="index.html#Query.match">Query.match</a>
-<br>
-<a href="index.html#Query.source">Query.source</a>
-<br>
-<a href="index.html#Query.with">Query.with</a>
 <br>
 </p>
 <h4>Tree</h4>
@@ -202,10 +203,10 @@ h2 {
 <br>
 </p></td></tr></tbody></table>
 <br><br><br><br><br><br><br><br><br><br>
-<h2><a name="load"><code>load: function(file_name: string, language_name: string): Parser, string</code></a></h2>
-<p>Load a parser from a given file<br><br>   Keep in mind that this includes the <code>.so</code> or <code>.dll</code> extension<br><br>   On Unix this uses dlopen, on Windows this uses LoadLibrary so if a path without a path separator is given, these functions have their own path's that they will search for your file in.<br>   So if in doubt use a file path like<br>   <pre><br>   local my_parser = ltreesitter.load("./my_parser.so", "my_language")<br>   </pre></p><br>
-<h2><a name="require"><code>require: function(library_file_name: string, language_name?: string): Parser, string</code></a></h2>
-<p>Search <code>package.cpath</code> for a parser with the filename <code>library_file_name.so</code> or <code>parsers/library_file_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_'language_name'</code><br>   <code>language_name</code> is optional and will be set to <code>library_file_name</code> if not provided.<br><br>   So if you want to load a Lua parser from a file named <code>lua.so</code> then use <code>ltreesitter.require("lua")</code><br>   But if you want to load a Lua parser from a file named <code>parser.so</code> then use <code>ltreesitter.require("parser", "lua")</code><br><br>   Like the regular <code>require</code>, this will error if the parser is not found or the symbol couldn't be loaded. Use either <code>pcall</code> or <code>ltreesitter.load</code> to not error out on failure.<br><br>   Returns the parser and the path it was loaded from.<br><br>   <pre><br>   local my_parser, loaded_from = ltreesitter.require("my_language")<br>   print(loaded_from) -- /home/user/.luarocks/lib/lua/5.4/parsers/my_language.so<br>   my_parser:parse_string(...)<br>   -- etc.<br>   </pre></p><br>
+<h2><a name="load"><code>load: function(file_name: string, language_name: string): Language, string</code></a></h2>
+<p>Load a language from a given file<br><br>   Keep in mind that this includes the <code>.so</code>, <code>.dll</code>, or <code>.dynlib</code> extension<br><br>   On Unix this uses dlopen, on Windows this uses LoadLibrary so if a path without a path separator is given, these functions have their own path's that they will search for your file in.<br>   So if in doubt use a file path like<br>   <pre><br>   local my_language = ltreesitter.load("./my_parser.so", "my_language")<br>   </pre></p><br>
+<h2><a name="require"><code>require: function(library_file_name: string, language_name?: string): Language, string</code></a></h2>
+<p>Search <code>package.cpath</code> for a parser with the filename <code>library_file_name.so</code> or <code>parsers/library_file_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_'language_name'</code><br>   <code>language_name</code> is optional and will be set to <code>library_file_name</code> if not provided.<br><br>   So if you want to load a Lua parser from a file named <code>lua.so</code> then use <code>ltreesitter.require("lua")</code><br>   But if you want to load a Lua parser from a file named <code>parser.so</code> then use <code>ltreesitter.require("parser", "lua")</code><br><br>   Like the regular <code>require</code>, this will error if the parser is not found or the symbol couldn't be loaded. Use either <code>pcall</code> or <code>ltreesitter.load</code> to not error out on failure.<br><br>   Returns the language and the path it was loaded from.<br><br>   <pre><br>   local my_language, loaded_from = ltreesitter.require("my_language")<br>   print(my_language:name(), loaded_from) -- "my_language", /home/user/.luarocks/lib/lua/5.4/parsers/my_language.so<br>   -- etc.<br>   </pre></p><br>
 <br>
 <h2><a name="Cursor.copy"><code>Cursor.copy: function(Cursor): Cursor</code></a></h2>
 <p>Create a copy of the given cursor</p><br>
@@ -235,6 +236,39 @@ h2 {
 <p>Position the cursor at the given node</p><br>
 <h2><a name="Cursor.reset_to"><code>Cursor.reset_to: function(Cursor, Cursor)</code></a></h2>
 <p>Re-initialize a tree cursor to the same position as another cursor.</p><br>
+<br>
+<h2><a name="Language.abi_version"><code>Language.abi_version: function(Language): integer</code></a></h2>
+<p>Get the ABI version number for the given parser's language</p><br>
+<h2><a name="Language.field_count"><code>Language.field_count: function(Language): integer</code></a></h2>
+<p>Get the number of distinct field names in the given parser's language</p><br>
+<h2><a name="Language.field_id_for_name"><code>Language.field_id_for_name: function(Language, string): FieldId</code></a></h2>
+<p>Get the numeric id for the given field name</p><br>
+<h2><a name="Language.metadata"><code>Language.metadata: function(Language): LanguageMetadata</code></a></h2>
+<p>Get the metadata for the given language. This information relies on<br>   the language author providing the correct data in the language's<br>   `tree-sitter.json`<br><br>   May return nil</p><br>
+<h2><a name="Language.name"><code>Language.name: function(Language): string</code></a></h2>
+<p>Get the name of the language. May return nil.</p><br>
+<h2><a name="Language.name_for_field_id"><code>Language.name_for_field_id: function(Language, FieldId): string</code></a></h2>
+<p>Get the name for a numeric field id</p><br>
+<h2><a name="Language.next_state"><code>Language.next_state: function(Language, StateId, Symbol): StateId</code></a></h2>
+<p>Get the next parse state</p><br>
+<h2><a name="Language.parser"><code>Language.parser: function(Language): Parser</code></a></h2>
+<p>Create a parser of the given language</p><br>
+<h2><a name="Language.query"><code>Language.query: function(Language, string): Query</code></a></h2>
+<p>Create a query out of the given string for this language</p><br>
+<h2><a name="Language.state_count"><code>Language.state_count: function(Language): integer</code></a></h2>
+<p>Get the number of valid states in the given language</p><br>
+<h2><a name="Language.subtypes"><code>Language.subtypes: function(Language, supertype: Symbol): {Symbol}</code></a></h2>
+<p>Get a list of all supertype symbols for the given language</p><br>
+<h2><a name="Language.supertypes"><code>Language.supertypes: function(Language): {Symbol}</code></a></h2>
+<p>Get a list of all supertype symbols for the given language</p><br>
+<h2><a name="Language.symbol_count"><code>Language.symbol_count: function(Language): integer</code></a></h2>
+<p>Get the number of distinct node types in the given language</p><br>
+<h2><a name="Language.symbol_for_name"><code>Language.symbol_for_name: function(Language, string, is_named: boolean): Symbol</code></a></h2>
+<p>Get the numerical id for the given node type string</p><br>
+<h2><a name="Language.symbol_name"><code>Language.symbol_name: function(Language, Symbol): string</code></a></h2>
+<p>Get a node type string for the given symbol id</p><br>
+<h2><a name="Language.symbol_type"><code>Language.symbol_type: function(Language, Symbol): SymbolType</code></a></h2>
+<p>Check whether the given node type id belongs to named nodes, anonymous nodes,<br>   or hidden nodes</p><br>
 <br>
 <h2><a name="Node.child"><code>Node.child: function(Node, idx: integer): Node</code></a></h2>
 <p>Get the node's idx'th child (0-indexed)</p><br>
@@ -295,36 +329,6 @@ h2 {
 <br>
 <h2><a name="Parser.get_ranges"><code>Parser.get_ranges: function(Parser): {Range}</code></a></h2>
 <p>Get the ranges of text that the parser will include when parsing</p><br>
-<h2><a name="Parser.get_version"><code>Parser.get_version: function(Parser): integer</code></a></h2>
-<p>get the api version of the parser's language</p><br>
-<h2><a name="Parser.language_abi_version"><code>Parser.language_abi_version: function(Parser): integer</code></a></h2>
-<p>Get the ABI version number for the given parser's language</p><br>
-<h2><a name="Parser.language_field_count"><code>Parser.language_field_count: function(Parser): integer</code></a></h2>
-<p>Get the number of distinct field names in the given parser's language</p><br>
-<h2><a name="Parser.language_field_id_for_name"><code>Parser.language_field_id_for_name: function(Parser, string): FieldId</code></a></h2>
-<p>Get the numeric id for the given field name</p><br>
-<h2><a name="Parser.language_metadata"><code>Parser.language_metadata: function(Parser): LanguageMetadata</code></a></h2>
-<p>Get the metadata for the given parser's language. This information relies on<br>   the language author providing the correct data in the language's<br>   `tree-sitter.json`<br><br>   May return nil</p><br>
-<h2><a name="Parser.language_name"><code>Parser.language_name: function(Parser): string</code></a></h2>
-<p>Get the name of the language this parser is for. May return nil.</p><br>
-<h2><a name="Parser.language_name_for_field_id"><code>Parser.language_name_for_field_id: function(Parser, FieldId): string</code></a></h2>
-<p>Get the name for a numeric field id</p><br>
-<h2><a name="Parser.language_next_state"><code>Parser.language_next_state: function(Parser, StateId, Symbol): StateId</code></a></h2>
-<p>Get the next parse state</p><br>
-<h2><a name="Parser.language_state_count"><code>Parser.language_state_count: function(Parser): integer</code></a></h2>
-<p>Get the number of valid states in the given parser's language</p><br>
-<h2><a name="Parser.language_subtypes"><code>Parser.language_subtypes: function(Parser, supertype: Symbol): {Symbol}</code></a></h2>
-<p>Get a list of all supertype symbols for the given parser's language</p><br>
-<h2><a name="Parser.language_supertypes"><code>Parser.language_supertypes: function(Parser): {Symbol}</code></a></h2>
-<p>Get a list of all supertype symbols for the given parser's language</p><br>
-<h2><a name="Parser.language_symbol_count"><code>Parser.language_symbol_count: function(Parser): integer</code></a></h2>
-<p>Get the number of distinct node types in the given parser's language</p><br>
-<h2><a name="Parser.language_symbol_for_name"><code>Parser.language_symbol_for_name: function(Parser, string, is_named: boolean): Symbol</code></a></h2>
-<p>Get the numerical id for the given node type string</p><br>
-<h2><a name="Parser.language_symbol_name"><code>Parser.language_symbol_name: function(Parser, Symbol): string</code></a></h2>
-<p>Get a node type string for the given symbol id</p><br>
-<h2><a name="Parser.language_symbol_type"><code>Parser.language_symbol_type: function(Parser, Symbol): SymbolType</code></a></h2>
-<p>Check whether the given node type id belongs to named nodes, anonymous nodes,<br>   or hidden nodes</p><br>
 <h2><a name="Parser.parse_string"><code>Parser.parse_string: function(Parser, string, ?Encoding, ?Tree): Tree</code></a></h2>
 <p>Uses the given parser to parse the string<br><br>   If <code>Tree</code> is provided then it will be used to create a new updated tree<br>   (but it is the responsibility of the programmer to make the correct <code>Tree:edit</code> calls)</p><br>
 <h2><a name="Parser.parse_with"><code>Parser.parse_with: function(
@@ -335,23 +339,19 @@ h2 {
    old_tree?: Tree
    ): Tree</code></a></h2>
 <p><code>reader</code> should be a function that takes a byte index<br>   and a <code>Point</code> and returns the text at that point. The<br>   function should return either <code>nil</code> or an empty string<br>   to signal that there is no more text.<br><br>   <code>progress_callback</code> should be a function that takes a boolean<br>   signalling if an error has occurred, and an integer byte offset. This<br>   function will be called intermittently while parsing and may return `true`<br>   to cancel parsing.<br><br>   A <code>Tree</code> can be provided to reuse parts of it for parsing,<br>   provided the <code>Tree:edit</code> has been called previously<br><br>   <code>encoding</code> defaults to <code>"utf-8"</code> when not provided.<br><br>   May return nil if the progress callback cancelled parsing</p><br>
-<h2><a name="Parser.query"><code>Parser.query: function(Parser, string): Query</code></a></h2>
-<p>Create a query out of the given string for the language of the given parser</p><br>
 <h2><a name="Parser.reset"><code>Parser.reset: function(Parser)</code></a></h2>
 <p>Reset the parser, causing the next parse to start from the beginning</p><br>
 <h2><a name="Parser.set_ranges"><code>Parser.set_ranges: function(Parser, {Range}): boolean</code></a></h2>
 <p>Sets the ranges that <code>Parser</code> will include when parsing, so you don't have to parse an entire document, but the ranges in the tree will still match the document.<br>   The array of <code>Range</code>s must satisfy the following relationship: for a positive integer <code>i</code> within the length of <code>ranges: {Range}</code>:<br>   <pre><br>   ranges[i].end_byte <= ranges[i + 1].start_byte<br>   </pre><br><br>   returns whether or not setting the range succeeded</p><br>
 <br>
-<h2><a name="Query.capture"><code>Query.capture: function(Query, Node, start?: integer | Point, end_?: integer | Point): function(): (Node, string)</code></a></h2>
+<h2><a name="Query._with"><code>Query._with: function(Query, {string:Predicate}): Query</code></a></h2>
+<p></p><br>
+<h2><a name="Query.capture"><code>Query.capture: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): (Node, string)</code></a></h2>
 <p>Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs.<br>   <code>start</code> and <code>end</code> are optional.<br>   They must be passed together with the same type, describing either two bytes or two points.<br>   If passed, the query will be executed within the range denoted.<br>   If not passed, the default behaviour is to execute the query through the entire range of the node.<br><br>   <pre><br>   local q = parser:query[[ (comment) @my_match ]]<br>   for capture, name in q:capture(node) do<br>      print(capture, name) -- => (comment), "my_match"<br>   end<br>   </pre></p><br>
-<h2><a name="Query.exec"><code>Query.exec: function(Query, Node, start?: integer | Point, end_?: integer | Point)</code></a></h2>
-<p>Runs a query. That's it. Nothing more, nothing less.<br>   This is intended to be used with the <code>Query.with</code> method and predicates that have side effects,<br>   i.e. for when you would use Query.match or Query.capture, but do nothing in the for loop.<br>   <code>start</code> and <code>end</code> are optional.<br>   They must be passed together with the same type, describing either two bytes or two points.<br>   If passed, the query will be executed within the range denoted.<br>   If not passed, the default behaviour is to execute the query through the entire range of the node.<br><br>   <pre><br>   local parser = ltreesitter.require("teal")<br><br>   -- grab a node to query against<br>   local root_node = parser:parse_string[[<br>   local x: string = "foo"<br>   local y: string = "bar"<br>   ]]:root()<br><br>   parser<br>      :query[[(<br>         (var_declaration<br>            (var) @var-name<br>            (string) @value)<br>         (#set! @var-name @value)<br>      )]]<br>      :with{["set!"] = function(a, b) _G[a] = b:sub(2, -2) end}<br>      :exec(root_node)<br><br>   print(x) -- => foo<br>   print(y) -- => bar<br><br>   </pre><br><br>   If you'd like to interact with the matches/captures of a query, see the Query.match and Query.capture iterators</p><br>
-<h2><a name="Query.match"><code>Query.match: function(Query, Node, start?: integer | Point, end_?: integer | Point): function(): Match</code></a></h2>
-<p>Iterate over the matches of a given query.<br>   <code>start</code> and <code>end</code> are optional.<br>   They must be passed together with the same type, describing either two bytes or two points.<br>   If passed, the query will be executed within the range denoted.<br>   If not passed, the default behaviour is to execute the query through the entire range of the node.<br><br>   The match object is a record populated with all the information given by treesitter<br>   <pre><br>   interface Match<br>      id: integer<br>      pattern_index: integer<br>      capture_count: integer<br>      captures: {string:Node|{Node}}<br>   end<br>   </pre><br><br>   If a capture can only contain at most one node (as is the case with regular <code>(node) @capture-name</code> patterns and <code>(node)? @capture-name</code> patterns),<br>   it will either be <code>nil</code> or that <code>Node</code>.<br><br>   If a capture can containe multiple nodes (as is the case with <code>(node)* @capture-name</code> and <code>(node)+ @capture-name</code> patterns)<br>   it will either be <code>nil</code> or an array of <code>Node</code><br><br>   Example:<br>   <pre><br>   local q = parser:query[[ (comment) @my_match ]]<br>   for match in q:match(node) do<br>      print(match.captures.my_match)<br>   end<br>   </pre></p><br>
-<h2><a name="Query.source"><code>Query.source: function(Query): string</code></a></h2>
-<p>Gets the source that the query was initialized with</p><br>
-<h2><a name="Query.with"><code>Query.with: function(Query, {string:function(...: string | Node | {Node}): any...}): Query</code></a></h2>
-<p>Creates a new query equipped with predicates defined in the <code>{string:function}</code> map given<br><br>   Predicates that end in a <code>'?'</code> character will be seen as conditions that must be met for the pattern to be matched.<br>   Predicates that don't will be seen just as functions to be executed given the matches provided.<br><br>   Additionally, you will not have access to the return values of these functions, if you'd like to keep the results of a computation, make your functions have side-effects to write somewhere you can access.<br><br>   By default the following predicates are provided.<br>      <code> (#eq? ...) </code> will match if all arguments provided are equal<br>      <code> (#match? text pattern) </code> will match the provided <code>text</code> matches the given <code>pattern</code>. Matches are determined by Lua's standard <code>string.match</code> function.<br>      <code> (#find? text substring) </code> will match if <code>text</code> contains <code>substring</code>. The substring is found with Lua's standard <code>string.find</code>, but the search always starts from the beginning, and pattern matching is disabled. This is equivalent to <code>string.find(text, substring, 0, true)</code><br><br>   Predicate evaluation order:<br><br>      Since predicates that end with a `?` affect whether a node matches, these are run first, in the order they appear in the query's source. Once all `?` queries are run, all the non-`?` queries are run in the order they appear in the query's source.<br><br>   Example:<br>   The following snippet will match lua functions that have a single LDoc/EmmyLua style comment above them<br>   <pre><br>   local parser = ltreesitter.require("lua")<br><br>   -- grab a node to query against<br>   local root_node = parser:parse_string[[<br>      ---@Doc this does stuff<br>      local function stuff_doer()<br>         do_stuff()<br>      end<br>   ]]:root()<br><br>   for match in parser<br>      :query[[(<br>         (comment) @the-comment<br>         .<br>         (function_definition<br>            (function_name) @the-function-name)<br>         (#is-doc-comment? @the-comment)<br>      )]]<br>      :with{<br>         ["is-doc-comment?"] = function(str)<br>            return str:source():sub(1, 4) == "---@"<br>         end<br>      }<br>      :match(root_node)<br>   do<br>      print("Function: " .. match.captures["the-function-name"] .. " has documentation")<br>      print("   " .. match.captures["the-comment"])<br>   end<br>   </pre></p><br>
+<h2><a name="Query.exec"><code>Query.exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point)</code></a></h2>
+<p>Runs a query. That's it. Nothing more, nothing less.<br>   This is intended to be used with the <code>Query.with</code> method and predicates that have side effects,<br>   i.e. for when you would use Query.match or Query.capture, but do nothing in the for loop.<br>   <code>start</code> and <code>end</code> are optional.<br>   They must be passed together with the same type, describing either two bytes or two points.<br>   If passed, the query will be executed within the range denoted.<br>   If not passed, the default behaviour is to execute the query through the entire range of the node.<br><br>   <pre><br>   local parser = ltreesitter.require("teal"):parser()<br><br>   -- grab a node to query against<br>   local root_node = parser:parse_string[[<br>   local x: string = "foo"<br>   local y: string = "bar"<br>   ]]:root()<br><br>   parser<br>      :query[[(<br>         (var_declaration<br>            (var) @var-name<br>            (string) @value)<br>         (#set! @var-name @value)<br>      )]]<br>      :exec(root_node, {["set!"] = function(a, b) _G[a] = b:sub(2, -2) end})<br><br>   print(x) -- => foo<br>   print(y) -- => bar<br><br>   </pre><br><br>   If you'd like to interact with the matches/captures of a query, see the Query.match and Query.capture iterators</p><br>
+<h2><a name="Query.match"><code>Query.match: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): Match</code></a></h2>
+<p>Iterate over the matches of a given query.<br>   <code>start</code> and <code>end</code> are optional.<br>   They must be passed together with the same type, describing either two bytes or two points.<br>   If passed, the query will be executed within the range denoted.<br>   If not passed, the default behaviour is to execute the query through the entire range of the node.<br><br>   The match object is a record populated with all the information given by treesitter<br>   <pre><br>   interface Match<br>      id: integer<br>      pattern_index: integer<br>      capture_count: integer<br>      captures: {string:Node|{Node}}<br>   end<br>   </pre><br><br>   If a capture can only contain at most one node (as is the case with regular <code>(node) @capture-name</code> patterns and <code>(node)? @capture-name</code> patterns),<br>   it will either be <code>nil</code> or that <code>Node</code>.<br><br>   If a capture can contain multiple nodes (as is the case with <code>(node)* @capture-name</code> and <code>(node)+ @capture-name</code> patterns)<br>   it will either be <code>nil</code> or an array of <code>Node</code><br><br>   Example:<br>   <pre><br>   local q = parser:query[[ (comment) @my_match ]]<br>   for match in q:match(node) do<br>      print(match.captures.my_match)<br>   end<br>   </pre><br><br>   <code>predicates</code> is a map of functions to determine whether a query matches and/or execute side effects<br><br>   Predicates that end in a <code>'?'</code> character will be seen as conditions that must be met for the pattern to be matched.<br>   Predicates that don't will be seen just as functions to be executed given the matches provided.<br><br>   Additionally, you will not have access to the return values of these functions, if you'd like to keep the results of a computation, make your functions have side-effects to write somewhere you can access.<br><br>   By default the following predicates are provided.<br>      <code> (#eq? ...) </code> will match if all arguments provided are equal<br>      <code> (#match? text pattern) </code> will match the provided <code>text</code> matches the given <code>pattern</code>. Matches are determined by Lua's standard <code>string.match</code> function.<br>      <code> (#find? text substring) </code> will match if <code>text</code> contains <code>substring</code>. The substring is found with Lua's standard <code>string.find</code>, but the search always starts from the beginning, and pattern matching is disabled. This is equivalent to <code>string.find(text, substring, 0, true)</code><br><br>   Predicate evaluation order:<br><br>      Since predicates that end with a `?` affect whether a node matches, these are run first, in the order they appear in the query's source. Once all `?` queries are run, all the non-`?` queries are run in the order they appear in the query's source.<br><br>   Example:<br>   The following snippet will match lua functions that have a single LDoc/EmmyLua style comment above them<br>   <pre><br>   local parser = ltreesitter.require("lua"):parser()<br><br>   -- grab a node to query against<br>   local root_node = parser:parse_string[[<br>      ---@Doc this does stuff<br>      local function stuff_doer()<br>         do_stuff()<br>      end<br>   ]]:root()<br><br>   for match in parser<br>      :query[[(<br>         (comment) @the-comment<br>         .<br>         (function_definition<br>            (function_name) @the-function-name)<br>         (#is-doc-comment? @the-comment)<br>      )]]<br>      :match(root_node, {<br>         ["is-doc-comment?"] = function(str)<br>            return str:source():sub(1, 4) == "---@"<br>         end<br>      })<br>   do<br>      print("Function: " .. match.captures["the-function-name"] .. " has documentation")<br>      print("   " .. match.captures["the-comment"])<br>   end<br>   </pre></p><br>
 <br>
 <h2><a name="Tree.copy"><code>Tree.copy: function(Tree): Tree</code></a></h2>
 <p>Creates a copy of the tree. Tree-sitter recommends to create copies if you are going to use multithreading since tree accesses are not thread-safe, but copying them is cheap and quick</p><br>

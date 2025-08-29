@@ -16,8 +16,57 @@
    type FieldId = integer
 ]] */
 
+#define dynlib_registry_field "dynlibs"
+
+void setup_dynlib_cache(lua_State *L) {
+	newtable_with_mode(L, "v");
+	set_registry_field(L, dynlib_registry_field);
+}
+
+#ifdef _WIN32
+#define PATH_SEP "\\"
+#else
+#define PATH_SEP "/"
+#endif
+
+static int dynlib_gc(lua_State *L) {
+	Dynlib *lib = luaL_checkudata(L, 1, LTREESITTER_DYNLIB_METATABLE_NAME);
+#ifdef LOG_GC
+	printf("Dynlib %p is being garbage collected\n", (void const *)lib);
+#endif
+	dynlib_close(lib);
+	return 0;
+}
+
+void dynlib_init_metatable(lua_State *L) {
+	static const luaL_Reg metamethods[] = {
+		{"__gc", dynlib_gc},
+		{NULL, NULL}};
+	create_metatable(L, LTREESITTER_DYNLIB_METATABLE_NAME, metamethods, (luaL_Reg[]){{NULL, NULL}});
+}
+
+// ( -- Dynlib )
+static void cache_dynlib(lua_State *L, char const *path_loaded_from, Dynlib dl) {
+	// TODO: should we even attempt to normalize the path?
+	push_registry_field(L, dynlib_registry_field); // cache
+	*(Dynlib *)lua_newuserdata(L, sizeof(Dynlib)) = dl; // cache, dynlib
+	setmetatable(L, LTREESITTER_DYNLIB_METATABLE_NAME);
+	lua_pushvalue(L, -1); // cache, dynlib, dynlib
+	lua_setfield(L, -3, path_loaded_from); // cache, dynlib
+	lua_remove(L, -2); // dynlib
+}
+
+// ( -- Dynlib )
+static Dynlib *get_cached_dynlib(lua_State *L, char const *path) {
+	push_registry_field(L, dynlib_registry_field); // cache
+	lua_getfield(L, -1, path); // cache, ?Dynlib
+	lua_remove(L, -2); // ?Dynlib
+	void *data = testudata(L, -1, LTREESITTER_DYNLIB_METATABLE_NAME);
+	return data;
+}
+
 /* @teal-export load: function(file_name: string, language_name: string): Language, string [[
-   Load a parser from a given file
+   Load a language from a given file
 
    Keep in mind that this includes the <code>.so</code>, <code>.dll</code>, or <code>.dynlib</code> extension
 
@@ -34,7 +83,6 @@ TSLanguage const *language_load_from(Dynlib dl, size_t lang_name_len, char const
 		memcpy(buf + TREE_SITTER_SYM_LEN, language_name, lang_name_len);
 		buf[TREE_SITTER_SYM_LEN + lang_name_len] = 0;
 	}
-
 	void *sym = dynlib_sym(&dl, buf);
 	if (!sym) return NULL;
 	TSLanguage *(*tree_sitter_lang)(void);
@@ -52,32 +100,45 @@ int language_load(lua_State *L) {
 		return 2;
 	}
 
-	char const *err = NULL;
-	Dynlib dl;
-	if (!dynlib_open(dl_file, &dl, &err)) {
-		lua_pushnil(L);
-		lua_pushstring(L, err);
-		return 2;
-	}
+	Dynlib opened;
+	bool cached = false;
+	{
+		Dynlib *dl = get_cached_dynlib(L, dl_file);
+		if (dl) {
+			opened = *dl;
+			cached = true;
+		} else {
+			char const *err = NULL;
+			if (!dynlib_open(dl_file, &opened, &err)) {
+				lua_pushnil(L);
+				lua_pushstring(L, err);
+				return 2;
+			}
+		}
+	} // dynlib | nothing
 
-	TSLanguage const *lang = language_load_from(dl, lang_name_len, lang_name);
-	dynlib_close(&dl);
+	TSLanguage const *lang = language_load_from(opened, lang_name_len, lang_name);
 	if (!lang) {
 		lua_pushnil(L);
+		lua_pushfstring(L, "Symbol not found in %s", dl_file);
+		if (!cached) dynlib_close(&opened);
 		return 1;
 	}
+
 	TSLanguage const **result = lua_newuserdata(L, sizeof(TSLanguage *));
 	*result = lang;
 	setmetatable(L, LTREESITTER_LANGUAGE_METATABLE_NAME);
+	// dynlib | nothing, lang
+
+	if (!cached) {
+		cache_dynlib(L, dl_file, opened);
+		lua_insert(L, -2);
+	} // dynlib, lang
+
+	bind_lifetimes(L, -1, -2); // language keeps dll alive
 
 	return 1;
 }
-
-#ifdef _WIN32
-#define PATH_SEP "\\"
-#else
-#define PATH_SEP "/"
-#endif
 
 static bool try_load_from_path(
 	lua_State *L,
@@ -87,21 +148,38 @@ static bool try_load_from_path(
 	StringBuilder *err_buf
 ) {
 	char const *dynlib_error = NULL;
+	TSLanguage const *lang = NULL;
+	bool should_cache_dl = false;
+
+	{
+		Dynlib *dl = get_cached_dynlib(L, dl_file);
+		if (dl) {
+			lang = language_load_from(*dl, lang_name_len, lang_name);
+			if (!lang) {
+				sb_push_fmt(err_buf, "\n\tFound %s, but unable to find symbol " TREE_SITTER_SYM "%s", dl_file, lang_name);
+				return false;
+			}
+		}
+	} // dynlib | nothing
+
 	Dynlib dl;
-	if (!dynlib_open(dl_file, &dl, &dynlib_error)) {
-		sb_push_fmt(err_buf, "\n\tTried %s: %s", dl_file, dynlib_error);
-		return false;
-	}
-	TSLanguage const *lang = language_load_from(dl, lang_name_len, lang_name);
-	dynlib_close(&dl);
 	if (!lang) {
-		sb_push_fmt(err_buf, "\n\tFound %s, but unable to find symbol " TREE_SITTER_SYM "%s", dl_file, lang_name);
-		return false;
+		should_cache_dl = true;
+		if (!dynlib_open(dl_file, &dl, &dynlib_error)) {
+			sb_push_fmt(err_buf, "\n\tTried %s: %s", dl_file, dynlib_error);
+			return false;
+		}
+		lang = language_load_from(dl, lang_name_len, lang_name);
+		if (!lang) {
+			dynlib_close(&dl);
+			sb_push_fmt(err_buf, "\n\tFound %s, but unable to find symbol " TREE_SITTER_SYM "%s", dl_file, lang_name);
+			return false;
+		}
 	}
 
 	uint32_t const version = ts_language_version(lang);
 	if (version < TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION) {
-		dynlib_close(&dl);
+		if (should_cache_dl) dynlib_close(&dl);
 		sb_push_fmt(
 			err_buf,
 			"\n\tFound %s, but the version is too old, language version: %"PRIu32", minimum version: %d",
@@ -111,7 +189,7 @@ static bool try_load_from_path(
 		);
 		return false;
 	} else if (version > TREE_SITTER_LANGUAGE_VERSION) {
-		dynlib_close(&dl);
+		if (should_cache_dl) dynlib_close(&dl);
 		sb_push_fmt(
 			err_buf,
 			"\n\tFound %s, but the version is too new, language version: %"PRIu32", maximum version: %d",
@@ -122,9 +200,22 @@ static bool try_load_from_path(
 		return false;
 	}
 
+	// assert(lang);
+
 	TSLanguage const **result = lua_newuserdata(L, sizeof(TSLanguage const *));
 	*result = lang;
 	setmetatable(L, LTREESITTER_LANGUAGE_METATABLE_NAME);
+
+	// dynlib | nothing, lang
+
+	if (should_cache_dl) { // (nothing), lang
+		cache_dynlib(L, dl_file, dl);
+		lua_insert(L, -2);
+	} // dynlib, lang
+
+	bind_lifetimes(L, -1, -2); // language keeps dll alive
+	lua_remove(L, -2);
+
 	return true;
 }
 
@@ -231,7 +322,7 @@ static bool try_load_from_path_list(
 
    Like the regular <code>require</code>, this will error if the parser is not found or the symbol couldn't be loaded. Use either <code>pcall</code> or <code>ltreesitter.load</code> to not error out on failure.
 
-   Returns the parser and the path it was loaded from.
+   Returns the language and the path it was loaded from.
 
    <pre>
    local my_language, loaded_from = ltreesitter.require("my_language")
@@ -279,6 +370,9 @@ int language_require(lua_State *L) {
 	return 2;
 }
 
+/* @teal-export Language.parser: function(Language): Parser [[
+   Create a parser of the given language
+]] */
 static int make_parser(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
 	TSParser *parser = ts_parser_new();
@@ -515,7 +609,7 @@ static int make_query(lua_State *L) {
 	query_handle_error(L, q, err_offset, err_type, lua_query_src, len);
 
 	if (q)
-		query_push(L, lang, lua_query_src, len, q, 1);
+		query_push(L, lua_query_src, len, q, 1);
 	else
 		lua_pushnil(L);
 

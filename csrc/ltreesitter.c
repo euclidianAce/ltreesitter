@@ -39,9 +39,11 @@ int luaopen_ltreesitter(lua_State *L) {
 	query_cursor_init_metatable(L);
 	source_text_init_metatable(L);
 	language_init_metatable(L);
+	dynlib_init_metatable(L);
 
 	setup_registry_index(L);
 	setup_object_table(L);
+	setup_dynlib_cache(L);
 
 	query_setup_predicate_tables(L);
 

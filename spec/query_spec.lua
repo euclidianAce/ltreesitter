@@ -74,7 +74,7 @@ describe("Query", function()
 			local count = 0
 			for match in l
 				:query[[ (comment) @a ]]
-				:match(tree:root(), 4, 11)
+				:match(tree:root(), nil, 4, 11)
 			do
 				count = count + 1
 				assert.are.equal(1, match.capture_count)
@@ -97,6 +97,7 @@ describe("Query", function()
 				:query[[ (comment) @a ]]
 				:match(
 					tree:root(),
+					nil,
 					{ row = 1, column = 4 },
 					{ row = 1, column = 11 })
 			do
@@ -186,7 +187,7 @@ describe("Query", function()
 			local count = 0
 			for node, name in l
 				:query[[ (comment) @a ]]
-				:capture(tree:root(), 4, 11)
+				:capture(tree:root(), nil, 4, 11)
 			do
 				count = count + 1
 				assert.are.equal("// hello", node:source())
@@ -207,6 +208,7 @@ describe("Query", function()
 				:query[[ (comment) @a ]]
 				:capture(
 					tree:root(),
+					nil,
 					{ row = 1, column = 4 },
 					{ row = 1, column = 11 })
 			do
@@ -340,7 +342,7 @@ describe("Query", function()
 				assert.are.same(res, {})
 			end)
 		end)
-		pending("user-defined", function()
+		describe("user-defined", function()
 			local root_node
 			setup(function()
 				root_node = assert(p:parse_string[[
@@ -357,13 +359,12 @@ describe("Query", function()
 				for m in l
 					:query[[((comment) @the-comment
 						(#starts_with? @the-comment "b"))]]
-					:with{
+					:match(root_node, {
 						["starts_with?"] = function(a, b)
 							util.assert_userdata_type(a, "ltreesitter.Node")
 							return a:source():match("^//%s*" .. b)
 						end
-					}
-					:match(root_node)
+					})
 				do
 					assert(m.captures["the-comment"]:source():match("^//%s*b"))
 					table.insert(captures, m.captures["the-comment"]:source())
@@ -381,13 +382,12 @@ describe("Query", function()
 					:query[[((comment) @the-comment
 						(#eq? @the-comment "// bar")
 						(#starts_with? @the-comment "b"))]]
-					:with{
+					:match(root_node, {
 						["starts_with?"] = function(a, b)
 							util.assert_userdata_type(a, "ltreesitter.Node")
 							return a:source():match("^//%s*" .. b)
 						end
-					}
-					:match(root_node)
+					})
 				do
 					assert.are.equal(m.captures["the-comment"]:source(), "// bar")
 					assert(m.captures["the-comment"]:source():match("^//%s*b"))
@@ -398,7 +398,7 @@ describe("Query", function()
 		end)
 	end)
 	describe("exec", function()
-		pending("should run the query", function()
+		it("should run the query", function()
 			local root_node = assert(p:parse_string[[
 				// foo
 				// bar
@@ -409,11 +409,10 @@ describe("Query", function()
 				]]):root()
 			local res = {}
 			l:query[[ ((comment) @a (#insert! @a)) ]]
-				:with{["insert!"] = function(a)
+				:exec(root_node, {["insert!"] = function(a)
 					util.assert_userdata_type(a, "ltreesitter.Node")
 					table.insert(res, a:source())
-				end}
-				:exec(root_node)
+				end})
 			assert.are.same(res, {
 				"// foo",
 				"// bar",
@@ -423,7 +422,7 @@ describe("Query", function()
 				"// hoop",
 			})
 		end)
-		pending("should only iterate through requested byte range", function()
+		it("should only iterate through requested byte range", function()
 			local root_node = assert(p:parse_string[[
 				// foo
 				// bar
@@ -434,17 +433,16 @@ describe("Query", function()
 				]]):root()
 			local res = {}
 			l:query[[ ((comment) @a (#insert! @a)) ]]
-				:with{["insert!"] = function(a)
+				:exec(root_node, {["insert!"] = function(a)
 					util.assert_userdata_type(a, "ltreesitter.Node")
 					table.insert(res, a:source())
-				end}
-				:exec(root_node, 4, 20)
+				end}, 4, 20)
 			assert.are.same(res, {
 				"// foo",
 				"// bar"
 			})
 		end)
-		pending("should only iterate through requested point range", function()
+		it("should only iterate through requested point range", function()
 			local root_node = assert(p:parse_string[[
 				// foo
 				// bar
@@ -455,11 +453,12 @@ describe("Query", function()
 				]]):root()
 			local res = {}
 			l:query[[ ((comment) @a (#insert! @a)) ]]
-				:with{["insert!"] = function(a)
-					util.assert_userdata_type(a, "ltreesitter.Node")
-					table.insert(res, a:source())
-				end}
-				:exec(root_node,
+				:exec(
+					root_node,
+					{["insert!"] = function(a)
+						util.assert_userdata_type(a, "ltreesitter.Node")
+						table.insert(res, a:source())
+					end},
 					{ row = 1, column = 4 },
 					{ row = 2, column = 11 })
 			assert.are.same(res, {
