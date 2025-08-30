@@ -44,7 +44,8 @@ local record ltreesitter
       child_count: function(Node): integer
       children: function(Node): function(): Node
       create_cursor: function(Node): Cursor
-      end_byte: function(Node): integer
+      end_byte_offset: function(Node): integer
+      end_index: function(Node): integer
       end_point: function(Node): Point
       grammar_symbol: function(Node): Symbol
       grammar_type: function(Node): string
@@ -62,7 +63,8 @@ local record ltreesitter
       prev_named_sibling: function(Node): Node
       prev_sibling: function(Node): Node
       source: function(Node): string
-      start_byte: function(Node): integer
+      start_byte_offset: function(Node): integer
+      start_index: function(Node): integer
       start_point: function(Node): Point
       symbol: function(Node): Symbol
       type: function(Node): string

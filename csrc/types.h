@@ -37,6 +37,7 @@ struct ltreesitter_Tree {
 	SourceText const *text_or_null_if_function_reader;
 };
 
+// TODO: TSTreeCursor
 // TODO: TSLookaheadIterator
 
 // pointer will only be valid for as long as it is on the stack as it may be garbage collected

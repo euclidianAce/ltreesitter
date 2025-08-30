@@ -44,8 +44,8 @@ static int node_grammar_type(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.start_byte: function(Node): integer [[
-   Get the byte of the source string that the given node starts at
+/* @teal-export Node.start_byte_offset: function(Node): integer [[
+   Get the byte offset of the source string that the given node starts at
 ]] */
 static int node_start_byte(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
@@ -53,8 +53,20 @@ static int node_start_byte(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.end_byte: function(Node): integer [[
-   Get the byte of the source string that the given node ends at
+/* @teal-export Node.start_index: function(Node): integer [[
+   Get the inclusive 1-index of the source string that the given node starts at
+]] */
+static int node_start_index(lua_State *L) {
+	TSNode n = *node_assert(L, 1);
+	pushinteger(L, ts_node_start_byte(n) + 1);
+	return 1;
+}
+
+/* @teal-export Node.end_byte_offset: function(Node): integer [[
+   Get the byte offset of the source string that the given node ends at (exclusive)
+]] */
+/* @teal-export Node.end_index: function(Node): integer [[
+   Get the inclusive 1-index of the source string that the given node ends at
 ]] */
 static int node_end_byte(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
@@ -545,7 +557,8 @@ static const luaL_Reg node_methods[] = {
 	{"child_count", node_child_count},
 	{"children", node_children},
 	{"create_cursor", node_tree_cursor_create},
-	{"end_byte", node_end_byte},
+	{"end_index", node_end_byte},
+	{"end_byte_offset", node_end_byte},
 	{"end_point", node_end_point},
 	{"is_extra", node_is_extra},
 	{"is_missing", node_is_missing},
@@ -561,7 +574,8 @@ static const luaL_Reg node_methods[] = {
 	{"prev_named_sibling", node_prev_named_sibling},
 	{"prev_sibling", node_prev_sibling},
 	{"source", node_get_source_method},
-	{"start_byte", node_start_byte},
+	{"start_index", node_start_index},
+	{"start_byte_offset", node_start_byte},
 	{"start_point", node_start_point},
 	{"type", node_type},
 	{"grammar_type", node_grammar_type},

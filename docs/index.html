@@ -118,7 +118,9 @@ h2 {
 <br>
 <a href="index.html#Node.create_cursor">Node.create_cursor</a>
 <br>
-<a href="index.html#Node.end_byte">Node.end_byte</a>
+<a href="index.html#Node.end_byte_offset">Node.end_byte_offset</a>
+<br>
+<a href="index.html#Node.end_index">Node.end_index</a>
 <br>
 <a href="index.html#Node.end_point">Node.end_point</a>
 <br>
@@ -154,7 +156,9 @@ h2 {
 <br>
 <a href="index.html#Node.source">Node.source</a>
 <br>
-<a href="index.html#Node.start_byte">Node.start_byte</a>
+<a href="index.html#Node.start_byte_offset">Node.start_byte_offset</a>
+<br>
+<a href="index.html#Node.start_index">Node.start_index</a>
 <br>
 <a href="index.html#Node.start_point">Node.start_point</a>
 <br>
@@ -282,8 +286,10 @@ h2 {
 <p>Iterate over a node's children</p><br>
 <h2><a name="Node.create_cursor"><code>Node.create_cursor: function(Node): Cursor</code></a></h2>
 <p>Create a new cursor at the given node</p><br>
-<h2><a name="Node.end_byte"><code>Node.end_byte: function(Node): integer</code></a></h2>
-<p>Get the byte of the source string that the given node ends at</p><br>
+<h2><a name="Node.end_byte_offset"><code>Node.end_byte_offset: function(Node): integer</code></a></h2>
+<p>Get the byte offset of the source string that the given node ends at (exclusive)</p><br>
+<h2><a name="Node.end_index"><code>Node.end_index: function(Node): integer</code></a></h2>
+<p>Get the inclusive 1-index of the source string that the given node ends at</p><br>
 <h2><a name="Node.end_point"><code>Node.end_point: function(Node): Point</code></a></h2>
 <p>Get the row and column of where the given node ends</p><br>
 <h2><a name="Node.grammar_symbol"><code>Node.grammar_symbol: function(Node): Symbol</code></a></h2>
@@ -318,8 +324,10 @@ h2 {
 <p>Get a node's previous sibling</p><br>
 <h2><a name="Node.source"><code>Node.source: function(Node): string</code></a></h2>
 <p>Get the substring of the source that was parsed to create <code>Node</code></p><br>
-<h2><a name="Node.start_byte"><code>Node.start_byte: function(Node): integer</code></a></h2>
-<p>Get the byte of the source string that the given node starts at</p><br>
+<h2><a name="Node.start_byte_offset"><code>Node.start_byte_offset: function(Node): integer</code></a></h2>
+<p>Get the byte offset of the source string that the given node starts at</p><br>
+<h2><a name="Node.start_index"><code>Node.start_index: function(Node): integer</code></a></h2>
+<p>Get the inclusive 1-index of the source string that the given node starts at</p><br>
 <h2><a name="Node.start_point"><code>Node.start_point: function(Node): Point</code></a></h2>
 <p>Get the row and column of where the given node starts</p><br>
 <h2><a name="Node.symbol"><code>Node.symbol: function(Node): Symbol</code></a></h2>
