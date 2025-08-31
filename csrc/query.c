@@ -157,13 +157,6 @@ static bool do_predicates(
 	bool const predicates_provided = lua_type(L, predicate_table_idx) != LUA_TNIL;
 	bool result = true;
 
-#define RETURN(value)     \
-	do {                  \
-		result = (value); \
-		goto deferred;    \
-	} while (0)
-#define return plz use "RETURN" macro
-
 	int const initial_stack_top = lua_gettop(L);
 
 	// store captures as a map of {string:Node} where the keys are the
@@ -277,7 +270,8 @@ static bool do_predicates(
 				}
 
 				if (is_question && !lua_toboolean(L, -1)) {
-					RETURN(false);
+					result = false;
+					goto break_predicate_loop;
 				}
 
 				num_args = 0;
@@ -288,9 +282,7 @@ static bool do_predicates(
 		}
 	}
 
-#undef RETURN
-#undef return
-deferred:
+break_predicate_loop:
 	lua_settop(L, initial_stack_top);
 	return result;
 }
