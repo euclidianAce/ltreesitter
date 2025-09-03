@@ -86,7 +86,7 @@ local directives: {string:function(ts.Node, string, string)} = {
          documentation = trim(typedef:sub(doc_s+2, doc_e-2)):gsub("\n", "<br>")
          typedef = typedef:sub(1, doc_s-1):gsub("%s*$", "")
       end
-      typedef = typedef:gsub("[*/]", "")
+      typedef = typedef:gsub("%s*[*/]", "")
       if name then
          if documentation then
             insert_into(docs, name, "<" .. typedef .. ">" .. trim(documentation))

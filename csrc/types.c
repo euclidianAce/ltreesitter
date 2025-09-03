@@ -1,5 +1,7 @@
-#include "types.h"
 #include "luautils.h"
+#include "node.h"
+#include "types.h"
+
 #include <lauxlib.h>
 #include <string.h>
 
@@ -60,4 +62,61 @@ TSPoint topoint(lua_State *L, int const idx) {
 		.row = row,
 		.column = col,
 	};
+}
+
+void push_match(lua_State *L, TSQueryMatch m, TSQuery const *q, int tree_index) {
+	lua_createtable(L, 0, 5); // { <match> }
+	pushinteger(L, m.id);
+	lua_setfield(L, -2, "id"); // { <match> }
+	pushinteger(L, m.pattern_index);
+	lua_setfield(L, -2, "pattern_index"); // { <match> }
+	pushinteger(L, m.capture_count);
+	lua_setfield(L, -2, "capture_count");   // { <match> }
+	lua_createtable(L, 0, m.capture_count); // { <match> }, { <capture-map> }
+
+	for (uint16_t i = 0; i < m.capture_count; ++i) {
+#define push_current_node() node_push(L, tree_index, m.captures[i].node)
+
+		TSQuantifier const quantifier = ts_query_capture_quantifier_for_id(
+			q,
+			m.pattern_index,
+			m.captures[i].index);
+
+		uint32_t len;
+		char const *name = ts_query_capture_name_for_id(q, m.captures[i].index, &len);
+		lua_pushlstring(L, name, len); // {<capture-map>}, name
+		switch (table_rawget(L, -2)) {
+		case LUA_TNIL:                     // first node, just set it, or set up table
+			lua_pop(L, 1);                 // {<capture-map>}
+			lua_pushlstring(L, name, len); // {<capture-map>}, name
+			switch (quantifier) {
+			case TSQuantifierZero: // unreachable?
+				break;
+			case TSQuantifierZeroOrOne:
+			case TSQuantifierOne:
+				push_current_node(); // {<capture-map>}, name, <Node>
+				lua_rawset(L, -3);   // {<capture-map>}
+				break;
+			case TSQuantifierZeroOrMore:
+			case TSQuantifierOneOrMore:
+				lua_createtable(L, 1, 0); // {<capture-map>}, name, array
+				push_current_node();      // {<capture-map>}, name, array, <Node>
+				lua_rawseti(L, -2, 1);    // {<capture-map>}, name, array
+				lua_rawset(L, -3);        // {<capture-map>}
+				break;
+			}
+			break;
+		case LUA_TTABLE: // append it
+			// {<capture-map>}, array
+			{
+				size_t arr_len = length_of(L, -1);
+				push_current_node();             // {<capture-map>}, array, <nth Node>
+				lua_rawseti(L, -2, arr_len + 1); // {<capture-map>}, array
+				lua_pop(L, 1);                   // {<capture-map>}
+			}
+			break;
+		}
+#undef push_current_node
+	} // { <match> }, { <capture-map> }
+	lua_setfield(L, -2, "captures"); // {<match> captures=<capture-map>}
 }

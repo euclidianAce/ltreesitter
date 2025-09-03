@@ -73,20 +73,32 @@ local record ltreesitter
       get_ranges: function(Parser): {Range}
       parse_string: function(Parser, string, ?Encoding, ?Tree): Tree
       parse_with: function(
-   Parser,
-   reader: (function(integer, Point): string),
-   progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
-   encoding?: Encoding,
-   old_tree?: Tree
-   ): Tree
+         Parser,
+         reader: (function(integer, Point): string),
+         progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
+         encoding?: Encoding,
+         old_tree?: Tree
+      ): Tree
       reset: function(Parser)
       set_ranges: function(Parser, {Range}): boolean
    end
    record Query is userdata
-      _with: function(Query, {string:Predicate}): Query
       capture: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): (Node, string)
+      cursor: function(Query, Node): QueryCursor
       exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point)
       match: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): Match
+      predicates_for_pattern: function(Query, integer): {{string | Capture}}
+   end
+   record QueryCursor is userdata
+      did_exceed_match_limit: function(QueryCursor): boolean
+      match_limit: function(QueryCursor): integer
+      next_capture_without_executing_predicates: function(QueryCursor): Node, string
+      next_match_without_executing_predicates: function(QueryCursor): Match
+      remove_match: function(QueryCursor, integer)
+      set_byte_range: function(QueryCursor, start: integer, end_: integer): boolean
+      set_match_limit: function(QueryCursor, integer)
+      set_max_start_depth: function(QueryCursor, integer)
+      set_point_range: function(QueryCursor, start: Point, end_: Point): boolean
    end
    TREE_SITTER_LANGUAGE_VERSION: integer
    TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION: integer
@@ -154,6 +166,10 @@ local record ltreesitter
    end
 
    type Predicate = function(...: string | Node | {Node}): any...
+
+   interface Capture
+      capture_name: string
+   end
 
    interface Point
       row: integer

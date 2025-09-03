@@ -184,13 +184,20 @@ h2 {
 </p>
 <h4>Query</h4>
 <p>
-<a href="index.html#Query._with">Query._with</a>
-<br>
 <a href="index.html#Query.capture">Query.capture</a>
+<br>
+<a href="index.html#Query.cursor">Query.cursor</a>
 <br>
 <a href="index.html#Query.exec">Query.exec</a>
 <br>
 <a href="index.html#Query.match">Query.match</a>
+<br>
+</p>
+<h4>QueryCursor</h4>
+<p>
+<a href="index.html#QueryCursor.set_byte_range">QueryCursor.set_byte_range</a>
+<br>
+<a href="index.html#QueryCursor.set_point_range">QueryCursor.set_point_range</a>
 <br>
 </p>
 <h4>Tree</h4>
@@ -340,26 +347,31 @@ h2 {
 <h2><a name="Parser.parse_string"><code>Parser.parse_string: function(Parser, string, ?Encoding, ?Tree): Tree</code></a></h2>
 <p>Uses the given parser to parse the string<br><br>   If <code>Tree</code> is provided then it will be used to create a new updated tree<br>   (but it is the responsibility of the programmer to make the correct <code>Tree:edit</code> calls)</p><br>
 <h2><a name="Parser.parse_with"><code>Parser.parse_with: function(
-   Parser,
-   reader: (function(integer, Point): string),
-   progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
-   encoding?: Encoding,
-   old_tree?: Tree
-   ): Tree</code></a></h2>
+         Parser,
+         reader: (function(integer, Point): string),
+         progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
+         encoding?: Encoding,
+         old_tree?: Tree
+      ): Tree</code></a></h2>
 <p><code>reader</code> should be a function that takes a byte index<br>   and a <code>Point</code> and returns the text at that point. The<br>   function should return either <code>nil</code> or an empty string<br>   to signal that there is no more text.<br><br>   <code>progress_callback</code> should be a function that takes a boolean<br>   signalling if an error has occurred, and an integer byte offset. This<br>   function will be called intermittently while parsing and may return `true`<br>   to cancel parsing.<br><br>   A <code>Tree</code> can be provided to reuse parts of it for parsing,<br>   provided the <code>Tree:edit</code> has been called previously<br><br>   <code>encoding</code> defaults to <code>"utf-8"</code> when not provided.<br><br>   May return nil if the progress callback cancelled parsing</p><br>
 <h2><a name="Parser.reset"><code>Parser.reset: function(Parser)</code></a></h2>
 <p>Reset the parser, causing the next parse to start from the beginning</p><br>
 <h2><a name="Parser.set_ranges"><code>Parser.set_ranges: function(Parser, {Range}): boolean</code></a></h2>
 <p>Sets the ranges that <code>Parser</code> will include when parsing, so you don't have to parse an entire document, but the ranges in the tree will still match the document.<br>   The array of <code>Range</code>s must satisfy the following relationship: for a positive integer <code>i</code> within the length of <code>ranges: {Range}</code>:<br>   <pre><br>   ranges[i].end_byte <= ranges[i + 1].start_byte<br>   </pre><br><br>   returns whether or not setting the range succeeded</p><br>
 <br>
-<h2><a name="Query._with"><code>Query._with: function(Query, {string:Predicate}): Query</code></a></h2>
-<p></p><br>
 <h2><a name="Query.capture"><code>Query.capture: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): (Node, string)</code></a></h2>
 <p>Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs.<br>   <code>start</code> and <code>end</code> are optional.<br>   They must be passed together with the same type, describing either two bytes or two points.<br>   If passed, the query will be executed within the range denoted.<br>   If not passed, the default behaviour is to execute the query through the entire range of the node.<br><br>   <pre><br>   local q = parser:query[[ (comment) @my_match ]]<br>   for capture, name in q:capture(node) do<br>      print(capture, name) -- => (comment), "my_match"<br>   end<br>   </pre></p><br>
+<h2><a name="Query.cursor"><code>Query.cursor: function(Query, Node): QueryCursor</code></a></h2>
+<p></p><br>
 <h2><a name="Query.exec"><code>Query.exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point)</code></a></h2>
 <p>Runs a query. That's it. Nothing more, nothing less.<br>   This is intended to be used with the <code>Query.with</code> method and predicates that have side effects,<br>   i.e. for when you would use Query.match or Query.capture, but do nothing in the for loop.<br>   <code>start</code> and <code>end</code> are optional.<br>   They must be passed together with the same type, describing either two bytes or two points.<br>   If passed, the query will be executed within the range denoted.<br>   If not passed, the default behaviour is to execute the query through the entire range of the node.<br><br>   <pre><br>   local parser = ltreesitter.require("teal"):parser()<br><br>   -- grab a node to query against<br>   local root_node = parser:parse_string[[<br>   local x: string = "foo"<br>   local y: string = "bar"<br>   ]]:root()<br><br>   parser<br>      :query[[(<br>         (var_declaration<br>            (var) @var-name<br>            (string) @value)<br>         (#set! @var-name @value)<br>      )]]<br>      :exec(root_node, {["set!"] = function(a, b) _G[a] = b:sub(2, -2) end})<br><br>   print(x) -- => foo<br>   print(y) -- => bar<br><br>   </pre><br><br>   If you'd like to interact with the matches/captures of a query, see the Query.match and Query.capture iterators</p><br>
 <h2><a name="Query.match"><code>Query.match: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): Match</code></a></h2>
 <p>Iterate over the matches of a given query.<br>   <code>start</code> and <code>end</code> are optional.<br>   They must be passed together with the same type, describing either two bytes or two points.<br>   If passed, the query will be executed within the range denoted.<br>   If not passed, the default behaviour is to execute the query through the entire range of the node.<br><br>   The match object is a record populated with all the information given by treesitter<br>   <pre><br>   interface Match<br>      id: integer<br>      pattern_index: integer<br>      capture_count: integer<br>      captures: {string:Node|{Node}}<br>   end<br>   </pre><br><br>   If a capture can only contain at most one node (as is the case with regular <code>(node) @capture-name</code> patterns and <code>(node)? @capture-name</code> patterns),<br>   it will either be <code>nil</code> or that <code>Node</code>.<br><br>   If a capture can contain multiple nodes (as is the case with <code>(node)* @capture-name</code> and <code>(node)+ @capture-name</code> patterns)<br>   it will either be <code>nil</code> or an array of <code>Node</code><br><br>   Example:<br>   <pre><br>   local q = parser:query[[ (comment) @my_match ]]<br>   for match in q:match(node) do<br>      print(match.captures.my_match)<br>   end<br>   </pre><br><br>   <code>predicates</code> is a map of functions to determine whether a query matches and/or execute side effects<br><br>   Predicates that end in a <code>'?'</code> character will be seen as conditions that must be met for the pattern to be matched.<br>   Predicates that don't will be seen just as functions to be executed given the matches provided.<br><br>   Additionally, you will not have access to the return values of these functions, if you'd like to keep the results of a computation, make your functions have side-effects to write somewhere you can access.<br><br>   By default the following predicates are provided.<br>      <code> (#eq? ...) </code> will match if all arguments provided are equal<br>      <code> (#match? text pattern) </code> will match the provided <code>text</code> matches the given <code>pattern</code>. Matches are determined by Lua's standard <code>string.match</code> function.<br>      <code> (#find? text substring) </code> will match if <code>text</code> contains <code>substring</code>. The substring is found with Lua's standard <code>string.find</code>, but the search always starts from the beginning, and pattern matching is disabled. This is equivalent to <code>string.find(text, substring, 0, true)</code><br><br>   Predicate evaluation order:<br><br>      Since predicates that end with a `?` affect whether a node matches, these are run first, in the order they appear in the query's source. Once all `?` queries are run, all the non-`?` queries are run in the order they appear in the query's source.<br><br>   Example:<br>   The following snippet will match lua functions that have a single LDoc/EmmyLua style comment above them<br>   <pre><br>   local parser = ltreesitter.require("lua"):parser()<br><br>   -- grab a node to query against<br>   local root_node = parser:parse_string[[<br>      ---@Doc this does stuff<br>      local function stuff_doer()<br>         do_stuff()<br>      end<br>   ]]:root()<br><br>   for match in parser<br>      :query[[(<br>         (comment) @the-comment<br>         .<br>         (function_definition<br>            (function_name) @the-function-name)<br>         (#is-doc-comment? @the-comment)<br>      )]]<br>      :match(root_node, {<br>         ["is-doc-comment?"] = function(str)<br>            return str:source():sub(1, 4) == "---@"<br>         end<br>      })<br>   do<br>      print("Function: " .. match.captures["the-function-name"] .. " has documentation")<br>      print("   " .. match.captures["the-comment"])<br>   end<br>   </pre></p><br>
+<br>
+<h2><a name="QueryCursor.set_byte_range"><code>QueryCursor.set_byte_range: function(QueryCursor, start: integer, end_: integer): boolean</code></a></h2>
+<p>returns true when the given range was non-empty</p><br>
+<h2><a name="QueryCursor.set_point_range"><code>QueryCursor.set_point_range: function(QueryCursor, start: Point, end_: Point): boolean</code></a></h2>
+<p>returns true when the given range was non-empty</p><br>
 <br>
 <h2><a name="Tree.copy"><code>Tree.copy: function(Tree): Tree</code></a></h2>
 <p>Creates a copy of the tree. Tree-sitter recommends to create copies if you are going to use multithreading since tree accesses are not thread-safe, but copying them is cheap and quick</p><br>

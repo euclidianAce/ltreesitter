@@ -190,12 +190,12 @@ static char const *read_callback(void *payload, uint32_t byte_index, TSPoint pos
 // TODO: allow taking a DecodeFunction
 
 /* @teal-export Parser.parse_with: function(
-   Parser,
-   reader: (function(integer, Point): string),
-   progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
-   encoding?: Encoding,
-   old_tree?: Tree
-   ): Tree [[
+         Parser,
+         reader: (function(integer, Point): string),
+         progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
+         encoding?: Encoding,
+         old_tree?: Tree
+      ): Tree [[
 
    <code>reader</code> should be a function that takes a byte index
    and a <code>Point</code> and returns the text at that point. The
@@ -208,7 +208,7 @@ static char const *read_callback(void *payload, uint32_t byte_index, TSPoint pos
    to cancel parsing.
 
    A <code>Tree</code> can be provided to reuse parts of it for parsing,
-   provided the <code>Tree:edit</code> has been called previously
+   provided that <code>Tree:edit</code> has been called previously
 
    <code>encoding</code> defaults to <code>"utf-8"</code> when not provided.
 

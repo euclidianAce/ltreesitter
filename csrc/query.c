@@ -73,28 +73,12 @@ bool query_handle_error(
 	return false;
 }
 
-// src will be duplicated
-void query_push(
-	lua_State *L,
-	char const *src,
-	size_t const src_len,
-	TSQuery *q,
-	int kept_index) {
-	kept_index = absindex(L, kept_index);
-	TSQuery **lq = lua_newuserdata(L, sizeof(TSQuery *)); // query
+void query_push(lua_State *L, TSQuery *q, int language_index) {
+	*(TSQuery **)lua_newuserdata(L, sizeof(TSQuery *)) = q;
 	setmetatable(L, LTREESITTER_QUERY_METATABLE_NAME);
 
-	bind_lifetimes(L, -1, kept_index); // this query keeps `kept_index` alive
-
-	SourceText *source = source_text_push(L, src_len, src); // query, source text
-	if (!source) {
-		ALLOC_FAIL(L);
-		return;
-	}
-	bind_lifetimes(L, -2, -1); // query keeps source text alive
-	lua_pop(L, 1);             // query
-
-	*lq = q;
+	language_index = absindex(L, language_index);
+	bind_lifetimes(L, -1, language_index); // query keeps language alive
 }
 
 static int query_gc(lua_State *L) {
@@ -316,60 +300,7 @@ static int query_iterator_next_match(lua_State *L) {
 			return 0;
 	} while (!do_predicates(L, query_idx, q, tree_index, &m, predicate_table_index));
 
-	lua_createtable(L, 0, 5); // { <match> }
-	pushinteger(L, m.id);
-	lua_setfield(L, -2, "id"); // { <match> }
-	pushinteger(L, m.pattern_index);
-	lua_setfield(L, -2, "pattern_index"); // { <match> }
-	pushinteger(L, m.capture_count);
-	lua_setfield(L, -2, "capture_count");   // { <match> }
-	lua_createtable(L, 0, m.capture_count); // { <match> }, { <capture-map> }
-
-	for (uint16_t i = 0; i < m.capture_count; ++i) {
-#define push_current_node() node_push(L, tree_index, m.captures[i].node)
-
-		TSQuantifier const quantifier = ts_query_capture_quantifier_for_id(
-			q,
-			m.pattern_index,
-			m.captures[i].index);
-
-		uint32_t len;
-		char const *name = ts_query_capture_name_for_id(q, m.captures[i].index, &len);
-		lua_pushlstring(L, name, len); // {<capture-map>}, name
-		switch (table_rawget(L, -2)) {
-		case LUA_TNIL:                     // first node, just set it, or set up table
-			lua_pop(L, 1);                 // {<capture-map>}
-			lua_pushlstring(L, name, len); // {<capture-map>}, name
-			switch (quantifier) {
-			case TSQuantifierZero: // unreachable?
-				break;
-			case TSQuantifierZeroOrOne:
-			case TSQuantifierOne:
-				push_current_node(); // {<capture-map>}, name, <Node>
-				lua_rawset(L, -3);   // {<capture-map>}
-				break;
-			case TSQuantifierZeroOrMore:
-			case TSQuantifierOneOrMore:
-				lua_createtable(L, 1, 0); // {<capture-map>}, name, array
-				push_current_node();      // {<capture-map>}, name, array, <Node>
-				lua_rawseti(L, -2, 1);    // {<capture-map>}, name, array
-				lua_rawset(L, -3);        // {<capture-map>}
-				break;
-			}
-			break;
-		case LUA_TTABLE: // append it
-			// {<capture-map>}, array
-			{
-				size_t arr_len = length_of(L, -1);
-				push_current_node();             // {<capture-map>}, array, <nth Node>
-				lua_rawseti(L, -2, arr_len + 1); // {<capture-map>}, array
-				lua_pop(L, 1);                   // {<capture-map>}
-			}
-			break;
-		}
-#undef push_current_node
-	} // { <match> }, { <capture-map> }
-	lua_setfield(L, -2, "captures"); // {<match> captures=<capture-map>}
+	push_match(L, m, q, tree_index);
 	return 1;
 }
 
@@ -551,9 +482,6 @@ static int query_capture_factory(lua_State *L) {
    type Predicate = function(...: string | Node | {Node}): any...
 ]] */
 
-/* @teal-export Query._with: function(Query, {string:Predicate}): Query [[
-]]*/
-
 /* @teal-export Query.exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point) [[
    Runs a query. That's it. Nothing more, nothing less.
    This is intended to be used with the <code>Query.with</code> method and predicates that have side effects,
@@ -732,6 +660,83 @@ static int find_predicate(lua_State *L) {
 	return 1;
 }
 
+// TODO: exec_with_options
+/* @teal-export Query.cursor: function(Query, Node): QueryCursor [[
+]] */
+static int make_cursor(lua_State *L) {
+	TSQuery *const q = *query_assert(L, 1);
+	TSNode n = *node_assert(L, 2);
+	TSQueryCursor *const c = ts_query_cursor_new();
+	ts_query_cursor_exec(c, q, n);
+
+	*(TSQueryCursor **)lua_newuserdata(L, sizeof c) = c;
+	setmetatable(L, LTREESITTER_QUERY_CURSOR_METATABLE_NAME);
+
+	// kept object needs to be a table since we're keeping two things alive
+	lua_createtable(L, 2, 0);
+	lua_pushvalue(L, 1);
+	lua_rawseti(L, -2, 1);
+	lua_pushvalue(L, 2);
+	lua_rawseti(L, -2, 2);
+	bind_lifetimes(L, -2, -1); // cursor keeps both query and node alive
+	lua_pop(L, 1);
+
+	return 1;
+}
+
+/* @teal-inline [[
+   interface Capture
+      capture_name: string
+   end
+]] */
+/* @teal-export Query.predicates_for_pattern: function(Query, integer): {{string | Capture}} */
+static int predicates_for_pattern(lua_State *L) {
+	TSQuery const *const q = *query_assert(L, 1);
+	lua_Integer pattern_index = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, pattern_index >= 0, 2, "expected a non-negative integer (a pattern index)");
+	luaL_argcheck(L, pattern_index < ts_query_pattern_count(q), 2, "pattern index out of range");
+	lua_settop(L, 2);
+
+	uint32_t count;
+	TSQueryPredicateStep const *steps = ts_query_predicates_for_pattern(q, pattern_index, &count);
+	size_t result_index = 0;
+	lua_createtable(L, count, 0); // result array
+	size_t current_entry_index = 0;
+	for (uint32_t i = 0; i < count; ++i) {
+		// result array
+
+		if (i == 0 || steps[i - 1].type == TSQueryPredicateStepTypeDone)
+			lua_createtable(L, 0, 0);
+
+		switch (steps[i].type) {
+		case TSQueryPredicateStepTypeDone:
+			lua_rawseti(L, -2, ++result_index);
+			current_entry_index = 0;
+			break;
+
+		case TSQueryPredicateStepTypeCapture: {
+			uint32_t len;
+			char const *capture_name = ts_query_capture_name_for_id(q, steps[i].value_id, &len);
+			lua_createtable(L, 0, 1);
+			lua_pushlstring(L, capture_name, len);
+			lua_setfield(L, -2, "capture_name");
+			lua_rawseti(L, -2, ++current_entry_index);
+		} break;
+
+		case TSQueryPredicateStepTypeString: {
+			uint32_t len;
+			char const *string_value = ts_query_string_value_for_id(q, steps[i].value_id, &len);
+			lua_pushlstring(L, string_value, len);
+			lua_rawseti(L, -2, ++current_entry_index);
+		} break;
+
+		default:
+			break;
+		}
+	}
+	return 1;
+}
+
 static const luaL_Reg default_query_predicates[] = {
 	{"eq?", eq_predicate},
 	{"match?", match_predicate},
@@ -751,6 +756,8 @@ static const luaL_Reg query_methods[] = {
 	{"match", query_match_factory},
 	{"capture", query_capture_factory},
 	{"exec", query_exec},
+	{"cursor", make_cursor},
+	{"predicates_for_pattern", predicates_for_pattern},
 	{NULL, NULL}};
 
 static const luaL_Reg query_metamethods[] = {

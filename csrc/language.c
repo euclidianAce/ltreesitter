@@ -624,7 +624,7 @@ static int make_query(lua_State *L) {
 	query_handle_error(L, q, err_offset, err_type, lua_query_src, len);
 
 	if (q)
-		query_push(L, lua_query_src, len, q, 1);
+		query_push(L, q, 1);
 	else
 		lua_pushnil(L);
 
