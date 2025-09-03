@@ -53,7 +53,12 @@ local function split(str: string, del: string, no_patt: boolean): function(): st
    end
 end
 
-local function insert_into(dest: {string:any}, name: string, content: string)
+local function insert_into(
+   -- This type should actually be a recursive type: T = {string:string|T}
+   dest: {string:any},
+   name: string,
+   content: string
+)
    local components <const>: {string} = {}
    for comp in split(name, ".", true) do
       table.insert(components, comp)
@@ -61,6 +66,7 @@ local function insert_into(dest: {string:any}, name: string, content: string)
 
    if #components > 1 then
       local base = dest[components[1]] as {string:any} or {}
+      assert(type(base) == "table")
       local current = base
       local len = #components
       for i = 2, len - 1 do
@@ -68,6 +74,7 @@ local function insert_into(dest: {string:any}, name: string, content: string)
             current[components[i]] = {}
          end
          current = current[components[i]] as {string:any}
+         assert(type(current) == "table")
       end
       current[components[len]] = content
       dest[components[1]] = base
@@ -93,7 +100,7 @@ local directives: {string:function(ts.Node, string, string)} = {
          end
          --local c_src_start <const> = n:start_point()
          typedef = typedef -- .. " -- " .. fname .. ":" .. math.floor(c_src_start.row)
-         insert_into(records as {string:any}, name, typedef)
+         insert_into(records, name, typedef)
       end
    end,
 
@@ -192,8 +199,7 @@ do
    io.flush()
 end
 
-local record DocInfo
-   {string}
+local record DocInfo is {string}
    mod: string
    index: string
    doc: string
