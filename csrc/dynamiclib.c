@@ -1,6 +1,9 @@
 
 #include <stddef.h>
 
+// 260731 OIS - Modified to work with Emscripten, where no dynlib is available.
+
+#ifndef __EMSCRIPTEN__
 #include "dynamiclib.h"
 
 bool dynlib_open(char const *name, Dynlib *handle, char const **out_error) {
@@ -52,3 +55,5 @@ void dynlib_close(Dynlib *handle) {
 	dlclose(handle->opaque_handle);
 #endif
 }
+
+#endif

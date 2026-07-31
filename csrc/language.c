@@ -1,5 +1,12 @@
+// 260731 OIS - Modified to work with Emscripten, where no dynlib is available.
+
 #include "language.h"
+#include "lua.h"
+#include "luautils.h"
+#include "tree_sitter/api.h"
+#ifndef __EMSCRIPTEN__
 #include "dynamiclib.h"
+#endif
 #include "object.h"
 #include "query.h"
 
@@ -30,11 +37,13 @@ void setup_dynlib_cache(lua_State *L) {
 #endif
 
 static int dynlib_gc(lua_State *L) {
+#ifndef __EMSCRIPTEN__
 	Dynlib *lib = luaL_checkudata(L, 1, LTREESITTER_DYNLIB_METATABLE_NAME);
 #ifdef LOG_GC
 	printf("Dynlib %p is being garbage collected\n", (void const *)lib);
 #endif
 	dynlib_close(lib);
+#endif
 	return 0;
 }
 
@@ -45,6 +54,7 @@ void dynlib_init_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_DYNLIB_METATABLE_NAME, metamethods, (luaL_Reg[]){{NULL, NULL}});
 }
 
+#ifndef __EMSCRIPTEN__
 // ( -- Dynlib )
 static void cache_dynlib(lua_State *L, char const *path_loaded_from, Dynlib dl) {
 	// TODO: should we even attempt to normalize the path?
@@ -64,6 +74,30 @@ static Dynlib *get_cached_dynlib(lua_State *L, char const *path) {
 	void *data = testudata(L, -1, LTREESITTER_DYNLIB_METATABLE_NAME);
 	return data;
 }
+#endif
+
+#ifdef __EMSCRIPTEN__
+
+#define STATIC_LANGUAGES_REGISTRY_KEY "ltreesitter.static_languages"
+
+void ltreesitter_register_static_language(
+	lua_State *L,
+	char const *name,
+	TSLanguage const *language) {
+	lua_getfield(L, LUA_REGISTRYINDEX, STATIC_LANGUAGES_REGISTRY_KEY);
+
+	if (lua_isnil(L, -1)) {
+		lua_pop(L, 1);
+		lua_newtable(L);
+		lua_pushvalue(L, -1);
+		lua_setfield(L, LUA_REGISTRYINDEX, STATIC_LANGUAGES_REGISTRY_KEY);
+	}
+
+	lua_pushlightuserdata(L, (void *)language);
+	lua_setfield(L, -2, name);
+	lua_pop(L, 1);
+}
+#endif
 
 /* @teal-export load: function(file_name: string, language_name: string): Language, string [[
    Load a language from a given file
@@ -76,19 +110,38 @@ static Dynlib *get_cached_dynlib(lua_State *L, char const *path) {
    local my_language = ltreesitter.load("./my_parser.so", "my_language")
    </pre>
 ]] */
-TSLanguage const *language_load_from(Dynlib dl, size_t lang_name_len, char const *language_name) {
+TSLanguage const *language_load_from(
+#ifndef __EMSCRIPTEN__
+	Dynlib dl,
+#else
+	lua_State *L,
+#endif
+	size_t lang_name_len, char const *language_name) {
 	char buf[TREE_SITTER_SYM_LEN + MAX_LANG_NAME_LEN + 1] = {'t', 'r', 'e', 'e', '_', 's', 'i', 't', 't', 'e', 'r', '_'};
 	{
 		assert(lang_name_len <= MAX_LANG_NAME_LEN);
 		memcpy(buf + TREE_SITTER_SYM_LEN, language_name, lang_name_len);
 		buf[TREE_SITTER_SYM_LEN + lang_name_len] = 0;
 	}
+#ifndef __EMSCRIPTEN__
 	void *sym = dynlib_sym(&dl, buf);
 	if (!sym)
 		return NULL;
 	TSLanguage *(*tree_sitter_lang)(void);
 	*(void **)(&tree_sitter_lang) = sym;
 	return tree_sitter_lang();
+#else
+	lua_getfield(L, LUA_REGISTRYINDEX, STATIC_LANGUAGES_REGISTRY_KEY);
+	lua_getfield(L, -1, language_name);
+	lua_remove(L, -2);
+
+	if (lua_isnil(L, -1)) {
+		lua_pop(L, 1);
+		return NULL;
+	}
+	void *lang = lua_touserdata(L, -1);
+	return (TSLanguage const *)lang;
+#endif
 }
 
 int language_load(lua_State *L) {
@@ -101,6 +154,7 @@ int language_load(lua_State *L) {
 		return 2;
 	}
 
+#ifndef __EMSCRIPTEN__
 	Dynlib opened;
 	bool cached = false;
 	{
@@ -117,13 +171,22 @@ int language_load(lua_State *L) {
 			}
 		}
 	} // dynlib | nothing
+#endif
 
-	TSLanguage const *lang = language_load_from(opened, lang_name_len, lang_name);
+	TSLanguage const *lang = language_load_from(
+#ifndef __EMSCRIPTEN__
+		opened,
+#else
+		L,
+#endif
+		lang_name_len, lang_name);
 	if (!lang) {
 		lua_pushnil(L);
 		lua_pushfstring(L, "Symbol not found in %s", dl_file);
+#ifndef __EMSCRIPTEN__
 		if (!cached)
 			dynlib_close(&opened);
+#endif
 		return 1;
 	}
 
@@ -132,10 +195,12 @@ int language_load(lua_State *L) {
 	setmetatable(L, LTREESITTER_LANGUAGE_METATABLE_NAME);
 	// dynlib | nothing, lang
 
+#ifndef __EMSCRIPTEN__
 	if (!cached) {
 		cache_dynlib(L, dl_file, opened);
 		lua_insert(L, -2);
 	} // dynlib, lang
+#endif
 
 	bind_lifetimes(L, -1, -2); // language keeps dll alive
 
@@ -148,8 +213,11 @@ static bool try_load_from_path(
 	size_t lang_name_len,
 	char const *lang_name,
 	StringBuilder *err_buf) {
+#ifndef __EMSCRIPTEN__
 	char const *dynlib_error = NULL;
+#endif
 	TSLanguage const *lang = NULL;
+#ifndef __EMSCRIPTEN__
 	bool should_cache_dl = false;
 
 	{
@@ -170,18 +238,31 @@ static bool try_load_from_path(
 			sb_push_fmt(err_buf, "\n\tTried %s: %s", dl_file, dynlib_error);
 			return false;
 		}
-		lang = language_load_from(dl, lang_name_len, lang_name);
+#endif
+		lang = language_load_from(
+#ifndef __EMSCRIPTEN__
+			dl,
+#else
+		L,
+#endif
+			lang_name_len, lang_name);
 		if (!lang) {
+#ifndef __EMSCRIPTEN__
 			dynlib_close(&dl);
+#endif
 			sb_push_fmt(err_buf, "\n\tFound %s, but unable to find symbol " TREE_SITTER_SYM "%s", dl_file, lang_name);
 			return false;
 		}
+#ifndef __EMSCRIPTEN__
 	}
+#endif
 
 	uint32_t const version = ts_language_abi_version(lang);
 	if (version < TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION) {
+#ifndef __EMSCRIPTEN__
 		if (should_cache_dl)
 			dynlib_close(&dl);
+#endif
 		sb_push_fmt(
 			err_buf,
 			"\n\tFound %s, but the version is too old, language version: %" PRIu32 ", minimum version: %d",
@@ -190,8 +271,10 @@ static bool try_load_from_path(
 			TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION);
 		return false;
 	} else if (version > TREE_SITTER_LANGUAGE_VERSION) {
+#ifndef __EMSCRIPTEN__
 		if (should_cache_dl)
 			dynlib_close(&dl);
+#endif
 		sb_push_fmt(
 			err_buf,
 			"\n\tFound %s, but the version is too new, language version: %" PRIu32 ", maximum version: %d",
@@ -209,10 +292,12 @@ static bool try_load_from_path(
 
 	// dynlib | nothing, lang
 
+#ifndef __EMSCRIPTEN__
 	if (should_cache_dl) { // (nothing), lang
 		cache_dynlib(L, dl_file, dl);
 		lua_insert(L, -2);
 	} // dynlib, lang
+#endif
 
 	bind_lifetimes(L, -1, -2); // language keeps dll alive
 	lua_remove(L, -2);

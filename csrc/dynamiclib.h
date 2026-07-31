@@ -1,6 +1,10 @@
 #ifndef DYNAMICLIB_H
 #define DYNAMICLIB_H
 
+// 260731 OIS - Modified to work with Emscripten, where no dynlib is available.
+
+#ifndef __EMSCRIPTEN__
+
 #include <stdbool.h>
 
 #ifdef LTREESITTER_USE_LIBUV
@@ -28,5 +32,7 @@ typedef struct {
 bool dynlib_open(char const *name, Dynlib *handle, char const **out_error);
 void *dynlib_sym(Dynlib *handle, char const *sym_name);
 void dynlib_close(Dynlib *handle);
+
+#endif
 
 #endif
