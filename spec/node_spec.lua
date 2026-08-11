@@ -18,16 +18,13 @@ describe("Node", function()
 			root[i] = assert(tree[i]:root(), "Failed getting root of tree " .. tostring(i))
 		end
 	end)
-	it("name should return the name of the node", function()
-		assert.are.equal(root[1]:name(), "translation_unit")
-	end)
 	it("type should return the type of the node", function()
 		assert.are.equal(root[1]:type(), "translation_unit")
 	end)
 	it("child should return a Node (and the correct child)", function()
 		local n = root[1]:child(0)
 		util.assert_userdata_type(n, "ltreesitter.Node")
-		assert.are.equal(n:name(), "comment")
+		assert.are.equal(n:type(), "comment")
 	end)
 	it("child_count should return the correct number of children", function()
 		local n = root[2]:child_count()
@@ -59,19 +56,11 @@ describe("Node", function()
 	end)
 
 	it("children should iterate over all the children of a node", function()
-		-- TODO: find a case where children and named_children differ
-		local actual_child_names = {}
 		local actual_child_types = {}
 		for child in assert(root[2]:child(1)):children() do
 			util.assert_userdata_type(child, "ltreesitter.Node")
-			table.insert(actual_child_names, child:name())
 			table.insert(actual_child_types, child:type())
 		end
-		assert.are.same(actual_child_names, {
-			"primitive_type",
-			"function_declarator",
-			"compound_statement",
-		})
 		assert.are.same(actual_child_types, {
 			"primitive_type",
 			"function_declarator",
@@ -79,18 +68,11 @@ describe("Node", function()
 		})
 	end)
 	it("named_children should iterate over all the named children of a node", function()
-		local actual_child_names = {}
 		local actual_child_types = {}
 		for child in assert(root[2]:child(1)):named_children() do
 			util.assert_userdata_type(child, "ltreesitter.Node")
-			table.insert(actual_child_names, child:name())
 			table.insert(actual_child_types, child:type())
 		end
-		assert.are.same(actual_child_names, {
-			"primitive_type",
-			"function_declarator",
-			"compound_statement",
-		})
 		assert.are.same(actual_child_types, {
 			"primitive_type",
 			"function_declarator",

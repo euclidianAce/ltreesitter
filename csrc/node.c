@@ -342,25 +342,6 @@ static int node_eq(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.name: function(Node): string [[
-   Returns the type of a given node as a string
-   <pre>
-   print(node) -- => (comment)
-   print(node:name()) -- => comment
-   </pre>
-]] */
-static int node_name(lua_State *L) {
-	TSNode *n = node_assert(L, 1);
-	if (ts_node_is_null(*n) || !ts_node_is_named(*n)) {
-		lua_pushnil(L);
-		return 1;
-	}
-	TSSymbol sym = ts_node_symbol(*n);
-	char const *name = ts_language_symbol_name(ts_tree_language(n->tree), sym);
-	lua_pushstring(L, name);
-	return 1;
-}
-
 /* @teal-export Node.symbol: function(Node): Symbol [[
    Returns the type of a given node as a numeric id
 ]] */
@@ -563,7 +544,6 @@ static const luaL_Reg node_methods[] = {
 	{"is_extra", node_is_extra},
 	{"is_missing", node_is_missing},
 	{"is_named", node_is_named},
-	{"name", node_name},
 	{"symbol", node_symbol},
 	{"grammar_symbol", node_grammar_symbol},
 	{"named_child", node_named_child},
