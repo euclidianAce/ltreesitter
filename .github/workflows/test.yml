@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        luaVersion: ["5.1", "5.2", "5.3", "5.4", "luajit"]
+        luaVersion: ["5.1", "5.2", "5.3", "5.4", "5.5", "luajit"]
 
     runs-on: ubuntu-latest
 
@@ -24,12 +24,12 @@ jobs:
           submodules: "recursive"
 
       - name: Install Lua
-        uses: hishamhm/gh-actions-lua@master
+        uses: leafo/gh-actions-lua@v13
         with:
           luaVersion: ${{ matrix.luaVersion }}
 
       - name: Install LuaRocks
-        uses: hishamhm/gh-actions-luarocks@master
+        uses: leafo/gh-actions-luarocks@v6
 
       - name: Build ltreesitter
         run: |
