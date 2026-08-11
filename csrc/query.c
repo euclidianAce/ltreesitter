@@ -89,7 +89,7 @@ void query_push(lua_State *L, TSQuery *q, int language_index) {
 static int query_gc(lua_State *L) {
 	TSQuery *q = *query_assert(L, 1);
 	ts_query_delete(q);
-	return 1;
+	return 0;
 }
 
 /* @teal-export Query.pattern_count: function(Query): integer [[
