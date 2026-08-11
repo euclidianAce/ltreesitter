@@ -48,7 +48,7 @@ static int set_match_limit(lua_State *L) {
 	return 0;
 }
 
-/* @teal-export QueryCursor.set_byte_range: function(QueryCursor, start: integer, end_: integer): boolean [[
+/* @teal-export QueryCursor.set_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean [[
    returns true when the given range was non-empty
 ]] */
 static int set_byte_range(lua_State *L) {
@@ -149,25 +149,47 @@ static int remove_match(lua_State *L) {
 static int set_max_start_depth(lua_State *L) {
 	TSQueryCursor *qc = *query_cursor_assert(L, 1);
 	uint32_t depth = UINT32_MAX;
-	if (!lua_isnoneornil(L, 2)) {
-		lua_Integer arg = luaL_checkinteger(L, 2);
-		luaL_argcheck(L, arg >= 0, 2, "expected a non-negative integer");
-		depth = (uint32_t)arg;
-	}
+	if (!lua_isnoneornil(L, 2))
+		depth = u32_argcheck(L, 2);
 	ts_query_cursor_set_max_start_depth(qc, depth);
 	return 0;
 }
 
+/* @teal-export QueryCursor.set_containing_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean [[
+   Set the byte range within which all matches must be <em>fully</em> contained.
+]] */
+static int set_containing_byte_range(lua_State *L) {
+	TSQueryCursor *qc = *query_cursor_assert(L, 1);
+	uint32_t const start_byte = u32_argcheck(L, 2);
+	uint32_t const end_byte = u32_argcheck(L, 3);
+	lua_pushboolean(L, ts_query_cursor_set_containing_byte_range(qc, start_byte, end_byte));
+	return 1;
+}
+
+/* @teal-export QueryCursor.set_containing_point_range: function(QueryCursor, start_point: Point, end_point: Point): boolean [[
+   Set the byte range within which all matches must be <em>fully</em> contained.
+]] */
+static int set_containing_point_range(lua_State *L) {
+	TSQueryCursor *qc = *query_cursor_assert(L, 1);
+	TSPoint const start = topoint(L, 2);
+	TSPoint const end = topoint(L, 3);
+	lua_pushboolean(L, ts_query_cursor_set_containing_point_range(qc, start, end));
+	return 1;
+}
+
+
 static const luaL_Reg query_cursor_methods[] = {
 	{"did_exceed_match_limit", did_exceed_match_limit},
 	{"match_limit", match_limit},
-	{"set_match_limit", set_match_limit},
-	{"set_byte_range", set_byte_range},
-	{"set_point_range", set_point_range},
-	{"next_match_without_executing_predicates", next_match_without_executing_predicates},
 	{"next_capture_without_executing_predicates", next_capture_without_executing_predicates},
-	{"set_max_start_depth", set_max_start_depth},
+	{"next_match_without_executing_predicates", next_match_without_executing_predicates},
 	{"remove_match", remove_match},
+	{"set_byte_range", set_byte_range},
+	{"set_containing_byte_range", set_containing_byte_range},
+	{"set_containing_point_range", set_containing_point_range},
+	{"set_match_limit", set_match_limit},
+	{"set_max_start_depth", set_max_start_depth},
+	{"set_point_range", set_point_range},
 	{NULL, NULL}};
 
 static const luaL_Reg query_cursor_metamethods[] = {

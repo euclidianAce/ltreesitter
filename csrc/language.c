@@ -87,7 +87,7 @@ TSLanguage const *language_load_from(Dynlib dl, size_t lang_name_len, char const
 	if (!sym)
 		return NULL;
 	TSLanguage *(*tree_sitter_lang)(void);
-	*(void **)(&tree_sitter_lang) = sym;
+	memcpy(&tree_sitter_lang, &sym, sizeof sym);
 	return tree_sitter_lang();
 }
 

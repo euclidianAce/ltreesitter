@@ -71,6 +71,8 @@ bool expect_field(lua_State *L, int idx, char const *field_name, int expected_ty
 bool expect_nested_field(lua_State *L, int idx, char const *parent_name, char const *field_name, int expected_type);
 int absindex(lua_State *L, int idx);
 
+uint32_t u32_argcheck(lua_State *L, int idx);
+
 // ( T -- T )
 void setmetatable(lua_State *L, char const *mt_name);
 

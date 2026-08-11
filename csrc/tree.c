@@ -17,6 +17,10 @@
 #include <stdio.h>
 #endif
 
+// TODO
+// const TSLanguage *ts_tree_language(const TSTree *self);
+// void ts_tree_print_dot_graph(const TSTree *self, int file_descriptor);
+
 static ltreesitter_Tree *push_uninitialized_tree(lua_State *L) {
 	ltreesitter_Tree *tree = lua_newuserdata(L, sizeof *tree);
 	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
@@ -58,6 +62,19 @@ void tree_push_with_reader(
 static int tree_push_root(lua_State *L) {
 	ltreesitter_Tree *const t = tree_assert(L, 1);
 	node_push(L, 1, ts_tree_root_node(t->tree));
+	return 1;
+}
+
+/* @teal-export Tree.root_with_offset: function(Tree, offset_bytes: integer, offset_extent: Point): Node [[
+   Returns the root node of the given parse tree, but with its position shifted
+   forward
+]] */
+static int tree_push_root_with_offset(lua_State *L) {
+	ltreesitter_Tree *const t = tree_assert(L, 1);
+	luaL_argcheck(L, lua_type(L, 2) == LUA_TNUMBER, 2, "expected integer");
+	uint32_t offset_bytes = lua_tointeger(L, 2);
+	TSPoint offset_extent = topoint(L, 3);
+	node_push(L, 1, ts_tree_root_node_with_offset(t->tree, offset_bytes, offset_extent));
 	return 1;
 }
 
@@ -191,16 +208,7 @@ static int tree_edit(lua_State *L) {
 	return 0;
 }
 
-/* @teal-export Tree.get_changed_ranges: function(old: Tree, new: Tree): {Range} [[
-   Compare an old syntax tree to a new syntax tree.
-   This would usually be called right after a set of calls to <code>Tree.edit(_s)</code> and <code>Parser.parse_{string,with}</code>
-]] */
-static int tree_get_changed_ranges(lua_State *L) {
-	ltreesitter_Tree *old = tree_assert(L, 1);
-	ltreesitter_Tree *new = tree_assert(L, 2);
-	uint32_t len;
-	TSRange *ranges = ts_tree_get_changed_ranges(old->tree, new->tree, &len);
-
+static void push_range_array(lua_State *L, uint32_t len, TSRange ranges[static len]) {
 	lua_createtable(L, len, 0); // { range }
 	for (uint32_t i = 0; i < len; i++) {
 		lua_createtable(L, 0, 4); // { range }, range
@@ -222,9 +230,31 @@ static int tree_get_changed_ranges(lua_State *L) {
 		lua_setfield(L, -2, "end_point"); // { range }, range
 		lua_rawseti(L, -2, i + 1);        // { range }
 	}
+}
 
+/* @teal-export Tree.get_changed_ranges: function(old: Tree, new: Tree): {Range} [[
+   Compare an old syntax tree to a new syntax tree.
+   This would usually be called right after a set of calls to <code>Tree.edit(_s)</code> and <code>Parser.parse_{string,with}</code>
+]] */
+static int tree_get_changed_ranges(lua_State *L) {
+	ltreesitter_Tree *old = tree_assert(L, 1);
+	ltreesitter_Tree *new = tree_assert(L, 2);
+	uint32_t len = 0;
+	TSRange *ranges = ts_tree_get_changed_ranges(old->tree, new->tree, &len);
+	push_range_array(L, len, ranges);
 	free(ranges);
+	return 1;
+}
 
+/* @teal-export Tree.included_ranges: function(Tree): {Range} [[
+   Returns the array of ranges used to parse the syntax tree
+]] */
+static int tree_included_ranges(lua_State *L) {
+	ltreesitter_Tree *t = tree_assert(L, 1);
+	uint32_t len = 0;
+	TSRange *ranges = ts_tree_included_ranges(t->tree, &len);
+	push_range_array(L, len, ranges);
+	free(ranges);
 	return 1;
 }
 
@@ -239,11 +269,13 @@ static int tree_gc(lua_State *L) {
 }
 
 static const luaL_Reg tree_methods[] = {
-	{"root", tree_push_root},
 	{"copy", tree_copy},
 	{"edit", tree_edit},
 	{"edit_s", tree_edit_s},
 	{"get_changed_ranges", tree_get_changed_ranges},
+	{"included_ranges", tree_included_ranges},
+	{"root", tree_push_root},
+	{"root_with_offset", tree_push_root_with_offset},
 	{NULL, NULL}};
 static const luaL_Reg tree_metamethods[] = {
 	{"__gc", tree_gc},

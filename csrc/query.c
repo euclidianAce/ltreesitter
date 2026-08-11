@@ -12,6 +12,11 @@
 #include "tree.h"
 #include "types.h"
 
+// TODO?
+// const char *ts_query_capture_name_for_id()
+// TSQuantifier ts_query_capture_quantifier_for_id()
+// const char *ts_query_string_value_for_id()
+
 static char const *default_predicate_field = "default_predicates";
 
 static void push_default_predicate_table(lua_State *L) {
@@ -87,16 +92,27 @@ static int query_gc(lua_State *L) {
 	return 1;
 }
 
+/* @teal-export Query.pattern_count: function(Query): integer [[
+   Returns the number of patterns this query has
+]] */
 static int query_pattern_count(lua_State *L) {
 	TSQuery *q = *query_assert(L, 1);
 	pushinteger(L, ts_query_pattern_count(q));
 	return 1;
 }
+
+/* @teal-export Query.capture_count: function(Query): integer [[
+   Returns the number of captures this query has
+]] */
 static int query_capture_count(lua_State *L) {
 	TSQuery *q = *query_assert(L, 1);
 	pushinteger(L, ts_query_capture_count(q));
 	return 1;
 }
+
+/* @teal-export Query.string_count: function(Query): integer [[
+   Returns the number of strings this query has
+]] */
 static int query_string_count(lua_State *L) {
 	TSQuery *q = *query_assert(L, 1);
 	pushinteger(L, ts_query_string_count(q));
@@ -816,6 +832,81 @@ static int predicates_for_pattern(lua_State *L) {
 	return 1;
 }
 
+/* @teal-export Query.start_byte_for_pattern: function(Query, pattern_zero_index: integer): integer [[
+   Returns the byte offset where the given pattern starts in the query's source
+]] */
+static int query_start_byte_for_pattern(lua_State *L) {
+	TSQuery const *q = *query_assert(L, 1);
+	lua_Integer pattern_index = luaL_checkinteger(L, 2);
+	lua_pushinteger(L, ts_query_start_byte_for_pattern(q, (uint32_t)pattern_index));
+	return 1;
+}
+
+/* @teal-export Query.end_byte_for_pattern: function(Query, pattern_zero_index: integer): integer [[
+   Returns the byte offset where the given pattern ends in the query's source
+]] */
+static int query_end_byte_for_pattern(lua_State *L) {
+	TSQuery const *q = *query_assert(L, 1);
+	lua_Integer pattern_index = luaL_checkinteger(L, 2);
+	lua_pushinteger(L, ts_query_end_byte_for_pattern(q, (uint32_t)pattern_index));
+	return 1;
+}
+
+/* @teal-export Query.is_pattern_rooted: function(Query, pattern_zero_index: integer): bool [[
+   Returns whether the pattern at the given index is rooted
+]] */
+static int query_is_pattern_rooted(lua_State *L) {
+	TSQuery const *q = *query_assert(L, 1);
+	lua_Integer pattern_index = luaL_checkinteger(L, 2);
+	lua_pushinteger(L, ts_query_is_pattern_rooted(q, (uint32_t)pattern_index));
+	return 1;
+}
+
+/* @teal-export Query.is_pattern_non_local: function(Query, pattern_zero_index: integer): bool [[
+   Returns whether the pattern at the given index is non-local
+]] */
+static int query_is_pattern_non_local(lua_State *L) {
+	TSQuery const *q = *query_assert(L, 1);
+	lua_Integer pattern_index = luaL_checkinteger(L, 2);
+	lua_pushinteger(L, ts_query_is_pattern_non_local(q, (uint32_t)pattern_index));
+	return 1;
+}
+
+/* @teal-export Query.is_pattern_guaranteed_at_step: function(Query, pattern_zero_index: integer): bool [[
+   Returns whether the pattern at the given index is rooted
+]] */
+static int query_is_pattern_guaranteed_at_step(lua_State *L) {
+	TSQuery const *q = *query_assert(L, 1);
+	lua_Integer pattern_index = luaL_checkinteger(L, 2);
+	lua_pushinteger(L, ts_query_is_pattern_guaranteed_at_step(q, (uint32_t)pattern_index));
+	return 1;
+}
+
+/* @teal-export Query.disable_capture: function(Query, name: string) [[
+   Disable a certain capture within a query, preventing it from being returned in matches.
+
+   Currently there is no way to undo this.
+]] */
+static int query_disable_capture(lua_State *L) {
+	TSQuery *q = *query_assert(L, 1);
+	size_t len = 0;
+	const char *name = luaL_checklstring(L, 2, &len);
+	ts_query_disable_capture(q, name, len);
+	return 0;
+}
+
+/* @teal-export Query.disable_pattern: function(Query, pattern_zero_index: integer) [[
+   Disable a certain pattern within a query, preventing it from being returned in matches.
+
+   Currently there is no way to undo this.
+]] */
+static int query_disable_pattern(lua_State *L) {
+	TSQuery *q = *query_assert(L, 1);
+	lua_Integer pattern_index = luaL_checkinteger(L, 2);
+	ts_query_disable_pattern(q, (uint32_t)pattern_index);
+	return 0;
+}
+
 static const luaL_Reg default_query_predicates[] = {
 	{"eq?", eq_predicate},
 	{"not-eq?", not_eq_predicate},
@@ -835,14 +926,21 @@ void query_setup_predicate_tables(lua_State *L) {
 }
 
 static const luaL_Reg query_methods[] = {
-	{"pattern_count", query_pattern_count},
-	{"capture_count", query_capture_count},
-	{"string_count", query_string_count},
-	{"match", query_match_factory},
 	{"capture", query_capture_factory},
-	{"exec", query_exec},
+	{"capture_count", query_capture_count},
 	{"cursor", make_cursor},
+	{"disable_capture", query_disable_capture},
+	{"disable_pattern", query_disable_pattern},
+	{"end_byte_for_pattern", query_end_byte_for_pattern},
+	{"exec", query_exec},
+	{"is_pattern_guaranteed_at_step", query_is_pattern_guaranteed_at_step},
+	{"is_pattern_non_local", query_is_pattern_non_local},
+	{"is_pattern_rooted", query_is_pattern_rooted},
+	{"match", query_match_factory},
+	{"pattern_count", query_pattern_count},
 	{"predicates_for_pattern", predicates_for_pattern},
+	{"start_byte_for_pattern", query_start_byte_for_pattern},
+	{"string_count", query_string_count},
 	{NULL, NULL}};
 
 static const luaL_Reg query_metamethods[] = {
@@ -852,3 +950,4 @@ static const luaL_Reg query_metamethods[] = {
 void query_init_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_QUERY_METATABLE_NAME, query_metamethods, query_methods);
 }
+

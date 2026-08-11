@@ -303,3 +303,9 @@ void mos_push_to_lua(lua_State *L, MaybeOwnedString s) {
 bool mos_eq(MaybeOwnedString a, MaybeOwnedString b) {
 	return a.length == b.length && memcmp(a.data, b.data, a.length) == 0;
 }
+
+uint32_t u32_argcheck(lua_State *L, int idx) {
+	lua_Integer arg = luaL_checkinteger(L, idx);
+	luaL_argcheck(L, arg >= 0 && arg <= UINT32_MAX, idx, "expected an integer within [0, 2^32-1]");
+	return (uint32_t)arg;
+}
