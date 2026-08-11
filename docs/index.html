@@ -66,9 +66,13 @@ h2 {
 <br>
 <a href="index.html#Cursor.goto_first_child_for_point">Cursor.goto_first_child_for_point</a>
 <br>
+<a href="index.html#Cursor.goto_last_child">Cursor.goto_last_child</a>
+<br>
 <a href="index.html#Cursor.goto_next_sibling">Cursor.goto_next_sibling</a>
 <br>
 <a href="index.html#Cursor.goto_parent">Cursor.goto_parent</a>
+<br>
+<a href="index.html#Cursor.goto_previous_sibling">Cursor.goto_previous_sibling</a>
 <br>
 <a href="index.html#Cursor.reset">Cursor.reset</a>
 <br>
@@ -122,9 +126,17 @@ h2 {
 <br>
 <a href="index.html#Node.child_count">Node.child_count</a>
 <br>
+<a href="index.html#Node.child_with_descendant">Node.child_with_descendant</a>
+<br>
 <a href="index.html#Node.children">Node.children</a>
 <br>
 <a href="index.html#Node.create_cursor">Node.create_cursor</a>
+<br>
+<a href="index.html#Node.descendant_count">Node.descendant_count</a>
+<br>
+<a href="index.html#Node.descendant_for_byte_range">Node.descendant_for_byte_range</a>
+<br>
+<a href="index.html#Node.descendant_for_point_range">Node.descendant_for_point_range</a>
 <br>
 <a href="index.html#Node.end_byte_offset">Node.end_byte_offset</a>
 <br>
@@ -132,9 +144,21 @@ h2 {
 <br>
 <a href="index.html#Node.end_point">Node.end_point</a>
 <br>
+<a href="index.html#Node.field_name_for_child">Node.field_name_for_child</a>
+<br>
+<a href="index.html#Node.field_name_for_named_child">Node.field_name_for_named_child</a>
+<br>
+<a href="index.html#Node.first_child_for_byte">Node.first_child_for_byte</a>
+<br>
+<a href="index.html#Node.first_named_child_for_byte">Node.first_named_child_for_byte</a>
+<br>
 <a href="index.html#Node.grammar_symbol">Node.grammar_symbol</a>
 <br>
 <a href="index.html#Node.grammar_type">Node.grammar_type</a>
+<br>
+<a href="index.html#Node.has_changes">Node.has_changes</a>
+<br>
+<a href="index.html#Node.has_error">Node.has_error</a>
 <br>
 <a href="index.html#Node.is_extra">Node.is_extra</a>
 <br>
@@ -142,19 +166,23 @@ h2 {
 <br>
 <a href="index.html#Node.is_named">Node.is_named</a>
 <br>
-<a href="index.html#Node.name">Node.name</a>
-<br>
 <a href="index.html#Node.named_child">Node.named_child</a>
 <br>
 <a href="index.html#Node.named_child_count">Node.named_child_count</a>
 <br>
 <a href="index.html#Node.named_children">Node.named_children</a>
 <br>
+<a href="index.html#Node.named_descendant_for_byte_range">Node.named_descendant_for_byte_range</a>
+<br>
+<a href="index.html#Node.named_descendant_for_point_range">Node.named_descendant_for_point_range</a>
+<br>
 <a href="index.html#Node.next_named_sibling">Node.next_named_sibling</a>
 <br>
 <a href="index.html#Node.next_parse_state">Node.next_parse_state</a>
 <br>
 <a href="index.html#Node.next_sibling">Node.next_sibling</a>
+<br>
+<a href="index.html#Node.parent">Node.parent</a>
 <br>
 <a href="index.html#Node.parse_state">Node.parse_state</a>
 <br>
@@ -194,13 +222,33 @@ h2 {
 <p>
 <a href="index.html#Query.capture">Query.capture</a>
 <br>
+<a href="index.html#Query.capture_count">Query.capture_count</a>
+<br>
 <a href="index.html#Query.cursor">Query.cursor</a>
+<br>
+<a href="index.html#Query.disable_capture">Query.disable_capture</a>
+<br>
+<a href="index.html#Query.disable_pattern">Query.disable_pattern</a>
+<br>
+<a href="index.html#Query.end_byte_for_pattern">Query.end_byte_for_pattern</a>
 <br>
 <a href="index.html#Query.exec">Query.exec</a>
 <br>
+<a href="index.html#Query.is_pattern_guaranteed_at_step">Query.is_pattern_guaranteed_at_step</a>
+<br>
+<a href="index.html#Query.is_pattern_non_local">Query.is_pattern_non_local</a>
+<br>
+<a href="index.html#Query.is_pattern_rooted">Query.is_pattern_rooted</a>
+<br>
 <a href="index.html#Query.match">Query.match</a>
 <br>
+<a href="index.html#Query.pattern_count">Query.pattern_count</a>
+<br>
 <a href="index.html#Query.predicates_for_pattern">Query.predicates_for_pattern</a>
+<br>
+<a href="index.html#Query.start_byte_for_pattern">Query.start_byte_for_pattern</a>
+<br>
+<a href="index.html#Query.string_count">Query.string_count</a>
 <br>
 </p>
 <h4>QueryCursor</h4>
@@ -217,6 +265,10 @@ h2 {
 <br>
 <a href="index.html#QueryCursor.set_byte_range">QueryCursor.set_byte_range</a>
 <br>
+<a href="index.html#QueryCursor.set_containing_byte_range">QueryCursor.set_containing_byte_range</a>
+<br>
+<a href="index.html#QueryCursor.set_containing_point_range">QueryCursor.set_containing_point_range</a>
+<br>
 <a href="index.html#QueryCursor.set_match_limit">QueryCursor.set_match_limit</a>
 <br>
 <a href="index.html#QueryCursor.set_max_start_depth">QueryCursor.set_max_start_depth</a>
@@ -224,6 +276,8 @@ h2 {
 <a href="index.html#QueryCursor.set_point_range">QueryCursor.set_point_range</a>
 <br>
 </p>
+</td>
+<td valign=top>
 <h4>Tree</h4>
 <p>
 <a href="index.html#Tree.copy">Tree.copy</a>
@@ -234,7 +288,11 @@ h2 {
 <br>
 <a href="index.html#Tree.get_changed_ranges">Tree.get_changed_ranges</a>
 <br>
+<a href="index.html#Tree.included_ranges">Tree.included_ranges</a>
+<br>
 <a href="index.html#Tree.root">Tree.root</a>
+<br>
+<a href="index.html#Tree.root_with_offset">Tree.root_with_offset</a>
 <br>
 </p></td></tr></tbody></table>
 <br><br><br><br><br><br><br><br><br><br>
@@ -263,18 +321,22 @@ h2 {
 <p>Get the field name of the current node under the cursor</p><br>
 <h2><a name="Cursor.current_node"><code>Cursor.current_node: function(Cursor): Node</code></a></h2>
 <p>Get the current node under the cursor</p><br>
-<h2><a name="Cursor.goto_descendant"><code>Cursor.goto_descendant: function(Cursor, integer)</code></a></h2>
+<h2><a name="Cursor.goto_descendant"><code>Cursor.goto_descendant: function(Cursor, offset: integer)</code></a></h2>
 <p>Move the cursor to the nth descendant of the original node this cursor was<br>   constructed with. Zero represents the original node itself.</p><br>
 <h2><a name="Cursor.goto_first_child"><code>Cursor.goto_first_child: function(Cursor): boolean</code></a></h2>
-<p>Position the cursor at the first child of the current node</p><br>
+<p>Position the cursor at the first child of the current node<br><br>   Returns true if the cursor was able to move</p><br>
 <h2><a name="Cursor.goto_first_child_for_byte"><code>Cursor.goto_first_child_for_byte: function(Cursor, integer): integer</code></a></h2>
 <p>Move the given cursor to the first child of its current node that contains<br>   or starts after the given offset<br><br>   Returns the index of the child node or nil if no such child was found</p><br>
 <h2><a name="Cursor.goto_first_child_for_point"><code>Cursor.goto_first_child_for_point: function(Cursor, Point): integer</code></a></h2>
 <p>Move the given cursor to the first child of its current node that contains<br>   or starts after the given point<br><br>   Returns the index of the child node or nil if no such child was found</p><br>
+<h2><a name="Cursor.goto_last_child"><code>Cursor.goto_last_child: function(Cursor): boolean</code></a></h2>
+<p>Position the cursor at the first child of the current node<br><br>   Returns true if the cursor was able to move</p><br>
 <h2><a name="Cursor.goto_next_sibling"><code>Cursor.goto_next_sibling: function(Cursor): boolean</code></a></h2>
-<p>Position the cursor at the sibling of the current node</p><br>
+<p>Position the cursor at the next sibling of the current node<br><br>   Returns true if there was a sibling to move to</p><br>
 <h2><a name="Cursor.goto_parent"><code>Cursor.goto_parent: function(Cursor): boolean</code></a></h2>
 <p>Position the cursor at the parent of the current node</p><br>
+<h2><a name="Cursor.goto_previous_sibling"><code>Cursor.goto_previous_sibling: function(Cursor): boolean</code></a></h2>
+<p>Position the cursor at the sibling of the current node<br><br>   Returns true if there was a sibling to move to</p><br>
 <h2><a name="Cursor.reset"><code>Cursor.reset: function(Cursor, Node)</code></a></h2>
 <p>Position the cursor at the given node</p><br>
 <h2><a name="Cursor.reset_to"><code>Cursor.reset_to: function(Cursor, Cursor)</code></a></h2>
@@ -313,48 +375,72 @@ h2 {
 <h2><a name="Language.symbol_type"><code>Language.symbol_type: function(Language, Symbol): SymbolType</code></a></h2>
 <p>Check whether the given node type id belongs to named nodes, anonymous nodes,<br>   or hidden nodes</p><br>
 <br>
-<h2><a name="Node.child"><code>Node.child: function(Node, idx: integer): Node</code></a></h2>
-<p>Get the node's idx'th child (0-indexed)</p><br>
+<h2><a name="Node.child"><code>Node.child: function(Node, zero_index: integer): Node</code></a></h2>
+<p>Get the node's `zero_index`'th child (0-indexed)</p><br>
 <h2><a name="Node.child_by_field_id"><code>Node.child_by_field_id: function(Node, FieldId): Node</code></a></h2>
 <p>Get a node's child given a field id</p><br>
 <h2><a name="Node.child_by_field_name"><code>Node.child_by_field_name: function(Node, string): Node</code></a></h2>
 <p>Get a node's child given a field name</p><br>
 <h2><a name="Node.child_count"><code>Node.child_count: function(Node): integer</code></a></h2>
 <p>Get the number of children a node has</p><br>
+<h2><a name="Node.child_with_descendant"><code>Node.child_with_descendant: function(Node, descendant: Node): Node</code></a></h2>
+<p>Get the node that contains `descendant`. Can return `descendant` itself</p><br>
 <h2><a name="Node.children"><code>Node.children: function(Node): function(): Node</code></a></h2>
 <p>Iterate over a node's children</p><br>
 <h2><a name="Node.create_cursor"><code>Node.create_cursor: function(Node): Cursor</code></a></h2>
 <p>Create a new cursor at the given node</p><br>
+<h2><a name="Node.descendant_count"><code>Node.descendant_count: function(Node): integer</code></a></h2>
+<p>Returns the number of descendants this node has</p><br>
+<h2><a name="Node.descendant_for_byte_range"><code>Node.descendant_for_byte_range: function(Node, start_byte: integer, end_byte: integer): Node</code></a></h2>
+<p>Returns the smallest descendant node that spans the given range</p><br>
+<h2><a name="Node.descendant_for_point_range"><code>Node.descendant_for_point_range: function(Node, start_point: Point, end_point: Point): Node</code></a></h2>
+<p>Returns the smallest descendant node that spans the given range</p><br>
 <h2><a name="Node.end_byte_offset"><code>Node.end_byte_offset: function(Node): integer</code></a></h2>
 <p>Get the byte offset of the source string that the given node ends at (exclusive)</p><br>
 <h2><a name="Node.end_index"><code>Node.end_index: function(Node): integer</code></a></h2>
 <p>Get the inclusive 1-index of the source string that the given node ends at</p><br>
 <h2><a name="Node.end_point"><code>Node.end_point: function(Node): Point</code></a></h2>
 <p>Get the row and column of where the given node ends</p><br>
+<h2><a name="Node.field_name_for_child"><code>Node.field_name_for_child: function(Node, child_zero_index: integer): string</code></a></h2>
+<p>Returns the field name for the child at the given zero index (if any)</p><br>
+<h2><a name="Node.field_name_for_named_child"><code>Node.field_name_for_named_child: function(Node, child_zero_index: integer): string</code></a></h2>
+<p>Returns the field name for the named child at the given zero index (if any)</p><br>
+<h2><a name="Node.first_child_for_byte"><code>Node.first_child_for_byte: function(Node, byte_offset: integer): Node</code></a></h2>
+<p>Returns the first child that contains or starts after the given byte offset</p><br>
+<h2><a name="Node.first_named_child_for_byte"><code>Node.first_named_child_for_byte: function(Node, byte_offset: integer): Node</code></a></h2>
+<p>Returns the first named child that contains or starts after the given byte offset</p><br>
 <h2><a name="Node.grammar_symbol"><code>Node.grammar_symbol: function(Node): Symbol</code></a></h2>
 <p>Returns the type of a given node as a numeric id as it appears in the grammar ignoring aliases<br><br>   This is what should be used in `Parser:language_next_state` instead of `Node:symbol`</p><br>
 <h2><a name="Node.grammar_type"><code>Node.grammar_type: function(Node): string</code></a></h2>
 <p>Returns the type of a given node as a string as it appears in the grammar ignoring aliases</p><br>
+<h2><a name="Node.has_changes"><code>Node.has_changes: function(Node): boolean</code></a></h2>
+<p>Returns true when the node has been changed by an edit</p><br>
+<h2><a name="Node.has_error"><code>Node.has_error: function(Node): boolean</code></a></h2>
+<p>Returns true when the node is an error</p><br>
 <h2><a name="Node.is_extra"><code>Node.is_extra: function(Node): boolean</code></a></h2>
 <p>Get whether or not the current node is extra</p><br>
 <h2><a name="Node.is_missing"><code>Node.is_missing: function(Node): boolean</code></a></h2>
 <p>Get whether or not the current node is missing</p><br>
 <h2><a name="Node.is_named"><code>Node.is_named: function(Node): boolean</code></a></h2>
 <p>Get whether or not the current node is named</p><br>
-<h2><a name="Node.name"><code>Node.name: function(Node): string</code></a></h2>
-<p>Returns the type of a given node as a string<br>   <pre><br>   print(node) -- => (comment)<br>   print(node:name()) -- => comment<br>   </pre></p><br>
 <h2><a name="Node.named_child"><code>Node.named_child: function(Node, idx: integer): Node</code></a></h2>
 <p>Get the node's idx'th named child (0-indexed)</p><br>
 <h2><a name="Node.named_child_count"><code>Node.named_child_count: function(Node): integer</code></a></h2>
 <p>Get the number of named children a node has</p><br>
 <h2><a name="Node.named_children"><code>Node.named_children: function(Node): function(): Node</code></a></h2>
 <p>Iterate over a node's named children</p><br>
+<h2><a name="Node.named_descendant_for_byte_range"><code>Node.named_descendant_for_byte_range: function(Node): Node</code></a></h2>
+<p>Returns the smallest named descendant node that spans the given range</p><br>
+<h2><a name="Node.named_descendant_for_point_range"><code>Node.named_descendant_for_point_range: function(Node): Node</code></a></h2>
+<p>Returns the smallest named descendant node that spans the given range</p><br>
 <h2><a name="Node.next_named_sibling"><code>Node.next_named_sibling: function(Node): Node</code></a></h2>
 <p>Get a node's next named sibling</p><br>
 <h2><a name="Node.next_parse_state"><code>Node.next_parse_state: function(Node): StateId</code></a></h2>
 <p>Get the parse state after this node</p><br>
 <h2><a name="Node.next_sibling"><code>Node.next_sibling: function(Node): Node</code></a></h2>
 <p>Get a node's next sibling</p><br>
+<h2><a name="Node.parent"><code>Node.parent: function(Node): Node</code></a></h2>
+<p>Returns the parent of a given node.<br><br>   It is recommended to use `Node.child_with_descendant` for iterating over<br>   ancestors</p><br>
 <h2><a name="Node.parse_state"><code>Node.parse_state: function(Node): StateId</code></a></h2>
 <p>Get this node's parse state</p><br>
 <h2><a name="Node.prev_named_sibling"><code>Node.prev_named_sibling: function(Node): Node</code></a></h2>
@@ -393,14 +479,34 @@ h2 {
 <br>
 <h2><a name="Query.capture"><code>Query.capture: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): (Node, string)</code></a></h2>
 <p>Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs.<br>   <code>start</code> and <code>end</code> are optional.<br>   They must be passed together with the same type, describing either two bytes or two points.<br>   If passed, the query will be executed within the range denoted.<br>   If not passed, the default behaviour is to execute the query through the entire range of the node.<br><br>   <pre><br>   local q = parser:query[[ (comment) @my_match ]]<br>   for capture, name in q:capture(node) do<br>      print(capture, name) -- => (comment), "my_match"<br>   end<br>   </pre></p><br>
+<h2><a name="Query.capture_count"><code>Query.capture_count: function(Query): integer</code></a></h2>
+<p>Returns the number of captures this query has</p><br>
 <h2><a name="Query.cursor"><code>Query.cursor: function(Query, Node): QueryCursor</code></a></h2>
 <p>Create a query cursor from the given query, executing over the given node.</p><br>
+<h2><a name="Query.disable_capture"><code>Query.disable_capture: function(Query, name: string)</code></a></h2>
+<p>Disable a certain capture within a query, preventing it from being returned in matches.<br><br>   Currently there is no way to undo this.</p><br>
+<h2><a name="Query.disable_pattern"><code>Query.disable_pattern: function(Query, pattern_zero_index: integer)</code></a></h2>
+<p>Disable a certain pattern within a query, preventing it from being returned in matches.<br><br>   Currently there is no way to undo this.</p><br>
+<h2><a name="Query.end_byte_for_pattern"><code>Query.end_byte_for_pattern: function(Query, pattern_zero_index: integer): integer</code></a></h2>
+<p>Returns the byte offset where the given pattern ends in the query's source</p><br>
 <h2><a name="Query.exec"><code>Query.exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point)</code></a></h2>
 <p>Runs a query. That's it. Nothing more, nothing less.<br>   This is intended to be used with the <code>Query.with</code> method and predicates that have side effects,<br>   i.e. for when you would use Query.match or Query.capture, but do nothing in the for loop.<br>   <code>start</code> and <code>end</code> are optional.<br>   They must be passed together with the same type, describing either two bytes or two points.<br>   If passed, the query will be executed within the range denoted.<br>   If not passed, the default behaviour is to execute the query through the entire range of the node.<br><br>   <pre><br>   local parser = ltreesitter.require("teal"):parser()<br><br>   -- grab a node to query against<br>   local root_node = parser:parse_string[[<br>   local x: string = "foo"<br>   local y: string = "bar"<br>   ]]:root()<br><br>   parser<br>      :query[[(<br>         (var_declaration<br>            (var) @var-name<br>            (string) @value)<br>         (#set! @var-name @value)<br>      )]]<br>      :exec(root_node, {["set!"] = function(a, b) _G[a] = b:sub(2, -2) end})<br><br>   print(x) -- => foo<br>   print(y) -- => bar<br><br>   </pre><br><br>   If you'd like to interact with the matches/captures of a query, see the Query.match and Query.capture iterators</p><br>
+<h2><a name="Query.is_pattern_guaranteed_at_step"><code>Query.is_pattern_guaranteed_at_step: function(Query, pattern_zero_index: integer): bool</code></a></h2>
+<p>Returns whether the pattern at the given index is rooted</p><br>
+<h2><a name="Query.is_pattern_non_local"><code>Query.is_pattern_non_local: function(Query, pattern_zero_index: integer): bool</code></a></h2>
+<p>Returns whether the pattern at the given index is non-local</p><br>
+<h2><a name="Query.is_pattern_rooted"><code>Query.is_pattern_rooted: function(Query, pattern_zero_index: integer): bool</code></a></h2>
+<p>Returns whether the pattern at the given index is rooted</p><br>
 <h2><a name="Query.match"><code>Query.match: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): Match</code></a></h2>
 <p>Iterate over the matches of a given query.<br>   <code>start</code> and <code>end</code> are optional.<br>   They must be passed together with the same type, describing either two bytes or two points.<br>   If passed, the query will be executed within the range denoted.<br>   If not passed, the default behaviour is to execute the query through the entire range of the node.<br><br>   The match object is a record populated with all the information given by treesitter<br>   <pre><br>   interface Match<br>      id: integer<br>      pattern_index: integer<br>      capture_count: integer<br>      captures: {string:Node|{Node}}<br>   end<br>   </pre><br><br>   If a capture can only contain at most one node (as is the case with regular <code>(node) @capture-name</code> patterns and <code>(node)? @capture-name</code> patterns),<br>   it will either be <code>nil</code> or that <code>Node</code>.<br><br>   If a capture can contain multiple nodes (as is the case with <code>(node)* @capture-name</code> and <code>(node)+ @capture-name</code> patterns)<br>   it will either be <code>nil</code> or an array of <code>Node</code><br><br>   Example:<br>   <pre><br>   local q = parser:query[[ (comment) @my_match ]]<br>   for match in q:match(node) do<br>      print(match.captures.my_match)<br>   end<br>   </pre><br><br>   <code>predicates</code> is a map of functions to determine whether a query matches and/or execute side effects<br><br>   Predicates that end in a <code>'?'</code> character will be seen as conditions that must be met for the pattern to be matched.<br>   Predicates that don't will be seen just as functions to be executed given the matches provided.<br><br>   Additionally, you will not have access to the return values of these functions, if you'd like to keep the results of a computation, make your functions have side-effects to write somewhere you can access.<br><br>   By default the following predicates are provided.<br>      <code> (#eq? ...) </code> will match if all arguments provided are equal<br>      <code> (#not-eq? a b) </code> will match if the two arguments provided are not equal<br>      <code> (#match? text pattern) </code> will match the provided <code>text</code> matches the given <code>pattern</code>. Matches are determined by Lua's standard <code>string.match</code> function.<br>      <code> (#not-match? text pattern) </code> inverse of <code>match?</code><br>      <code> (#find? text substring) </code> will match if <code>text</code> contains <code>substring</code>. The substring is found with Lua's standard <code>string.find</code>, but the search always starts from the beginning, and pattern matching is disabled. This is equivalent to <code>string.find(text, substring, 0, true)</code><br>      <code> (#not-find? text substring) </code> inverse of <code>find?</code><br><br>   Predicate evaluation order:<br><br>      Since predicates that end with a `?` affect whether a node matches, these are run first, in the order they appear in the query's source. Once all `?` queries are run, all the non-`?` queries are run in the order they appear in the query's source.<br><br>   Example:<br>   The following snippet will match lua functions that have a single LDoc/EmmyLua style comment above them<br>   <pre><br>   local parser = ltreesitter.require("lua"):parser()<br><br>   -- grab a node to query against<br>   local root_node = parser:parse_string[[<br>      ---@Doc this does stuff<br>      local function stuff_doer()<br>         do_stuff()<br>      end<br>   ]]:root()<br><br>   for match in parser<br>      :query[[(<br>         (comment) @the-comment<br>         .<br>         (function_definition<br>            (function_name) @the-function-name)<br>         (#is-doc-comment? @the-comment)<br>      )]]<br>      :match(root_node, {<br>         ["is-doc-comment?"] = function(str)<br>            return str:source():sub(1, 4) == "---@"<br>         end<br>      })<br>   do<br>      print("Function: " .. match.captures["the-function-name"] .. " has documentation")<br>      print("   " .. match.captures["the-comment"])<br>   end<br>   </pre></p><br>
+<h2><a name="Query.pattern_count"><code>Query.pattern_count: function(Query): integer</code></a></h2>
+<p>Returns the number of patterns this query has</p><br>
 <h2><a name="Query.predicates_for_pattern"><code>Query.predicates_for_pattern: function(Query, pattern_index: integer): {{string | Capture}}</code></a></h2>
 <p>Given a pattern index, return an array representing each predicate<br><br>   Each predicate is an array of either strings, representing literal strings<br>   in the predicate, or a table with a `capture_name` field, representing a<br>   `@capture` in the predicate.<br><br>   e.g. Given a (c) query like with source:<br><br>   <code><br>      local q = c:query [[<br>        ((_ declarator: (identifier) @name)<br>         (#match? @name "[a-z]+")<br>         (#set! @name true))<br>      ]]<br>   </code><br><br>   <code>q:predicates_for_pattern(0)</code> would return:<br><br>   <code><br>      {<br>         { "match?", { capture_name = "name" }, "[a-z]+" },<br>         { "set!", { capture_name = "name" }, "true" },<br>      }<br>   </code></p><br>
+<h2><a name="Query.start_byte_for_pattern"><code>Query.start_byte_for_pattern: function(Query, pattern_zero_index: integer): integer</code></a></h2>
+<p>Returns the byte offset where the given pattern starts in the query's source</p><br>
+<h2><a name="Query.string_count"><code>Query.string_count: function(Query): integer</code></a></h2>
+<p>Returns the number of strings this query has</p><br>
 <br>
 <h2><a name="QueryCursor.did_exceed_match_limit"><code>QueryCursor.did_exceed_match_limit: function(QueryCursor): boolean</code></a></h2>
 <p>Returns true if the given cursor exceeded its match limit. See<br>   `set_match_limit` and `match_limit`</p><br>
@@ -412,8 +518,12 @@ h2 {
 <p>Find the next match of the given cursor. As implied by the name, this does<br>   <em>NOT</em> execute any predicates. See `Query.predicates_for_pattern` or<br>   `Query.match` for executing predicates.</p><br>
 <h2><a name="QueryCursor.remove_match"><code>QueryCursor.remove_match: function(QueryCursor, match_id: integer)</code></a></h2>
 <p>Prevent the given query cursor from matching the given match id</p><br>
-<h2><a name="QueryCursor.set_byte_range"><code>QueryCursor.set_byte_range: function(QueryCursor, start: integer, end_: integer): boolean</code></a></h2>
+<h2><a name="QueryCursor.set_byte_range"><code>QueryCursor.set_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean</code></a></h2>
 <p>returns true when the given range was non-empty</p><br>
+<h2><a name="QueryCursor.set_containing_byte_range"><code>QueryCursor.set_containing_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean</code></a></h2>
+<p>Set the byte range within which all matches must be <em>fully</em> contained.</p><br>
+<h2><a name="QueryCursor.set_containing_point_range"><code>QueryCursor.set_containing_point_range: function(QueryCursor, start_point: Point, end_point: Point): boolean</code></a></h2>
+<p>Set the byte range within which all matches must be <em>fully</em> contained.</p><br>
 <h2><a name="QueryCursor.set_match_limit"><code>QueryCursor.set_match_limit: function(QueryCursor, integer)</code></a></h2>
 <p>Set the maximum number of in-progress matches allowed by this query cursor.<br><br>   Set to nil to set to the maximum limit (2^32-1)</p><br>
 <h2><a name="QueryCursor.set_max_start_depth"><code>QueryCursor.set_max_start_depth: function(QueryCursor, integer)</code></a></h2>
@@ -440,6 +550,10 @@ h2 {
 <p>Create an edit to the given tree</p><br>
 <h2><a name="Tree.get_changed_ranges"><code>Tree.get_changed_ranges: function(old: Tree, new: Tree): {Range}</code></a></h2>
 <p>Compare an old syntax tree to a new syntax tree.<br>   This would usually be called right after a set of calls to <code>Tree.edit(_s)</code> and <code>Parser.parse_{string,with}</code></p><br>
+<h2><a name="Tree.included_ranges"><code>Tree.included_ranges: function(Tree): {Range}</code></a></h2>
+<p>Returns the array of ranges used to parse the syntax tree</p><br>
 <h2><a name="Tree.root"><code>Tree.root: function(Tree): Node</code></a></h2>
 <p>Returns the root node of the given parse tree</p><br>
+<h2><a name="Tree.root_with_offset"><code>Tree.root_with_offset: function(Tree, offset_bytes: integer, offset_extent: Point): Node</code></a></h2>
+<p>Returns the root node of the given parse tree, but with its position shifted<br>   forward</p><br>
 </body></html>

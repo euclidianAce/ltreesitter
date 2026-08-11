@@ -10,12 +10,14 @@ local record ltreesitter
       current_field_id: function(Cursor): FieldId
       current_field_name: function(Cursor): string
       current_node: function(Cursor): Node
-      goto_descendant: function(Cursor, integer)
+      goto_descendant: function(Cursor, offset: integer)
       goto_first_child: function(Cursor): boolean
       goto_first_child_for_byte: function(Cursor, integer): integer
       goto_first_child_for_point: function(Cursor, Point): integer
+      goto_last_child: function(Cursor): boolean
       goto_next_sibling: function(Cursor): boolean
       goto_parent: function(Cursor): boolean
+      goto_previous_sibling: function(Cursor): boolean
       reset: function(Cursor, Node)
       reset_to: function(Cursor, Cursor)
    end
@@ -38,27 +40,39 @@ local record ltreesitter
       symbol_type: function(Language, Symbol): SymbolType
    end
    record Node is userdata
-      child: function(Node, idx: integer): Node
+      child: function(Node, zero_index: integer): Node
       child_by_field_id: function(Node, FieldId): Node
       child_by_field_name: function(Node, string): Node
       child_count: function(Node): integer
+      child_with_descendant: function(Node, descendant: Node): Node
       children: function(Node): function(): Node
       create_cursor: function(Node): Cursor
+      descendant_count: function(Node): integer
+      descendant_for_byte_range: function(Node, start_byte: integer, end_byte: integer): Node
+      descendant_for_point_range: function(Node, start_point: Point, end_point: Point): Node
       end_byte_offset: function(Node): integer
       end_index: function(Node): integer
       end_point: function(Node): Point
+      field_name_for_child: function(Node, child_zero_index: integer): string
+      field_name_for_named_child: function(Node, child_zero_index: integer): string
+      first_child_for_byte: function(Node, byte_offset: integer): Node
+      first_named_child_for_byte: function(Node, byte_offset: integer): Node
       grammar_symbol: function(Node): Symbol
       grammar_type: function(Node): string
+      has_changes: function(Node): boolean
+      has_error: function(Node): boolean
       is_extra: function(Node): boolean
       is_missing: function(Node): boolean
       is_named: function(Node): boolean
-      name: function(Node): string
       named_child: function(Node, idx: integer): Node
       named_child_count: function(Node): integer
       named_children: function(Node): function(): Node
+      named_descendant_for_byte_range: function(Node): Node
+      named_descendant_for_point_range: function(Node): Node
       next_named_sibling: function(Node): Node
       next_parse_state: function(Node): StateId
       next_sibling: function(Node): Node
+      parent: function(Node): Node
       parse_state: function(Node): StateId
       prev_named_sibling: function(Node): Node
       prev_sibling: function(Node): Node
@@ -84,10 +98,20 @@ local record ltreesitter
    end
    record Query is userdata
       capture: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): (Node, string)
+      capture_count: function(Query): integer
       cursor: function(Query, Node): QueryCursor
+      disable_capture: function(Query, name: string)
+      disable_pattern: function(Query, pattern_zero_index: integer)
+      end_byte_for_pattern: function(Query, pattern_zero_index: integer): integer
       exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point)
+      is_pattern_guaranteed_at_step: function(Query, pattern_zero_index: integer): bool
+      is_pattern_non_local: function(Query, pattern_zero_index: integer): bool
+      is_pattern_rooted: function(Query, pattern_zero_index: integer): bool
       match: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): Match
+      pattern_count: function(Query): integer
       predicates_for_pattern: function(Query, pattern_index: integer): {{string | Capture}}
+      start_byte_for_pattern: function(Query, pattern_zero_index: integer): integer
+      string_count: function(Query): integer
    end
    record QueryCursor is userdata
       did_exceed_match_limit: function(QueryCursor): boolean
@@ -95,7 +119,9 @@ local record ltreesitter
       next_capture_without_executing_predicates: function(QueryCursor): Node, string
       next_match_without_executing_predicates: function(QueryCursor): Match
       remove_match: function(QueryCursor, match_id: integer)
-      set_byte_range: function(QueryCursor, start: integer, end_: integer): boolean
+      set_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean
+      set_containing_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean
+      set_containing_point_range: function(QueryCursor, start_point: Point, end_point: Point): boolean
       set_match_limit: function(QueryCursor, integer)
       set_max_start_depth: function(QueryCursor, integer)
       set_point_range: function(QueryCursor, start: Point, end_: Point): boolean
@@ -118,7 +144,9 @@ local record ltreesitter
       )
       edit_s: function(Tree, TreeEdit)
       get_changed_ranges: function(old: Tree, new: Tree): {Range}
+      included_ranges: function(Tree): {Range}
       root: function(Tree): Node
+      root_with_offset: function(Tree, offset_bytes: integer, offset_extent: Point): Node
    end
    load: function(file_name: string, language_name: string): Language, string
    require: function(library_file_name: string, language_name?: string): Language, string

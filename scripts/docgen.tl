@@ -93,21 +93,21 @@ end
 -- TODO: should probably just use the teal parser to pull out these type definitions
 local directives: {string:function(ts.Node, string, string)} = {
    ["@teal-export"] = function(n: ts.Node, content: string, fname: string)
+      local point <const> = one_based_start_point(n)
       local name <const>, typedef = content:match("%@teal%-export%s+(.-)%s*:%s*(.*)")
+      assert(typedef, point.row .. ":" .. point.column .. ": No typedef after teal-export?")
       local doc_s <const>, eq_s <const>, eq_e <const> = typedef:match("()%[()%=*()%[") as (integer, integer, integer)
       local documentation: string
       if doc_s then
          local eq_count <const> = eq_e - eq_s
          local equal_signs <const> = ("="):rep(eq_count)
          local doc_e <const> = typedef:find("%]" .. equal_signs .. "%]")
-         local point <const> = one_based_start_point(n)
          assert(doc_e, fname .. ":" .. point.row .. ":" .. point.column .. ": Unclosed documentation opening ‘[" .. equal_signs .. "[’")
          documentation = trim(typedef:sub(doc_s + eq_count + 2, doc_e - 1)):gsub("\n", "<br>")
          typedef = typedef:sub(1, doc_s-1):gsub("%s*$", "")
          documentation = #documentation > 0 and documentation or nil
       end
       if not documentation then
-         local point <const> = one_based_start_point(n)
          io.stderr:write(fname, ":", point.row, ":", point.column, ": Exported item ‘", name, "’ has no documentation!\n")
       end
       typedef = typedef:gsub("%s*[*/]", "")

@@ -620,7 +620,7 @@ static int field_name_for_named_child(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.first_child_for_byte: function(Node, byte_offset: integer): Node ]]
+/* @teal-export Node.first_child_for_byte: function(Node, byte_offset: integer): Node [[
    Returns the first child that contains or starts after the given byte offset
 ]] */
 static int first_child_for_byte(lua_State *L) {
@@ -636,7 +636,7 @@ static int first_child_for_byte(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.first_named_child_for_byte: function(Node, byte_offset: integer): Node ]]
+/* @teal-export Node.first_named_child_for_byte: function(Node, byte_offset: integer): Node [[
    Returns the first named child that contains or starts after the given byte offset
 ]] */
 static int first_named_child_for_byte(lua_State *L) {
@@ -652,13 +652,13 @@ static int first_named_child_for_byte(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export: Node.descendant_count: function(Node): integer [[ Returns the number of descendants this node has ]] */
+/* @teal-export Node.descendant_count: function(Node): integer [[ Returns the number of descendants this node has ]] */
 static int descendant_count(lua_State *L) {
 	lua_pushinteger(L, ts_node_descendant_count(*node_assert(L, 1)));
 	return 1;
 }
 
-/* @teal-export: Node.descendant_for_byte_range: function(Node, start_byte: integer, end_byte: integer): Node [[
+/* @teal-export Node.descendant_for_byte_range: function(Node, start_byte: integer, end_byte: integer): Node [[
    Returns the smallest descendant node that spans the given range
 ]] */
 static int descendant_for_byte_range(lua_State *L) {
@@ -671,8 +671,7 @@ static int descendant_for_byte_range(lua_State *L) {
 	return 1;
 }
 
-// TSNode ts_node_descendant_for_point_range(TSNode self, TSPoint start, TSPoint end);
-/* @teal-export: Node.descendant_for_point_range: function(Node, start_point: Point, end_point: Point): Node [[
+/* @teal-export Node.descendant_for_point_range: function(Node, start_point: Point, end_point: Point): Node [[
    Returns the smallest descendant node that spans the given range
 ]] */
 static int descendant_for_point_range(lua_State *L) {
@@ -685,8 +684,7 @@ static int descendant_for_point_range(lua_State *L) {
 	return 1;
 }
 
-// TSNode ts_node_named_descendant_for_byte_range(TSNode self, uint32_t start, uint32_t end);
-/* @teal-export: Node.named_descendant_for_byte_range: function(Node): Node [[
+/* @teal-export Node.named_descendant_for_byte_range: function(Node): Node [[
    Returns the smallest named descendant node that spans the given range
 ]] */
 static int named_descendant_for_byte_range(lua_State *L) {
@@ -699,8 +697,7 @@ static int named_descendant_for_byte_range(lua_State *L) {
 	return 1;
 }
 
-// TSNode ts_node_named_descendant_for_point_range(TSNode self, TSPoint start, TSPoint end);
-/* @teal-export: Node.named_descendant_for_point_range: function(Node): Node [[
+/* @teal-export Node.named_descendant_for_point_range: function(Node): Node [[
    Returns the smallest named descendant node that spans the given range
 ]] */
 static int named_descendant_for_point_range(lua_State *L) {
