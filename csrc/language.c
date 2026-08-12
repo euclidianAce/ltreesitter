@@ -10,11 +10,11 @@
 #define TREE_SITTER_SYM_LEN (sizeof TREE_SITTER_SYM - 1)
 #define MAX_LANG_NAME_LEN 200
 
-/* @teal-inline [[
-   type StateId = integer
-   type Symbol = integer
-   type FieldId = integer
-]] */
+// @teal-inline [[
+//    type StateId = integer
+//    type Symbol = integer
+//    type FieldId = integer
+// ]]
 
 #define dynlib_registry_field "dynlibs"
 
@@ -65,17 +65,17 @@ static Dynlib *get_cached_dynlib(lua_State *L, char const *path) {
 	return data;
 }
 
-/* @teal-export load: function(file_name: string, language_name: string): Language, string [[
-   Load a language from a given file
-
-   Keep in mind that this includes the <code>.so</code>, <code>.dll</code>, or <code>.dynlib</code> extension
-
-   On Unix this uses dlopen, on Windows this uses LoadLibrary so if a path without a path separator is given, these functions have their own path's that they will search for your file in.
-   So if in doubt use a file path like
-   <pre>
-   local my_language = ltreesitter.load("./my_parser.so", "my_language")
-   </pre>
-]] */
+// @teal-export load: function(file_name: string, language_name: string): Language, string [[
+//    Load a language from a given file
+//
+//    Keep in mind that this includes the <code>.so</code>, <code>.dll</code>, or <code>.dynlib</code> extension
+//
+//    On Unix this uses dlopen, on Windows this uses LoadLibrary so if a path without a path separator is given, these functions have their own path's that they will search for your file in.
+//    So if in doubt use a file path like
+//    <pre>
+//    local my_language = ltreesitter.load("./my_parser.so", "my_language")
+//    </pre>
+// ]]
 TSLanguage const *language_load_from(Dynlib dl, size_t lang_name_len, char const *language_name) {
 	char buf[TREE_SITTER_SYM_LEN + MAX_LANG_NAME_LEN + 1] = {'t', 'r', 'e', 'e', '_', 's', 'i', 't', 't', 'e', 'r', '_'};
 	{
@@ -312,23 +312,23 @@ static bool try_load_from_path_list(
 	return result;
 }
 
-/* @teal-export require: function(library_file_name: string, language_name?: string): Language, string [[
-   Search <code>package.cpath</code> for a parser with the filename <code>library_file_name.so</code> or <code>parsers/library_file_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_'language_name'</code>
-   <code>language_name</code> is optional and will be set to <code>library_file_name</code> if not provided.
-
-   So if you want to load a Lua parser from a file named <code>lua.so</code> then use <code>ltreesitter.require("lua")</code>
-   But if you want to load a Lua parser from a file named <code>parser.so</code> then use <code>ltreesitter.require("parser", "lua")</code>
-
-   Like the regular <code>require</code>, this will error if the parser is not found or the symbol couldn't be loaded. Use either <code>pcall</code> or <code>ltreesitter.load</code> to not error out on failure.
-
-   Returns the language and the path it was loaded from.
-
-   <pre>
-   local my_language, loaded_from = ltreesitter.require("my_language")
-   print(my_language:name(), loaded_from) -- "my_language", /home/user/.luarocks/lib/lua/5.4/parsers/my_language.so
-   -- etc.
-   </pre>
-]] */
+// @teal-export require: function(library_file_name: string, language_name?: string): Language, string [[
+//    Search <code>package.cpath</code> for a parser with the filename <code>library_file_name.so</code> or <code>parsers/library_file_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_'language_name'</code>
+//    <code>language_name</code> is optional and will be set to <code>library_file_name</code> if not provided.
+//
+//    So if you want to load a Lua parser from a file named <code>lua.so</code> then use <code>ltreesitter.require("lua")</code>
+//    But if you want to load a Lua parser from a file named <code>parser.so</code> then use <code>ltreesitter.require("parser", "lua")</code>
+//
+//    Like the regular <code>require</code>, this will error if the parser is not found or the symbol couldn't be loaded. Use either <code>pcall</code> or <code>ltreesitter.load</code> to not error out on failure.
+//
+//    Returns the language and the path it was loaded from.
+//
+//    <pre>
+//    local my_language, loaded_from = ltreesitter.require("my_language")
+//    print(my_language:name(), loaded_from) -- "my_language", /home/user/.luarocks/lib/lua/5.4/parsers/my_language.so
+//    -- etc.
+//    </pre>
+// ]]
 int language_require(lua_State *L) {
 	lua_settop(L, 2);
 	char const *so_name = luaL_checkstring(L, 1);
@@ -372,9 +372,9 @@ int language_require(lua_State *L) {
 	return 2;
 }
 
-/* @teal-export Language.parser: function(Language): Parser [[
-   Create a parser of the given language
-]] */
+// @teal-export Language.parser: function(Language): Parser [[
+//    Create a parser of the given language
+// ]]
 static int make_parser(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
 	TSParser *parser = ts_parser_new();
@@ -395,9 +395,9 @@ static int language_gc(lua_State *L) {
 	return 0;
 }
 
-/* @teal-export Language.name: function(Language): string [[
-   Get the name of the language. May return nil.
-]] */
+// @teal-export Language.name: function(Language): string [[
+//    Get the name of the language. May return nil.
+// ]]
 static int language_name(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
 	char const *name = ts_language_name(l);
@@ -408,56 +408,49 @@ static int language_name(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Language.symbol_count: function(Language): integer [[
-   Get the number of distinct node types in the given language
-]] */
+// @teal-export Language.symbol_count: function(Language): integer [[
+//    Get the number of distinct node types in the given language
+// ]]
 static int language_symbol_count(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
-	lua_pushinteger(L, ts_language_symbol_count(l));
+	pushinteger(L, ts_language_symbol_count(l));
 	return 1;
 }
 
-/* @teal-export Language.state_count: function(Language): integer [[
-   Get the number of valid states in the given language
-]] */
+// @teal-export Language.state_count: function(Language): integer [[
+//    Get the number of valid states in the given language
+// ]]
 static int language_state_count(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
-	lua_pushinteger(L, ts_language_state_count(l));
+	pushinteger(L, ts_language_state_count(l));
 	return 1;
 }
 
-/* @teal-export Language.field_count: function(Language): integer [[
-   Get the number of distinct field names in the given parser's language
-]] */
+// @teal-export Language.field_count: function(Language): integer [[
+//    Get the number of distinct field names in the given parser's language
+// ]]
 static int language_field_count(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
-	lua_pushinteger(L, ts_language_field_count(l));
+	pushinteger(L, ts_language_field_count(l));
 	return 1;
 }
 
-/* @teal-export Language.abi_version: function(Language): integer [[
-   Get the ABI version number for the given parser's language
-]] */
+// @teal-export Language.abi_version: function(Language): integer [[
+//    Get the ABI version number for the given parser's language
+// ]]
 static int language_abi_version(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
-	lua_pushinteger(L, ts_language_abi_version(l));
+	pushinteger(L, ts_language_abi_version(l));
 	return 1;
 }
 
-/* @teal-inline [[
-   interface LanguageMetadata
-      major_version: integer
-      minor_version: integer
-      patch_version: integer
-   end
-]] */
-/* @teal-export Language.metadata: function(Language): LanguageMetadata [[
-   Get the metadata for the given language. This information relies on
-   the language author providing the correct data in the language's
-   `tree-sitter.json`
-
-   May return nil
-]] */
+// @teal-export Language.metadata: function(Language): LanguageMetadata [[
+//    Get the metadata for the given language. This information relies on
+//    the language author providing the correct data in the language's
+//    <code>tree-sitter.json</code>
+//
+//    May return nil
+// ]]
 static int language_metadata(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
 	TSLanguageMetadata const *meta = ts_language_metadata(l);
@@ -475,9 +468,17 @@ static int language_metadata(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Language.field_id_for_name: function(Language, string): FieldId [[
-   Get the numeric id for the given field name
-]] */
+// @teal-inline [[
+//    interface LanguageMetadata
+//       major_version: integer
+//       minor_version: integer
+//       patch_version: integer
+//    end
+// ]]
+
+// @teal-export Language.field_id_for_name: function(Language, string): FieldId [[
+//    Get the numeric id for the given field name
+// ]]
 static int language_field_id_for_name(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
 	size_t len;
@@ -486,9 +487,9 @@ static int language_field_id_for_name(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Language.name_for_field_id: function(Language, FieldId): string [[
-   Get the name for a numeric field id
-]] */
+// @teal-export Language.name_for_field_id: function(Language, FieldId): string [[
+//    Get the name for a numeric field id
+// ]]
 static int language_name_for_field_id(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
 	lua_Integer id = luaL_checkinteger(L, 2);
@@ -501,9 +502,9 @@ static int language_name_for_field_id(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Language.symbol_for_name: function(Language, string, is_named: boolean): Symbol [[
-   Get the numerical id for the given node type string
-]] */
+// @teal-export Language.symbol_for_name: function(Language, string, is_named: boolean): Symbol [[
+//    Get the numerical id for the given node type string
+// ]]
 static int language_symbol_for_name(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
 	size_t len;
@@ -511,15 +512,15 @@ static int language_symbol_for_name(lua_State *L) {
 	bool is_named = lua_toboolean(L, 3);
 	TSSymbol sym = ts_language_symbol_for_name(l, name, (uint32_t)len, is_named);
 	if (sym)
-		lua_pushinteger(L, sym);
+		pushinteger(L, sym);
 	else
 		lua_pushnil(L);
 	return 1;
 }
 
-/* @teal-export Language.symbol_name: function(Language, Symbol): string [[
-   Get a node type string for the given symbol id
-]] */
+// @teal-export Language.symbol_name: function(Language, Symbol): string [[
+//    Get a node type string for the given symbol id
+// ]]
 static int language_symbol_name(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
 	lua_Integer id = luaL_checkinteger(L, 2);
@@ -532,10 +533,10 @@ static int language_symbol_name(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Language.symbol_type: function(Language, Symbol): SymbolType [[
-   Check whether the given node type id belongs to named nodes, anonymous nodes,
-   or hidden nodes
-]] */
+// @teal-export Language.symbol_type: function(Language, Symbol): SymbolType [[
+//    Check whether the given node type id belongs to named nodes, anonymous nodes,
+//    or hidden nodes
+// ]]
 static int language_symbol_type(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
 	lua_Integer id = luaL_checkinteger(L, 2);
@@ -553,9 +554,9 @@ static int language_symbol_type(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Language.supertypes: function(Language): {Symbol} [[
-   Get a list of all supertype symbols for the given language
-]] */
+// @teal-export Language.supertypes: function(Language): {Symbol} [[
+//    Get a list of all supertype symbols for the given language
+// ]]
 static int language_supertypes(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
 	uint32_t length;
@@ -568,9 +569,9 @@ static int language_supertypes(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Language.subtypes: function(Language, supertype: Symbol): {Symbol} [[
-   Get a list of all supertype symbols for the given language
-]] */
+// @teal-export Language.subtypes: function(Language, supertype: Symbol): {Symbol} [[
+//    Get a list of all supertype symbols for the given language
+// ]]
 static int language_subtypes(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
 	lua_Integer id = luaL_checkinteger(L, 2);
@@ -587,9 +588,9 @@ static int language_subtypes(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Language.next_state: function(Language, StateId, Symbol): StateId [[
-   Get the next parse state
-]] */
+// @teal-export Language.next_state: function(Language, StateId, Symbol): StateId [[
+//    Get the next parse state
+// ]]
 static int language_next_state(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
 
@@ -605,9 +606,9 @@ static int language_next_state(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Language.query: function(Language, string): Query [[
-   Create a query out of the given string for this language
-]] */
+// @teal-export Language.query: function(Language, string): Query [[
+//    Create a query out of the given string for this language
+// ]]
 static int make_query(lua_State *L) {
 	lua_settop(L, 2);
 	TSLanguage const *lang = *language_assert(L, 1);

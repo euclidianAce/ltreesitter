@@ -30,64 +30,64 @@ ltreesitter_Tree *node_push_tree(lua_State *L, int node_idx) {
 	return tree;
 }
 
-/* @teal-export Node.type: function(Node): string [[
-   Get the type of the given node
-]] */
+// @teal-export Node.type: function(Node): string [[
+//    Get the type of the given node
+// ]]
 static int node_type(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
 	lua_pushstring(L, ts_node_type(n));
 	return 1;
 }
 
-/* @teal-export Node.grammar_type: function(Node): string [[
-   Returns the type of a given node as a string as it appears in the grammar ignoring aliases
-]] */
+// @teal-export Node.grammar_type: function(Node): string [[
+//   Returns the type of a given node as a string as it appears in the grammar ignoring aliases
+// ]]
 static int node_grammar_type(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
 	lua_pushstring(L, ts_node_grammar_type(n));
 	return 1;
 }
 
-/* @teal-export Node.start_byte_offset: function(Node): integer [[
-   Get the byte offset of the source string that the given node starts at
-]] */
+// @teal-export Node.start_byte_offset: function(Node): integer [[
+//    Get the byte offset of the source string that the given node starts at
+// ]]
 static int node_start_byte(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
 	pushinteger(L, ts_node_start_byte(n));
 	return 1;
 }
 
-/* @teal-export Node.start_index: function(Node): integer [[
-   Get the inclusive 1-index of the source string that the given node starts at
-]] */
+// @teal-export Node.start_index: function(Node): integer [[
+//    Get the inclusive 1-index of the source string that the given node starts at
+// ]]
 static int node_start_index(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
 	pushinteger(L, ts_node_start_byte(n) + 1);
 	return 1;
 }
 
-/* @teal-export Node.end_byte_offset: function(Node): integer [[
-   Get the byte offset of the source string that the given node ends at (exclusive)
-]] */
-/* @teal-export Node.end_index: function(Node): integer [[
-   Get the inclusive 1-index of the source string that the given node ends at
-]] */
+// @teal-export Node.end_byte_offset: function(Node): integer [[
+//    Get the byte offset of the source string that the given node ends at (exclusive)
+// ]]
+// @teal-export Node.end_index: function(Node): integer [[
+//    Get the inclusive 1-index of the source string that the given node ends at
+// ]]
 static int node_end_byte(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
 	pushinteger(L, ts_node_end_byte(n));
 	return 1;
 }
 
-/* @teal-inline [[
-   interface Point
-      row: integer
-      column: integer
-   end
-]]*/
+// @teal-inline [[
+//   interface Point
+//      row: integer
+//      column: integer
+//   end
+// ]]
 
-/* @teal-export Node.start_point: function(Node): Point [[
-   Get the row and column of where the given node starts
-]] */
+// @teal-export Node.start_point: function(Node): Point [[
+//    Get the row and column of where the given node starts
+// ]]
 static int node_start_point(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
 	TSPoint p = ts_node_start_point(n);
@@ -102,9 +102,9 @@ static int node_start_point(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.end_point: function(Node): Point [[
-   Get the row and column of where the given node ends
-]] */
+// @teal-export Node.end_point: function(Node): Point [[
+//    Get the row and column of where the given node ends
+// ]]
 static int node_end_point(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
 	TSPoint p = ts_node_end_point(n);
@@ -118,27 +118,27 @@ static int node_end_point(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.is_named: function(Node): boolean [[
-   Get whether or not the current node is named
-]] */
+// @teal-export Node.is_named: function(Node): boolean [[
+//    Get whether or not the current node is named
+// ]]
 static int node_is_named(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
 	lua_pushboolean(L, ts_node_is_named(n));
 	return 1;
 }
 
-/* @teal-export Node.is_missing: function(Node): boolean [[
-   Get whether or not the current node is missing
-]] */
+// @teal-export Node.is_missing: function(Node): boolean [[
+//    Get whether or not the current node is missing
+// ]]
 static int node_is_missing(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
 	lua_pushboolean(L, ts_node_is_missing(n));
 	return 1;
 }
 
-/* @teal-export Node.is_extra: function(Node): boolean [[
-   Get whether or not the current node is extra
-]] */
+// @teal-export Node.is_extra: function(Node): boolean [[
+//    Get whether or not the current node is extra
+// ]]
 static int node_is_extra(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
 	lua_pushboolean(L, ts_node_is_extra(n));
@@ -162,9 +162,9 @@ void node_push(lua_State *L, int tree_idx, TSNode n) {
 	lua_remove(L, -2);                                // node
 }
 
-/* @teal-export Node.child: function(Node, zero_index: integer): Node [[
-   Get the node's `zero_index`'th child (0-indexed)
-]] */
+// @teal-export Node.child: function(Node, zero_index: integer): Node [[
+//    Get the node's <code>zero_index</code>'th child (0-indexed)
+// ]]
 static int node_child(lua_State *L) {
 	TSNode *parent = node_assert(L, 1);
 	uint32_t const idx = luaL_checknumber(L, 2);
@@ -177,18 +177,18 @@ static int node_child(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.child_count: function(Node): integer [[
-   Get the number of children a node has
-]] */
+// @teal-export Node.child_count: function(Node): integer [[
+//    Get the number of children a node has
+// ]]
 static int node_child_count(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
 	pushinteger(L, ts_node_child_count(n));
 	return 1;
 }
 
-/* @teal-export Node.named_child: function(Node, idx: integer): Node [[
-   Get the node's idx'th named child (0-indexed)
-]] */
+// @teal-export Node.named_child: function(Node, zero_index: integer): Node [[
+//    Get the node's <code>zero_index</code>'th named child
+// ]]
 static int node_named_child(lua_State *L) {
 	TSNode *parent = node_assert(L, 1);
 	uint32_t const idx = luaL_checknumber(L, 2);
@@ -201,9 +201,9 @@ static int node_named_child(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.named_child_count: function(Node): integer [[
-   Get the number of named children a node has
-]] */
+// @teal-export Node.named_child_count: function(Node): integer [[
+//    Get the number of named children a node has
+// ]]
 static int node_named_child_count(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
 	pushinteger(L, ts_node_named_child_count(n));
@@ -249,9 +249,9 @@ static int node_named_children_iterator(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.children: function(Node): function(): Node [[
-   Iterate over a node's children
-]] */
+// @teal-export Node.children: function(Node): function(): Node [[
+//    Iterate over a node's children
+// ]]
 static int node_children(lua_State *L) {
 	lua_settop(L, 1);
 	TSNode *n = node_assert(L, 1);
@@ -263,9 +263,9 @@ static int node_children(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.named_children: function(Node): function(): Node [[
-   Iterate over a node's named children
-]] */
+// @teal-export Node.named_children: function(Node): function(): Node [[
+//    Iterate over a node's named children
+// ]]
 static int node_named_children(lua_State *L) {
 	node_assert(L, 1);
 	push_kept(L, 1);
@@ -275,9 +275,9 @@ static int node_named_children(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.next_sibling: function(Node): Node [[
-   Get a node's next sibling
-]] */
+// @teal-export Node.next_sibling: function(Node): Node [[
+//    Get a node's next sibling
+// ]]
 static int node_next_sibling(lua_State *L) {
 	TSNode *const n = node_assert(L, 1);
 	push_kept(L, 1);
@@ -290,9 +290,9 @@ static int node_next_sibling(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.prev_sibling: function(Node): Node [[
-   Get a node's previous sibling
-]] */
+// @teal-export Node.prev_sibling: function(Node): Node [[
+//    Get a node's previous sibling
+// ]]
 static int node_prev_sibling(lua_State *L) {
 	TSNode *const n = node_assert(L, 1);
 	push_kept(L, 1);
@@ -305,9 +305,9 @@ static int node_prev_sibling(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.next_named_sibling: function(Node): Node [[
-   Get a node's next named sibling
-]] */
+// @teal-export Node.next_named_sibling: function(Node): Node [[
+//    Get a node's next named sibling
+// ]]
 static int node_next_named_sibling(lua_State *L) {
 	TSNode *const n = node_assert(L, 1);
 	push_kept(L, 1);
@@ -320,9 +320,9 @@ static int node_next_named_sibling(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.prev_named_sibling: function(Node): Node [[
-   Get a node's previous named sibling
-]] */
+// @teal-export Node.prev_named_sibling: function(Node): Node [[
+//    Get a node's previous named sibling
+// ]]
 static int node_prev_named_sibling(lua_State *L) {
 	TSNode *const n = node_assert(L, 1);
 	push_kept(L, 1);
@@ -350,9 +350,9 @@ static int node_eq(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.child_with_descendant: function(Node, descendant: Node): Node [[
-   Get the node that contains `descendant`. Can return `descendant` itself
-]] */
+// @teal-export Node.child_with_descendant: function(Node, descendant: Node): Node [[
+//    Get the node that contains <code>descendant</code>. Can return <code>descendant</code> itself
+// ]]
 static int node_child_with_descendant(lua_State *L) {
 	TSNode *self = node_assert(L, 1);
 	TSNode *descendant = node_assert(L, 2);
@@ -374,12 +374,12 @@ static int node_child_with_descendant(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.parent: function(Node): Node [[
-   Returns the parent of a given node.
-
-   It is recommended to use `Node.child_with_descendant` for iterating over
-   ancestors
-]] */
+// @teal-export Node.parent: function(Node): Node [[
+//    Returns the parent of a given node.
+//
+//    It is recommended to use <code>Node.child_with_descendant</code> for iterating over
+//    ancestors
+// ]]
 static int node_parent(lua_State *L) {
 	TSNode *n = node_assert(L, 1);
 	if (ts_node_is_null(*n)) {
@@ -396,9 +396,9 @@ static int node_parent(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.symbol: function(Node): Symbol [[
-   Returns the type of a given node as a numeric id
-]] */
+// @teal-export Node.symbol: function(Node): Symbol [[
+//    Returns the type of a given node as a numeric id
+// ]]
 static int node_symbol(lua_State *L) {
 	TSNode *n = node_assert(L, 1);
 	if (ts_node_is_null(*n)) {
@@ -406,28 +406,28 @@ static int node_symbol(lua_State *L) {
 		return 1;
 	}
 	TSSymbol sym = ts_node_symbol(*n);
-	lua_pushinteger(L, sym);
+	pushinteger(L, sym);
 	return 1;
 }
 
-/* @teal-export Node.grammar_symbol: function(Node): Symbol [[
-   Returns the type of a given node as a numeric id as it appears in the grammar ignoring aliases
-
-   This is what should be used in `Parser:language_next_state` instead of `Node:symbol`
-]] */
+// @teal-export Node.grammar_symbol: function(Node): Symbol [[
+//    Returns the type of a given node as a numeric id as it appears in the grammar ignoring aliases
+//
+//    This is what should be used in <code>Parser:language_next_state()</code> instead of <code>Node:symbol</code>
+// ]]
 static int node_grammar_symbol(lua_State *L) {
 	TSNode *n = node_assert(L, 1);
 	if (ts_node_is_null(*n)) {
 		lua_pushnil(L);
 		return 1;
 	}
-	lua_pushinteger(L, ts_node_grammar_symbol(*n));
+	pushinteger(L, ts_node_grammar_symbol(*n));
 	return 1;
 }
 
-/* @teal-export Node.child_by_field_name: function(Node, string): Node [[
-   Get a node's child given a field name
-]] */
+// @teal-export Node.child_by_field_name: function(Node, string): Node [[
+//    Get a node's child given a field name
+// ]]
 static int node_child_by_field_name(lua_State *L) {
 	lua_settop(L, 2);
 	TSNode *n = node_assert(L, 1);
@@ -443,9 +443,9 @@ static int node_child_by_field_name(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.child_by_field_id: function(Node, FieldId): Node [[
-   Get a node's child given a field id
-]] */
+// @teal-export Node.child_by_field_id: function(Node, FieldId): Node [[
+//   Get a node's child given a field id
+// ]]
 static int node_child_by_field_id(lua_State *L) {
 	lua_settop(L, 2);
 	TSNode *n = node_assert(L, 1);
@@ -550,9 +550,9 @@ MaybeOwnedString node_get_source(lua_State *L) { // node
 	};
 }
 
-/* @teal-export Node.source: function(Node): string [[
-   Get the substring of the source that was parsed to create <code>Node</code>
-]]*/
+// @teal-export Node.source: function(Node): string [[
+//   Get the substring of the source that was parsed to create <code>Node</code>
+// ]]
 static int node_get_source_method(lua_State *L) {
 	MaybeOwnedString str = node_get_source(L);
 	mos_push_to_lua(L, str);
@@ -560,9 +560,9 @@ static int node_get_source_method(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.create_cursor: function(Node): Cursor [[
-   Create a new cursor at the given node
-]] */
+// @teal-export Node.create_cursor: function(Node): Cursor [[
+//    Create a new cursor at the given node
+// ]]
 static int node_tree_cursor_create(lua_State *L) {
 	lua_settop(L, 1);
 	TSNode *const n = node_assert(L, 1);
@@ -571,58 +571,57 @@ static int node_tree_cursor_create(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.parse_state: function(Node): StateId [[ Get this node's parse state ]] */
+// @teal-export Node.parse_state: function(Node): StateId [[ Get this node's parse state ]]
 static int node_parse_state(lua_State *L) {
 	TSNode *n = node_assert(L, 1);
-	lua_pushinteger(L, ts_node_parse_state(*n));
+	pushinteger(L, ts_node_parse_state(*n));
 	return 1;
 }
 
-/* @teal-export Node.next_parse_state: function(Node): StateId [[ Get the parse state after this node ]] */
+// @teal-export Node.next_parse_state: function(Node): StateId [[ Get the parse state after this node ]]
 static int node_next_parse_state(lua_State *L) {
 	TSNode *n = node_assert(L, 1);
-	lua_pushinteger(L, ts_node_next_parse_state(*n));
+	pushinteger(L, ts_node_next_parse_state(*n));
 	return 1;
 }
 
-// bool ts_node_has_changes(TSNode self);
-/* @teal-export Node.has_changes: function(Node): boolean [[ Returns true when the node has been changed by an edit ]] */
+// @teal-export Node.has_changes: function(Node): boolean [[ Returns true when the node has been changed by an edit ]]
 static int node_has_changes(lua_State *L) {
 	lua_pushboolean(L, ts_node_has_changes(*node_assert(L, 1)));
 	return 1;
 }
 
-/* @teal-export Node.has_error: function(Node): boolean [[ Returns true when the node is or contains an error ]] */
+// @teal-export Node.has_error: function(Node): boolean [[ Returns true when the node is or contains an error ]]
 static int node_has_error(lua_State *L) {
 	lua_pushboolean(L, ts_node_has_error(*node_assert(L, 1)));
 	return 1;
 }
 
-/* @teal-export Node.has_error: function(Node): boolean [[ Returns true when the node is an error ]] */
+// @teal-export Node.has_error: function(Node): boolean [[ Returns true when the node is an error ]]
 static int node_is_error(lua_State *L) {
 	lua_pushboolean(L, ts_node_is_error(*node_assert(L, 1)));
 	return 1;
 }
 
-/* @teal-export Node.field_name_for_child: function(Node, child_zero_index: integer): string [[
-   Returns the field name for the child at the given zero index (if any)
-]] */
+// @teal-export Node.field_name_for_child: function(Node, child_zero_index: integer): string [[
+//   Returns the field name for the child at the given zero index (if any)
+// ]]
 static int field_name_for_child(lua_State *L) {
 	lua_pushstring(L, ts_node_field_name_for_child(*node_assert(L, 1), u32_argcheck(L, 2)));
 	return 1;
 }
 
-/* @teal-export Node.field_name_for_named_child: function(Node, child_zero_index: integer): string [[
-   Returns the field name for the named child at the given zero index (if any)
-]] */
+// @teal-export Node.field_name_for_named_child: function(Node, child_zero_index: integer): string [[
+//    Returns the field name for the named child at the given zero index (if any)
+// ]]
 static int field_name_for_named_child(lua_State *L) {
 	lua_pushstring(L, ts_node_field_name_for_named_child(*node_assert(L, 1), u32_argcheck(L, 2)));
 	return 1;
 }
 
-/* @teal-export Node.first_child_for_byte: function(Node, byte_offset: integer): Node [[
-   Returns the first child that contains or starts after the given byte offset
-]] */
+// @teal-export Node.first_child_for_byte: function(Node, byte_offset: integer): Node [[
+//    Returns the first child that contains or starts after the given byte offset
+// ]]
 static int first_child_for_byte(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
 	uint32_t byte_offset = u32_argcheck(L, 2);
@@ -636,9 +635,9 @@ static int first_child_for_byte(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.first_named_child_for_byte: function(Node, byte_offset: integer): Node [[
-   Returns the first named child that contains or starts after the given byte offset
-]] */
+// @teal-export Node.first_named_child_for_byte: function(Node, byte_offset: integer): Node [[
+//    Returns the first named child that contains or starts after the given byte offset
+// ]]
 static int first_named_child_for_byte(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
 	uint32_t byte_offset = u32_argcheck(L, 2);
@@ -652,15 +651,15 @@ static int first_named_child_for_byte(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.descendant_count: function(Node): integer [[ Returns the number of descendants this node has ]] */
+// @teal-export Node.descendant_count: function(Node): integer [[ Returns the number of descendants this node has ]]
 static int descendant_count(lua_State *L) {
-	lua_pushinteger(L, ts_node_descendant_count(*node_assert(L, 1)));
+	pushinteger(L, ts_node_descendant_count(*node_assert(L, 1)));
 	return 1;
 }
 
-/* @teal-export Node.descendant_for_byte_range: function(Node, start_byte: integer, end_byte: integer): Node [[
-   Returns the smallest descendant node that spans the given range
-]] */
+// @teal-export Node.descendant_for_byte_range: function(Node, start_byte: integer, end_byte: integer): Node [[
+//    Returns the smallest descendant node that spans the given range
+// ]]
 static int descendant_for_byte_range(lua_State *L) {
 	TSNode const n = *node_assert(L, 1);
 	uint32_t const start = u32_argcheck(L, 2);
@@ -671,9 +670,9 @@ static int descendant_for_byte_range(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.descendant_for_point_range: function(Node, start_point: Point, end_point: Point): Node [[
-   Returns the smallest descendant node that spans the given range
-]] */
+// @teal-export Node.descendant_for_point_range: function(Node, start_point: Point, end_point: Point): Node [[
+//    Returns the smallest descendant node that spans the given range
+// ]]
 static int descendant_for_point_range(lua_State *L) {
 	TSNode const n = *node_assert(L, 1);
 	TSPoint const start = topoint(L, 2);
@@ -684,9 +683,9 @@ static int descendant_for_point_range(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.named_descendant_for_byte_range: function(Node): Node [[
-   Returns the smallest named descendant node that spans the given range
-]] */
+// @teal-export Node.named_descendant_for_byte_range: function(Node): Node [[
+//    Returns the smallest named descendant node that spans the given range
+// ]]
 static int named_descendant_for_byte_range(lua_State *L) {
 	TSNode const n = *node_assert(L, 1);
 	uint32_t const start = u32_argcheck(L, 2);
@@ -697,9 +696,9 @@ static int named_descendant_for_byte_range(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Node.named_descendant_for_point_range: function(Node): Node [[
-   Returns the smallest named descendant node that spans the given range
-]] */
+// @teal-export Node.named_descendant_for_point_range: function(Node): Node [[
+//    Returns the smallest named descendant node that spans the given range
+// ]]
 static int named_descendant_for_point_range(lua_State *L) {
 	TSNode const n = *node_assert(L, 1);
 	TSPoint const start = topoint(L, 2);

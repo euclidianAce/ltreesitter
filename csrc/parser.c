@@ -31,20 +31,20 @@ static int parser_gc(lua_State *L) {
 // not possible until https://github.com/tree-sitter/tree-sitter/issues/4721
 // is resolved
 
-/* @teal-inline [[
-   enum Encoding
-      "utf-8"
-      "utf-16le"
-      "utf-16be"
-   end
-
-   enum SymbolType
-      "regular"
-      "anonymous"
-      "supertype"
-      "auxiliary"
-   end
-]]*/
+// @teal-inline [[
+//    enum Encoding
+//       "utf-8"
+//       "utf-16le"
+//       "utf-16be"
+//    end
+//
+//    enum SymbolType
+//       "regular"
+//       "anonymous"
+//       "supertype"
+//       "auxiliary"
+//    end
+// ]]
 
 static TSInputEncoding encoding_from_str(lua_State *L, int str_index) {
 	size_t len = 0;
@@ -84,12 +84,12 @@ static TSInputEncoding encoding_from_str(lua_State *L, int str_index) {
 	return TSInputEncodingUTF8;
 }
 
-/* @teal-export Parser.parse_string: function(Parser, string, ?Encoding, ?Tree): Tree [[
-   Uses the given parser to parse the string
-
-   If <code>Tree</code> is provided then it will be used to create a new updated tree
-   (but it is the responsibility of the programmer to make the correct <code>Tree:edit</code> calls)
-]] */
+// @teal-export Parser.parse_string: function(Parser, string, ?Encoding, ?Tree): Tree [[
+//   Uses the given parser to parse the string
+//
+//   If <code>Tree</code> is provided then it will be used to create a new updated tree
+//   (but it is the responsibility of the programmer to make the correct <code>Tree:edit</code> calls)
+// ]]
 static int parser_parse_string(lua_State *L) {
 	lua_settop(L, 4);
 	TSParser *p = *parser_assert(L, 1);
@@ -132,7 +132,7 @@ static bool progress_callback(TSParseState *state) {
 
 	lua_pushvalue(L, -1);
 	lua_pushboolean(L, state->has_error);
-	lua_pushinteger(L, state->current_byte_offset);
+	pushinteger(L, state->current_byte_offset);
 	if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
 		info->callback_errored = true;
 		return true;
@@ -189,31 +189,31 @@ static char const *read_callback(void *payload, uint32_t byte_index, TSPoint pos
 
 // TODO: allow taking a DecodeFunction
 
-/* @teal-export Parser.parse_with: function(
-         Parser,
-         reader: (function(integer, Point): string),
-         progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
-         encoding?: Encoding,
-         old_tree?: Tree
-      ): Tree [[
-
-   <code>reader</code> should be a function that takes a byte index
-   and a <code>Point</code> and returns the text at that point. The
-   function should return either <code>nil</code> or an empty string
-   to signal that there is no more text.
-
-   <code>progress_callback</code> should be a function that takes a boolean
-   signalling if an error has occurred, and an integer byte offset. This
-   function will be called intermittently while parsing and may return `true`
-   to cancel parsing.
-
-   A <code>Tree</code> can be provided to reuse parts of it for parsing,
-   provided that <code>Tree:edit</code> has been called previously
-
-   <code>encoding</code> defaults to <code>"utf-8"</code> when not provided.
-
-   May return nil if the progress callback cancelled parsing
-]] */
+// @teal-export Parser.parse_with: function(
+//          Parser,
+//          reader: (function(integer, Point): string),
+//          progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
+//          encoding?: Encoding,
+//          old_tree?: Tree
+//       ): Tree [[
+//
+//    <code>reader</code> should be a function that takes a byte index
+//    and a <code>Point</code> and returns the text at that point. The
+//    function should return either <code>nil</code> or an empty string
+//    to signal that there is no more text.
+//
+//    <code>progress_callback</code> should be a function that takes a boolean
+//    signalling if an error has occurred, and an integer byte offset. This
+//    function will be called intermittently while parsing and may return <code>true</code>
+//    to cancel parsing.
+//
+//    A <code>Tree</code> can be provided to reuse parts of it for parsing,
+//    provided that <code>Tree:edit</code> has been called previously
+//
+//    <code>encoding</code> defaults to <code>"utf-8"</code> when not provided.
+//
+//    May return nil if the progress callback cancelled parsing
+// ]]
 static int parser_parse_with(lua_State *L) {
 	lua_settop(L, 5);
 	TSParser *const p = *parser_assert(L, 1);
@@ -276,34 +276,34 @@ static int parser_parse_with(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Parser.reset: function(Parser) [[
-   Reset the parser, causing the next parse to start from the beginning
-]] */
+// @teal-export Parser.reset: function(Parser) [[
+//   Reset the parser, causing the next parse to start from the beginning
+// ]]
 static int parser_reset(lua_State *L) {
 	TSParser *p = *parser_assert(L, 1);
 	ts_parser_reset(p);
 	return 0;
 }
 
-/* @teal-inline [[
-   interface Range
-      start_byte: integer
-      end_byte: integer
+// @teal-inline [[
+//   interface Range
+//      start_byte: integer
+//      end_byte: integer
+//
+//      start_point: Point
+//      end_point: Point
+//   end
+// ]]
 
-      start_point: Point
-      end_point: Point
-   end
-]]*/
-
-/* @teal-export Parser.set_ranges: function(Parser, {Range}): boolean [[
-   Sets the ranges that <code>Parser</code> will include when parsing, so you don't have to parse an entire document, but the ranges in the tree will still match the document.
-   The array of <code>Range</code>s must satisfy the following relationship: for a positive integer <code>i</code> within the length of <code>ranges: {Range}</code>:
-   <pre>
-   ranges[i].end_byte <= ranges[i + 1].start_byte
-   </pre>
-
-   returns whether or not setting the range succeeded
-]]*/
+// @teal-export Parser.set_ranges: function(Parser, {Range}): boolean [[
+//    Sets the ranges that <code>Parser</code> will include when parsing, so you don't have to parse an entire document, but the ranges in the tree will still match the document.
+//    The array of <code>Range</code>s must satisfy the following relationship: for a positive integer <code>i</code> within the length of <code>ranges: {Range}</code>:
+//    <pre>
+//    ranges[i].end_byte <= ranges[i + 1].start_byte
+//    </pre>
+//
+//    returns whether or not setting the range succeeded
+// ]]
 static int parser_set_ranges(lua_State *L) {
 	lua_settop(L, 2);
 	TSParser *p = *parser_assert(L, 1);
@@ -377,9 +377,9 @@ static void push_range(lua_State *L, TSRange const *range) {
 	SET_FIELD_P(L, push_point, range, end_point);
 }
 
-/* @teal-export Parser.get_ranges: function(Parser): {Range} [[
-   Get the ranges of text that the parser will include when parsing
-]] */
+// @teal-export Parser.get_ranges: function(Parser): {Range} [[
+//   Get the ranges of text that the parser will include when parsing
+// ]]
 static int parser_get_ranges(lua_State *L) {
 	TSParser *p = *parser_assert(L, 1);
 

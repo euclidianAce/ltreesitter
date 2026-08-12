@@ -79,10 +79,11 @@ bool query_handle_error(
 }
 
 void query_push(lua_State *L, TSQuery *q, int language_index) {
+	language_index = absindex(L, language_index);
+
 	*(TSQuery **)lua_newuserdata(L, sizeof(TSQuery *)) = q;
 	setmetatable(L, LTREESITTER_QUERY_METATABLE_NAME);
 
-	language_index = absindex(L, language_index);
 	bind_lifetimes(L, -1, language_index); // query keeps language alive
 }
 
@@ -92,27 +93,27 @@ static int query_gc(lua_State *L) {
 	return 0;
 }
 
-/* @teal-export Query.pattern_count: function(Query): integer [[
-   Returns the number of patterns this query has
-]] */
+// @teal-export Query.pattern_count: function(Query): integer [[
+//    Returns the number of patterns this query has
+// ]]
 static int query_pattern_count(lua_State *L) {
 	TSQuery *q = *query_assert(L, 1);
 	pushinteger(L, ts_query_pattern_count(q));
 	return 1;
 }
 
-/* @teal-export Query.capture_count: function(Query): integer [[
-   Returns the number of captures this query has
-]] */
+// @teal-export Query.capture_count: function(Query): integer [[
+//   Returns the number of captures this query has
+// ]]
 static int query_capture_count(lua_State *L) {
 	TSQuery *q = *query_assert(L, 1);
 	pushinteger(L, ts_query_capture_count(q));
 	return 1;
 }
 
-/* @teal-export Query.string_count: function(Query): integer [[
-   Returns the number of strings this query has
-]] */
+// @teal-export Query.string_count: function(Query): integer [[
+//   Returns the number of strings this query has
+// ]]
 static int query_string_count(lua_State *L) {
 	TSQuery *q = *query_assert(L, 1);
 	pushinteger(L, ts_query_string_count(q));
@@ -287,14 +288,14 @@ break_predicate_loop:
 	return result;
 }
 
-/* @teal-inline [[
-   interface Match
-      id: integer
-      pattern_index: integer
-      capture_count: integer
-      captures: {string:Node|{Node}}
-   end
-]] */
+// @teal-inline [[
+//   interface Match
+//      id: integer
+//      pattern_index: integer
+//      capture_count: integer
+//      captures: {string:Node|{Node}}
+//   end
+// ]]
 
 static int query_iterator_next_match(lua_State *L) {
 	// upvalues: Query, Node, Predicate Map, Cursor
@@ -371,88 +372,91 @@ static void query_cursor_set_range(lua_State *L, TSQueryCursor *c) {
 	}
 }
 
-/* @teal-export Query.match: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): Match [====[
-   Iterate over the matches of a given query.
-   <code>start</code> and <code>end</code> are optional.
-   They must be passed together with the same type, describing either two bytes or two points.
-   If passed, the query will be executed within the range denoted.
-   If not passed, the default behaviour is to execute the query through the entire range of the node.
-
-   The match object is a record populated with all the information given by treesitter
-   <pre>
-   interface Match
-      id: integer
-      pattern_index: integer
-      capture_count: integer
-      captures: {string:Node|{Node}}
-   end
-   </pre>
-
-   If a capture can only contain at most one node (as is the case with regular <code>(node) @capture-name</code> patterns and <code>(node)? @capture-name</code> patterns),
-   it will either be <code>nil</code> or that <code>Node</code>.
-
-   If a capture can contain multiple nodes (as is the case with <code>(node)* @capture-name</code> and <code>(node)+ @capture-name</code> patterns)
-   it will either be <code>nil</code> or an array of <code>Node</code>
-
-   Example:
-   <pre>
-   local q = parser:query[[ (comment) @my_match ]]
-   for match in q:match(node) do
-      print(match.captures.my_match)
-   end
-   </pre>
-
-   <code>predicates</code> is a map of functions to determine whether a query matches and/or execute side effects
-
-   Predicates that end in a <code>'?'</code> character will be seen as conditions that must be met for the pattern to be matched.
-   Predicates that don't will be seen just as functions to be executed given the matches provided.
-
-   Additionally, you will not have access to the return values of these functions, if you'd like to keep the results of a computation, make your functions have side-effects to write somewhere you can access.
-
-   By default the following predicates are provided.
-      <code> (#eq? ...) </code> will match if all arguments provided are equal
-      <code> (#not-eq? a b) </code> will match if the two arguments provided are not equal
-      <code> (#match? text pattern) </code> will match the provided <code>text</code> matches the given <code>pattern</code>. Matches are determined by Lua's standard <code>string.match</code> function.
-      <code> (#not-match? text pattern) </code> inverse of <code>match?</code>
-      <code> (#find? text substring) </code> will match if <code>text</code> contains <code>substring</code>. The substring is found with Lua's standard <code>string.find</code>, but the search always starts from the beginning, and pattern matching is disabled. This is equivalent to <code>string.find(text, substring, 0, true)</code>
-      <code> (#not-find? text substring) </code> inverse of <code>find?</code>
-
-   Predicate evaluation order:
-
-      Since predicates that end with a `?` affect whether a node matches, these are run first, in the order they appear in the query's source. Once all `?` queries are run, all the non-`?` queries are run in the order they appear in the query's source.
-
-   Example:
-   The following snippet will match lua functions that have a single LDoc/EmmyLua style comment above them
-   <pre>
-   local parser = ltreesitter.require("lua"):parser()
-
-   -- grab a node to query against
-   local root_node = parser:parse_string[[
-      ---@Doc this does stuff
-      local function stuff_doer()
-         do_stuff()
-      end
-   ]]:root()
-
-   for match in parser
-      :query[[(
-         (comment) @the-comment
-         .
-         (function_definition
-            (function_name) @the-function-name)
-         (#is-doc-comment? @the-comment)
-      )]]
-      :match(root_node, {
-         ["is-doc-comment?"] = function(str)
-            return str:source():sub(1, 4) == "---@"
-         end
-      })
-   do
-      print("Function: " .. match.captures["the-function-name"] .. " has documentation")
-      print("   " .. match.captures["the-comment"])
-   end
-   </pre>
-]====]*/
+// @teal-export Query.match: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): Match [====[
+//   Iterate over the matches of a given query.
+//   <code>start</code> and <code>end</code> are optional.
+//   They must be passed together with the same type, describing either two bytes or two points.
+//   If passed, the query will be executed within the range denoted.
+//   If not passed, the default behaviour is to execute the query through the entire range of the node.
+//   <br>
+//
+//   The match object is a record populated with all the information given by treesitter
+//   <pre>
+//   interface Match
+//      id: integer
+//      pattern_index: integer
+//      capture_count: integer
+//      captures: {string:Node|{Node}}
+//   end
+//   </pre>
+//
+//   If a capture can only contain at most one node (as is the case with regular <code>(node) @capture-name</code> patterns and <code>(node)? @capture-name</code> patterns),
+//   it will either be <code>nil</code> or that <code>Node</code>.
+//
+//   If a capture can contain multiple nodes (as is the case with <code>(node)* @capture-name</code> and <code>(node)+ @capture-name</code> patterns)
+//   it will either be <code>nil</code> or an array of <code>Node</code>
+//
+//   Example:
+//   <p>
+//   <pre>
+//   local q = parser:query[[ (comment) @my_match ]]
+//   for match in q:match(node) do
+//      print(match.captures.my_match)
+//   end
+//   </pre>
+//   </p>
+//
+//   <code>predicates</code> is a map of functions to determine whether a query matches and/or execute side effects
+//
+//   Predicates that end in a <code>'?'</code> character will be seen as conditions that must be met for the pattern to be matched.
+//   Predicates that don't will be seen just as functions to be executed given the matches provided.
+//
+//   Additionally, you will not have access to the return values of these functions, if you'd like to keep the results of a computation, make your functions have side-effects to write somewhere you can access.
+//
+//   By default the following predicates are provided.
+//      <code> (#eq? ...) </code> will match if all arguments provided are equal<br>
+//      <code> (#not-eq? a b) </code> will match if the two arguments provided are not equal<br>
+//      <code> (#match? text pattern) </code> will match the provided <code>text</code> matches the given <code>pattern</code>. Matches are determined by Lua's standard <code>string.match</code> function.<br>
+//      <code> (#not-match? text pattern) </code> inverse of <code>match?</code><br>
+//      <code> (#find? text substring) </code> will match if <code>text</code> contains <code>substring</code>. The substring is found with Lua's standard <code>string.find</code>, but the search always starts from the beginning, and pattern matching is disabled. This is equivalent to <code>string.find(text, substring, 0, true)</code><br>
+//      <code> (#not-find? text substring) </code> inverse of <code>find?</code><br>
+//
+//   Predicate evaluation order:
+//
+//      Since predicates that end with a <code>?</code> affect whether a node matches, these are run first, in the order they appear in the query's source. Once all <code>?</code> queries are run, all the non-<code>?</code> queries are run in the order they appear in the query's source.
+//
+//   Example:
+//   The following snippet will match lua functions that have a single LDoc/EmmyLua style comment above them
+//   <pre>
+//   local parser = ltreesitter.require("lua"):parser()
+//
+//   -- grab a node to query against
+//   local root_node = parser:parse_string[[
+//      ---@Doc this does stuff
+//      local function stuff_doer()
+//         do_stuff()
+//      end
+//   ]]:root()
+//
+//   for match in parser
+//      :query[[(
+//         (comment) @the-comment
+//         .
+//         (function_definition
+//            (function_name) @the-function-name)
+//         (#is-doc-comment? @the-comment)
+//      )]]
+//      :match(root_node, {
+//         ["is-doc-comment?"] = function(str)
+//            return str:source():sub(1, 4) == "---@"
+//         end
+//      })
+//   do
+//      print("Function: " .. match.captures["the-function-name"] .. " has documentation")
+//      print("   " .. match.captures["the-comment"])
+//   end
+//   </pre>
+// ]====]
 static int query_match_factory(lua_State *L) {
 	TSQuery *const q = *query_assert(L, 1);
 	TSNode n = *node_assert(L, 2);
@@ -468,20 +472,20 @@ static int query_match_factory(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Query.capture: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): (Node, string) [===[
-   Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs.
-   <code>start</code> and <code>end</code> are optional.
-   They must be passed together with the same type, describing either two bytes or two points.
-   If passed, the query will be executed within the range denoted.
-   If not passed, the default behaviour is to execute the query through the entire range of the node.
-
-   <pre>
-   local q = parser:query[[ (comment) @my_match ]]
-   for capture, name in q:capture(node) do
-      print(capture, name) -- => (comment), "my_match"
-   end
-   </pre>
-]===]*/
+// @teal-export Query.capture: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): (Node, string) [===[
+//    Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs.
+//    <code>start</code> and <code>end</code> are optional.
+//    They must be passed together with the same type, describing either two bytes or two points.
+//    If passed, the query will be executed within the range denoted.
+//    If not passed, the default behaviour is to execute the query through the entire range of the node.
+//
+//    <pre>
+//    local q = parser:query[[ (comment) @my_match ]]
+//    for capture, name in q:capture(node) do
+//       print(capture, name) -- => (comment), "my_match"
+//    end
+//    </pre>
+// ]===]
 static int query_capture_factory(lua_State *L) {
 	TSQuery *const q = *query_assert(L, 1);
 	TSNode n = *node_assert(L, 2);
@@ -497,44 +501,42 @@ static int query_capture_factory(lua_State *L) {
 	return 1;
 }
 
-/* @teal-inline [[
-   type Predicate = function(...: string | Node | {Node}): any...
-]] */
+// @teal-inline [[ type Predicate = function(...: string | Node | {Node}): any... ]]
 
-/* @teal-export Query.exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point) [===[
-   Runs a query. That's it. Nothing more, nothing less.
-   This is intended to be used with the <code>Query.with</code> method and predicates that have side effects,
-   i.e. for when you would use Query.match or Query.capture, but do nothing in the for loop.
-   <code>start</code> and <code>end</code> are optional.
-   They must be passed together with the same type, describing either two bytes or two points.
-   If passed, the query will be executed within the range denoted.
-   If not passed, the default behaviour is to execute the query through the entire range of the node.
-
-   <pre>
-   local parser = ltreesitter.require("teal"):parser()
-
-   -- grab a node to query against
-   local root_node = parser:parse_string[[
-   local x: string = "foo"
-   local y: string = "bar"
-   ]]:root()
-
-   parser
-      :query[[(
-         (var_declaration
-            (var) @var-name
-            (string) @value)
-         (#set! @var-name @value)
-      )]]
-      :exec(root_node, {["set!"] = function(a, b) _G[a] = b:sub(2, -2) end})
-
-   print(x) -- => foo
-   print(y) -- => bar
-
-   </pre>
-
-   If you'd like to interact with the matches/captures of a query, see the Query.match and Query.capture iterators
-]===]*/
+// @teal-export Query.exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point) [===[
+//    Runs a query. That's it. Nothing more, nothing less.
+//    This is intended to be used with predicates that have side effects,
+//    i.e. for when you would use <code>Query.match</code> or
+//    <code>Query.capture</code>, but do nothing in the for loop.
+//    <code>start</code> and <code>end</code> are optional.
+//    They must be passed together with the same type, describing either two bytes or two points.
+//    If passed, the query will be executed within the range denoted.
+//    If not passed, the default behaviour is to execute the query through the entire range of the node.
+//
+//    <pre>
+//    local parser = ltreesitter.require("teal"):parser()
+//
+//    -- grab a node to query against
+//    local root_node = parser:parse_string[[
+//       local x: string = "foo"
+//       local y: string = "bar"
+//    ]]:root()
+//
+//    parser
+//       :query[[(
+//          (var_declaration
+//             (var) @var-name
+//             (string) @value)
+//          (#set! @var-name @value)
+//       )]]
+//       :exec(root_node, {["set!"] = function(a, b) _G[a] = b:sub(2, -2) end})
+//
+//    print(x) -- => foo
+//    print(y) -- => bar
+//    </pre>
+//
+//    If you'd like to interact with the matches/captures of a query, see the Query.match and Query.capture iterators
+// ]===]
 static int query_exec(lua_State *L) {
 	TSQuery *const q = *query_assert(L, 1);
 	TSNode n = *node_assert(L, 2);
@@ -730,9 +732,9 @@ static int not_find_predicate(lua_State *L) {
 }
 
 // TODO: exec_with_options
-/* @teal-export Query.cursor: function(Query, Node): QueryCursor [[
-   Create a query cursor from the given query, executing over the given node.
-]] */
+// @teal-export Query.cursor: function(Query, Node): QueryCursor [[
+//   Create a query cursor from the given query, executing over the given node.
+// ]]
 static int make_cursor(lua_State *L) {
 	TSQuery *const q = *query_assert(L, 1);
 	TSNode n = *node_assert(L, 2);
@@ -754,37 +756,38 @@ static int make_cursor(lua_State *L) {
 	return 1;
 }
 
-/* @teal-inline [[
-   interface Capture
-      capture_name: string
-   end
-]] */
-/* @teal-export Query.predicates_for_pattern: function(Query, pattern_index: integer): {{string | Capture}} [==[
-   Given a pattern index, return an array representing each predicate
+// @teal-inline [[
+//   interface Capture
+//      capture_name: string
+//   end
+// ]]
 
-   Each predicate is an array of either strings, representing literal strings
-   in the predicate, or a table with a `capture_name` field, representing a
-   `@capture` in the predicate.
-
-   e.g. Given a (c) query like with source:
-
-   <code>
-      local q = c:query [[
-        ((_ declarator: (identifier) @name)
-         (#match? @name "[a-z]+")
-         (#set! @name true))
-      ]]
-   </code>
-
-   <code>q:predicates_for_pattern(0)</code> would return:
-
-   <code>
-      {
-         { "match?", { capture_name = "name" }, "[a-z]+" },
-         { "set!", { capture_name = "name" }, "true" },
-      }
-   </code>
-]==]*/
+// @teal-export Query.predicates_for_pattern: function(Query, pattern_index: integer): {{string | Capture}} [==[
+//   Given a pattern index, return an array representing each predicate
+//
+//   Each predicate is an array of either strings, representing literal strings
+//   in the predicate, or a table with a <code>capture_name</code> field, representing a
+//   <code>@capture</code> in the predicate.
+//
+//   e.g. Given a (c) query like with source:
+//
+//   <code>
+//      local q = c:query [[
+//        ((_ declarator: (identifier) @name)
+//         (#match? @name "[a-z]+")
+//         (#set! @name true))
+//      ]]
+//   </code>
+//
+//   <code>q:predicates_for_pattern(0)</code> would return:
+//
+//   <code>
+//      {
+//         { "match?", { capture_name = "name" }, "[a-z]+" },
+//         { "set!", { capture_name = "name" }, "true" },
+//      }
+//   </code>
+// ]==]
 static int predicates_for_pattern(lua_State *L) {
 	TSQuery const *const q = *query_assert(L, 1);
 	lua_Integer pattern_index = luaL_checkinteger(L, 2);
@@ -832,61 +835,61 @@ static int predicates_for_pattern(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Query.start_byte_for_pattern: function(Query, pattern_zero_index: integer): integer [[
-   Returns the byte offset where the given pattern starts in the query's source
-]] */
+// @teal-export Query.start_byte_for_pattern: function(Query, pattern_zero_index: integer): integer [[
+//   Returns the byte offset where the given pattern starts in the query's source
+// ]]
 static int query_start_byte_for_pattern(lua_State *L) {
 	TSQuery const *q = *query_assert(L, 1);
 	lua_Integer pattern_index = luaL_checkinteger(L, 2);
-	lua_pushinteger(L, ts_query_start_byte_for_pattern(q, (uint32_t)pattern_index));
+	pushinteger(L, ts_query_start_byte_for_pattern(q, (uint32_t)pattern_index));
 	return 1;
 }
 
-/* @teal-export Query.end_byte_for_pattern: function(Query, pattern_zero_index: integer): integer [[
-   Returns the byte offset where the given pattern ends in the query's source
-]] */
+// @teal-export Query.end_byte_for_pattern: function(Query, pattern_zero_index: integer): integer [[
+//   Returns the byte offset where the given pattern ends in the query's source
+// ]]
 static int query_end_byte_for_pattern(lua_State *L) {
 	TSQuery const *q = *query_assert(L, 1);
 	lua_Integer pattern_index = luaL_checkinteger(L, 2);
-	lua_pushinteger(L, ts_query_end_byte_for_pattern(q, (uint32_t)pattern_index));
+	pushinteger(L, ts_query_end_byte_for_pattern(q, (uint32_t)pattern_index));
 	return 1;
 }
 
-/* @teal-export Query.is_pattern_rooted: function(Query, pattern_zero_index: integer): bool [[
-   Returns whether the pattern at the given index is rooted
-]] */
+// @teal-export Query.is_pattern_rooted: function(Query, pattern_zero_index: integer): boolean [[
+//    Returns whether the pattern at the given index is rooted
+// ]]
 static int query_is_pattern_rooted(lua_State *L) {
 	TSQuery const *q = *query_assert(L, 1);
 	lua_Integer pattern_index = luaL_checkinteger(L, 2);
-	lua_pushinteger(L, ts_query_is_pattern_rooted(q, (uint32_t)pattern_index));
+	pushinteger(L, ts_query_is_pattern_rooted(q, (uint32_t)pattern_index));
 	return 1;
 }
 
-/* @teal-export Query.is_pattern_non_local: function(Query, pattern_zero_index: integer): bool [[
-   Returns whether the pattern at the given index is non-local
-]] */
+// @teal-export Query.is_pattern_non_local: function(Query, pattern_zero_index: integer): boolean [[
+//    Returns whether the pattern at the given index is non-local
+// ]]
 static int query_is_pattern_non_local(lua_State *L) {
 	TSQuery const *q = *query_assert(L, 1);
 	lua_Integer pattern_index = luaL_checkinteger(L, 2);
-	lua_pushinteger(L, ts_query_is_pattern_non_local(q, (uint32_t)pattern_index));
+	pushinteger(L, ts_query_is_pattern_non_local(q, (uint32_t)pattern_index));
 	return 1;
 }
 
-/* @teal-export Query.is_pattern_guaranteed_at_step: function(Query, pattern_zero_index: integer): bool [[
-   Returns whether the pattern at the given index is rooted
-]] */
+// @teal-export Query.is_pattern_guaranteed_at_step: function(Query, pattern_zero_index: integer): boolean [[
+//   Returns whether the pattern at the given index is guaranteed to match when it is reached
+// ]]
 static int query_is_pattern_guaranteed_at_step(lua_State *L) {
 	TSQuery const *q = *query_assert(L, 1);
 	lua_Integer pattern_index = luaL_checkinteger(L, 2);
-	lua_pushinteger(L, ts_query_is_pattern_guaranteed_at_step(q, (uint32_t)pattern_index));
+	pushinteger(L, ts_query_is_pattern_guaranteed_at_step(q, (uint32_t)pattern_index));
 	return 1;
 }
 
-/* @teal-export Query.disable_capture: function(Query, name: string) [[
-   Disable a certain capture within a query, preventing it from being returned in matches.
-
-   Currently there is no way to undo this.
-]] */
+// @teal-export Query.disable_capture: function(Query, name: string) [[
+//    Disable a certain capture within a query, preventing it from being returned in matches.
+//
+//    Currently there is no way to undo this.
+// ]]
 static int query_disable_capture(lua_State *L) {
 	TSQuery *q = *query_assert(L, 1);
 	size_t len = 0;
@@ -895,11 +898,11 @@ static int query_disable_capture(lua_State *L) {
 	return 0;
 }
 
-/* @teal-export Query.disable_pattern: function(Query, pattern_zero_index: integer) [[
-   Disable a certain pattern within a query, preventing it from being returned in matches.
-
-   Currently there is no way to undo this.
-]] */
+// @teal-export Query.disable_pattern: function(Query, pattern_zero_index: integer) [[
+//    Disable a certain pattern within a query, preventing it from being returned in matches.
+//
+//    Currently there is no way to undo this.
+// ]]
 static int query_disable_pattern(lua_State *L) {
 	TSQuery *q = *query_assert(L, 1);
 	lua_Integer pattern_index = luaL_checkinteger(L, 2);

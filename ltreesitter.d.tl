@@ -64,7 +64,7 @@ local record ltreesitter
       is_extra: function(Node): boolean
       is_missing: function(Node): boolean
       is_named: function(Node): boolean
-      named_child: function(Node, idx: integer): Node
+      named_child: function(Node, zero_index: integer): Node
       named_child_count: function(Node): integer
       named_children: function(Node): function(): Node
       named_descendant_for_byte_range: function(Node): Node
@@ -87,12 +87,12 @@ local record ltreesitter
       get_ranges: function(Parser): {Range}
       parse_string: function(Parser, string, ?Encoding, ?Tree): Tree
       parse_with: function(
-         Parser,
-         reader: (function(integer, Point): string),
-         progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
-         encoding?: Encoding,
-         old_tree?: Tree
-      ): Tree
+          Parser,
+          reader: (function(integer, Point): string),
+          progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
+          encoding?: Encoding,
+          old_tree?: Tree
+       ): Tree
       reset: function(Parser)
       set_ranges: function(Parser, {Range}): boolean
    end
@@ -104,9 +104,9 @@ local record ltreesitter
       disable_pattern: function(Query, pattern_zero_index: integer)
       end_byte_for_pattern: function(Query, pattern_zero_index: integer): integer
       exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point)
-      is_pattern_guaranteed_at_step: function(Query, pattern_zero_index: integer): bool
-      is_pattern_non_local: function(Query, pattern_zero_index: integer): bool
-      is_pattern_rooted: function(Query, pattern_zero_index: integer): bool
+      is_pattern_guaranteed_at_step: function(Query, pattern_zero_index: integer): boolean
+      is_pattern_non_local: function(Query, pattern_zero_index: integer): boolean
+      is_pattern_rooted: function(Query, pattern_zero_index: integer): boolean
       match: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): Match
       pattern_count: function(Query): integer
       predicates_for_pattern: function(Query, pattern_index: integer): {{string | Capture}}
@@ -155,18 +155,19 @@ local record ltreesitter
 
    -- Inlines
 
-   enum Encoding
-      "utf-8"
-      "utf-16le"
-      "utf-16be"
-   end
+    enum Encoding
+       "utf-8"
+       "utf-16le"
+       "utf-16be"
+    end
 
-   enum SymbolType
-      "regular"
-      "anonymous"
-      "supertype"
-      "auxiliary"
-   end
+    enum SymbolType
+       "regular"
+       "anonymous"
+       "supertype"
+       "auxiliary"
+    end
+
 
    interface Range
       start_byte: integer
@@ -175,6 +176,7 @@ local record ltreesitter
       start_point: Point
       end_point: Point
    end
+
 
    interface TreeEdit
       start_byte: integer
@@ -186,6 +188,7 @@ local record ltreesitter
       new_end_point: Point
    end
 
+
    interface Match
       id: integer
       pattern_index: integer
@@ -193,26 +196,30 @@ local record ltreesitter
       captures: {string:Node|{Node}}
    end
 
-   type Predicate = function(...: string | Node | {Node}): any...
+ type Predicate = function(...: string | Node | {Node}): any... 
 
    interface Capture
       capture_name: string
    end
+
 
    interface Point
       row: integer
       column: integer
    end
 
-   type StateId = integer
-   type Symbol = integer
-   type FieldId = integer
 
-   interface LanguageMetadata
-      major_version: integer
-      minor_version: integer
-      patch_version: integer
-   end
+    type StateId = integer
+    type Symbol = integer
+    type FieldId = integer
+
+
+    interface LanguageMetadata
+       major_version: integer
+       minor_version: integer
+       patch_version: integer
+    end
+
 end
 
 return ltreesitter

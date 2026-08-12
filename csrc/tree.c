@@ -56,19 +56,19 @@ void tree_push_with_reader(
 	lua_remove(L, -2);         // tree
 }
 
-/* @teal-export Tree.root: function(Tree): Node [[
-   Returns the root node of the given parse tree
-]] */
+// @teal-export Tree.root: function(Tree): Node [[
+//   Returns the root node of the given parse tree
+// ]]
 static int tree_push_root(lua_State *L) {
 	ltreesitter_Tree *const t = tree_assert(L, 1);
 	node_push(L, 1, ts_tree_root_node(t->tree));
 	return 1;
 }
 
-/* @teal-export Tree.root_with_offset: function(Tree, offset_bytes: integer, offset_extent: Point): Node [[
-   Returns the root node of the given parse tree, but with its position shifted
-   forward
-]] */
+// @teal-export Tree.root_with_offset: function(Tree, offset_bytes: integer, offset_extent: Point): Node [[
+//   Returns the root node of the given parse tree, but with its position shifted
+//   forward
+// ]]
 static int tree_push_root_with_offset(lua_State *L) {
 	ltreesitter_Tree *const t = tree_assert(L, 1);
 	luaL_argcheck(L, lua_type(L, 2) == LUA_TNUMBER, 2, "expected integer");
@@ -87,9 +87,9 @@ static int tree_to_string(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Tree.copy: function(Tree): Tree [[
-   Creates a copy of the tree. Tree-sitter recommends to create copies if you are going to use multithreading since tree accesses are not thread-safe, but copying them is cheap and quick
-]] */
+// @teal-export Tree.copy: function(Tree): Tree [[
+//   Creates a copy of the tree. Tree-sitter recommends to create copies if you are going to use multithreading since tree accesses are not thread-safe, but copying them is cheap and quick
+// ]]
 static int tree_copy(lua_State *L) {
 	lua_settop(L, 1);
 	ltreesitter_Tree *t = tree_assert(L, 1); // tree
@@ -111,20 +111,21 @@ static inline bool is_non_negative(lua_State *L, int i) {
 }
 
 // Maybe make this Tree.Edit?
-/* @teal-inline [[
-   interface TreeEdit
-      start_byte: integer
-      old_end_byte: integer
-      new_end_byte: integer
+// @teal-inline [[
+//   interface TreeEdit
+//      start_byte: integer
+//      old_end_byte: integer
+//      new_end_byte: integer
+//
+//      start_point: Point
+//      old_end_point: Point
+//      new_end_point: Point
+//   end
+// ]]
 
-      start_point: Point
-      old_end_point: Point
-      new_end_point: Point
-   end
-]]*/
-/* @teal-export Tree.edit_s: function(Tree, TreeEdit) [[
-   Create an edit to the given tree
-]] */
+// @teal-export Tree.edit_s: function(Tree, TreeEdit) [[
+//    Create an edit to the given tree
+// ]]
 static int tree_edit_s(lua_State *L) {
 	lua_settop(L, 2);
 	luaL_checkstack(L, 15, "Internal allocation failed");
@@ -179,20 +180,20 @@ static int tree_edit_s(lua_State *L) {
 	return 0;
 }
 
-/* @teal-export Tree.edit: function(
-         Tree,
-         start_byte: integer,
-         old_end_byte: integer,
-         new_end_byte: integer,
-         start_point_row: integer,
-         start_point_col: integer,
-         old_end_point_row: integer,
-         old_end_point_col: integer,
-         new_end_point_row: integer,
-         new_end_point_col: integer
-      ) [[
-   Create an edit to the given tree
-]] */
+// @teal-export Tree.edit: function(
+//         Tree,
+//         start_byte: integer,
+//         old_end_byte: integer,
+//         new_end_byte: integer,
+//         start_point_row: integer,
+//         start_point_col: integer,
+//         old_end_point_row: integer,
+//         old_end_point_col: integer,
+//         new_end_point_row: integer,
+//         new_end_point_col: integer
+//      ) [[
+//   Create an edit to the given tree
+// ]]
 static int tree_edit(lua_State *L) {
 	ltreesitter_Tree *t = tree_assert(L, 1);
 	TSInputEdit edit = (TSInputEdit){
@@ -232,10 +233,10 @@ static void push_range_array(lua_State *L, uint32_t len, TSRange ranges[static l
 	}
 }
 
-/* @teal-export Tree.get_changed_ranges: function(old: Tree, new: Tree): {Range} [[
-   Compare an old syntax tree to a new syntax tree.
-   This would usually be called right after a set of calls to <code>Tree.edit(_s)</code> and <code>Parser.parse_{string,with}</code>
-]] */
+// @teal-export Tree.get_changed_ranges: function(old: Tree, new: Tree): {Range} [[
+//    Compare an old syntax tree to a new syntax tree.
+//    This would usually be called right after a set of calls to <code>Tree.edit(_s)</code> and <code>Parser.parse_{string,with}</code>
+// ]]
 static int tree_get_changed_ranges(lua_State *L) {
 	ltreesitter_Tree *old = tree_assert(L, 1);
 	ltreesitter_Tree *new = tree_assert(L, 2);
@@ -246,9 +247,9 @@ static int tree_get_changed_ranges(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export Tree.included_ranges: function(Tree): {Range} [[
-   Returns the array of ranges used to parse the syntax tree
-]] */
+// @teal-export Tree.included_ranges: function(Tree): {Range} [[
+//    Returns the array of ranges used to parse the syntax tree
+// ]]
 static int tree_included_ranges(lua_State *L) {
 	ltreesitter_Tree *t = tree_assert(L, 1);
 	uint32_t len = 0;

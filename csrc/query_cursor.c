@@ -11,31 +11,31 @@ static int query_cursor_gc(lua_State *L) {
 	return 0;
 }
 
-/* @teal-export QueryCursor.did_exceed_match_limit: function(QueryCursor): boolean [[
-   Returns true if the given cursor exceeded its match limit. See
-   `set_match_limit` and `match_limit`
-]] */
+// @teal-export QueryCursor.did_exceed_match_limit: function(QueryCursor): boolean [[
+//   Returns true if the given cursor exceeded its match limit. See
+//   <code>set_match_limit</code> and <code>match_limit</code>
+// ]]
 static int did_exceed_match_limit(lua_State *L) {
 	TSQueryCursor const *qc = *query_cursor_assert(L, 1);
 	lua_pushboolean(L, ts_query_cursor_did_exceed_match_limit(qc));
 	return 1;
 }
 
-/* @teal-export QueryCursor.match_limit: function(QueryCursor): integer [[
-   Get the match limit of the given cursor. See `set_match_limit` and
-   `did_exceed_match_limit`
-]] */
+// @teal-export QueryCursor.match_limit: function(QueryCursor): integer [[
+//    Get the match limit of the given cursor. See <code>set_match_limit</code> and
+//    <code>did_exceed_match_limit</code>
+// ]]
 static int match_limit(lua_State *L) {
 	TSQueryCursor const *qc = *query_cursor_assert(L, 1);
 	lua_pushinteger(L, ts_query_cursor_match_limit(qc));
 	return 1;
 }
 
-/* @teal-export QueryCursor.set_match_limit: function(QueryCursor, integer) [[
-   Set the maximum number of in-progress matches allowed by this query cursor.
-
-   Set to nil to set to the maximum limit (2^32-1)
-]] */
+// @teal-export QueryCursor.set_match_limit: function(QueryCursor, integer) [[
+//   Set the maximum number of in-progress matches allowed by this query cursor.
+//
+//   Set to nil to set to the maximum limit (2^32-1)
+// ]]
 static int set_match_limit(lua_State *L) {
 	TSQueryCursor *qc = *query_cursor_assert(L, 1);
 	uint32_t limit = UINT32_MAX;
@@ -48,9 +48,9 @@ static int set_match_limit(lua_State *L) {
 	return 0;
 }
 
-/* @teal-export QueryCursor.set_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean [[
-   returns true when the given range was non-empty
-]] */
+// @teal-export QueryCursor.set_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean [[
+//   returns true when the given range was non-empty
+// ]]
 static int set_byte_range(lua_State *L) {
 	TSQueryCursor *qc = *query_cursor_assert(L, 1);
 	lua_Integer start = luaL_checkinteger(L, 2);
@@ -61,9 +61,9 @@ static int set_byte_range(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export QueryCursor.set_point_range: function(QueryCursor, start: Point, end_: Point): boolean [[
-   returns true when the given range was non-empty
-]] */
+// @teal-export QueryCursor.set_point_range: function(QueryCursor, start: Point, end_: Point): boolean [[
+//    returns true when the given range was non-empty
+// ]]
 static int set_point_range(lua_State *L) {
 	TSQueryCursor *qc = *query_cursor_assert(L, 1);
 	TSPoint start = topoint(L, 2);
@@ -72,11 +72,11 @@ static int set_point_range(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export QueryCursor.next_match_without_executing_predicates: function(QueryCursor): Match [[
-   Find the next match of the given cursor. As implied by the name, this does
-   <em>NOT</em> execute any predicates. See `Query.predicates_for_pattern` or
-   `Query.match` for executing predicates.
-]] */
+// @teal-export QueryCursor.next_match_without_executing_predicates: function(QueryCursor): Match [[
+//    Find the next match of the given cursor. As implied by the name, this does
+//    <em>NOT</em> execute any predicates. See <code>Query.predicates_for_pattern</code> or
+//    <code>Query.match</code> for executing predicates.
+// ]]
 static int next_match_without_executing_predicates(lua_State *L) {
 	lua_settop(L, 1);
 	luaL_checkstack(L, 5, "Internal allocation error");
@@ -98,11 +98,12 @@ static int next_match_without_executing_predicates(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export QueryCursor.next_capture_without_executing_predicates: function(QueryCursor): Node, string [[
-   Find the next capture of the given cursor. As implied by the name, this does
-   <em>NOT</em> execute any predicates. See `Query.predicates_for_pattern` or
-   `Query.capture` for executing predicates.
-   ]] */
+// @teal-export QueryCursor.next_capture_without_executing_predicates: function(QueryCursor): Node, string [[
+//    Find the next capture of the given cursor. As implied by the name, this does
+//    <em>NOT</em> execute any predicates. See <code>Query.predicates_for_pattern</code> or
+//    <code>Query.capture</code> for executing predicates.
+// ]]
+
 static int next_capture_without_executing_predicates(lua_State *L) {
 	lua_settop(L, 1);
 	luaL_checkstack(L, 5, "Internal allocation error");
@@ -130,9 +131,9 @@ static int next_capture_without_executing_predicates(lua_State *L) {
 	return 2;
 }
 
-/* @teal-export QueryCursor.remove_match: function(QueryCursor, match_id: integer) [[
-   Prevent the given query cursor from matching the given match id
-]] */
+// @teal-export QueryCursor.remove_match: function(QueryCursor, match_id: integer) [[
+//    Prevent the given query cursor from matching the given match id
+// ]]
 static int remove_match(lua_State *L) {
 	TSQueryCursor *qc = *query_cursor_assert(L, 1);
 	lua_Integer match_id = luaL_checkinteger(L, 2);
@@ -141,11 +142,11 @@ static int remove_match(lua_State *L) {
 	return 0;
 }
 
-/* @teal-export QueryCursor.set_max_start_depth: function(QueryCursor, integer) [[
-   Set the maximum start depth of the given cursor. Set to nil to set the maximum.
-
-   This prevents cursors from exploring children nodes at a certain depth.
-]] */
+// @teal-export QueryCursor.set_max_start_depth: function(QueryCursor, integer) [[
+//    Set the maximum start depth of the given cursor. Set to nil to set the maximum.
+//
+//    This prevents cursors from exploring children nodes at a certain depth.
+// ]]
 static int set_max_start_depth(lua_State *L) {
 	TSQueryCursor *qc = *query_cursor_assert(L, 1);
 	uint32_t depth = UINT32_MAX;
@@ -155,9 +156,9 @@ static int set_max_start_depth(lua_State *L) {
 	return 0;
 }
 
-/* @teal-export QueryCursor.set_containing_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean [[
-   Set the byte range within which all matches must be <em>fully</em> contained.
-]] */
+// @teal-export QueryCursor.set_containing_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean [[
+//    Set the byte range within which all matches must be <em>fully</em> contained.
+// ]]
 static int set_containing_byte_range(lua_State *L) {
 	TSQueryCursor *qc = *query_cursor_assert(L, 1);
 	uint32_t const start_byte = u32_argcheck(L, 2);
@@ -166,9 +167,9 @@ static int set_containing_byte_range(lua_State *L) {
 	return 1;
 }
 
-/* @teal-export QueryCursor.set_containing_point_range: function(QueryCursor, start_point: Point, end_point: Point): boolean [[
-   Set the byte range within which all matches must be <em>fully</em> contained.
-]] */
+// @teal-export QueryCursor.set_containing_point_range: function(QueryCursor, start_point: Point, end_point: Point): boolean [[
+//    Set the byte range within which all matches must be <em>fully</em> contained.
+// ]]
 static int set_containing_point_range(lua_State *L) {
 	TSQueryCursor *qc = *query_cursor_assert(L, 1);
 	TSPoint const start = topoint(L, 2);

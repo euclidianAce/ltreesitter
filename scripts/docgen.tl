@@ -83,34 +83,22 @@ local function insert_into(
    end
 end
 
-local function one_based_start_point(n: ts.Node): ts.Point
-   local point <const> = n:start_point()
-   point.row = point.row + 1
-   point.column = point.column + 1
-   return point
+local interface Location
+   file: string
+   row: integer
+   column: integer
 end
 
+local type Directive = function(Location, first: string, inner_content: string)
+
 -- TODO: should probably just use the teal parser to pull out these type definitions
-local directives: {string:function(ts.Node, string, string)} = {
-   ["@teal-export"] = function(n: ts.Node, content: string, fname: string)
-      local point <const> = one_based_start_point(n)
-      local name <const>, typedef = content:match("%@teal%-export%s+(.-)%s*:%s*(.*)")
-      assert(typedef, point.row .. ":" .. point.column .. ": No typedef after teal-export?")
-      local doc_s <const>, eq_s <const>, eq_e <const> = typedef:match("()%[()%=*()%[") as (integer, integer, integer)
-      local documentation: string
-      if doc_s then
-         local eq_count <const> = eq_e - eq_s
-         local equal_signs <const> = ("="):rep(eq_count)
-         local doc_e <const> = typedef:find("%]" .. equal_signs .. "%]")
-         assert(doc_e, fname .. ":" .. point.row .. ":" .. point.column .. ": Unclosed documentation opening ‘[" .. equal_signs .. "[’")
-         documentation = trim(typedef:sub(doc_s + eq_count + 2, doc_e - 1)):gsub("\n", "<br>")
-         typedef = typedef:sub(1, doc_s-1):gsub("%s*$", "")
-         documentation = #documentation > 0 and documentation or nil
-      end
+local directives: {string:Directive} = {
+   ["@teal-export"] = function(l: Location, inner: string, documentation: string)
+      local name <const>, typedef = inner:match("%s*(.-)%s*:%s*(.*)")
+      assert(typedef, l.file .. ":" .. l.row .. ":" .. l.column .. ": No typedef after teal-export?")
       if not documentation then
-         io.stderr:write(fname, ":", point.row, ":", point.column, ": Exported item ‘", name, "’ has no documentation!\n")
+         io.stderr:write(l.file, ":", l.row, ":", l.column, ": Exported item ‘", name, "’ has no documentation!\n")
       end
-      typedef = typedef:gsub("%s*[*/]", "")
       if name then
          if documentation then
             insert_into(docs, name, "<" .. typedef .. ">" .. trim(documentation))
@@ -119,33 +107,82 @@ local directives: {string:function(ts.Node, string, string)} = {
       end
    end,
 
-   ["@teal-inline"] = function(n: ts.Node, content: string, fname: string)
-      local point <const> = one_based_start_point(n)
-      local index = 1
-      while index < #content do
-         local _, inline_content_s <const>, eq_s <const>, eq_e <const> = content:find("@teal%-inline%s*%[()=*()%[", index)
-         if not inline_content_s then break end
-         local equal_signs = ("="):rep(eq_e - eq_s)
-         local inline_content_e <const>, next_index <const> = content:find("()]" .. equal_signs .. "]()", inline_content_s + 1)
-         assert(inline_content_e, fname .. ":" .. point.row .. ":" .. point.column .. ": Unclosed teal-inline opening ‘[" .. equal_signs .. "[’")
-         local inline_content <const> = content:sub(inline_content_s + 1, inline_content_e - 1):gsub("%s*$", "")
-         ti(inlines, inline_content)
-         index = next_index
-      end
+   ["@teal-inline"] = function(_: Location, _: string, inline_content: string)
+      ti(inlines, (inline_content:gsub("\n[ \t]*$", "\n")))
    end,
-
 }
+
+local comment_query <const> = c_lang:query[[
+   ((comment)+ @comments)
+]]
+
+local function comment_block_contents(location: Location, nodes: {ts.Node}): string
+   local content = {}
+   local reported_c89_comment = false
+   for i, comment in ipairs(nodes) do
+      local src = comment:source()
+      if src:sub(1, 2) == "//" then
+         src = src:gsub("^//+", "") .. "\n"
+      else
+         src = src:gsub("^/%*+", ""):gsub("%*/$", "")
+         if not reported_c89_comment then
+            io.stderr:write(location.file, ":", location.row, ":", location.column, ":warning: C89 style comment\n");
+            reported_c89_comment = true
+         end
+      end
+      content[i] = src
+   end
+   return table.concat(content)
+end
 
 local function proc_file(file: string)
    local tree <const> = parse_file(file)
-   for c in c_lang
-      :query[[ (comment) @the-comment ]]
-      :capture(tree:root())
-   do
-      local c_src <const> = c:source()
-      for patt, cb in pairs(directives) do
-         if c_src:find(patt, 1, true) then
-            cb(c, c_src, file)
+   for c in comment_query:match(tree:root()) do
+      local comments <const> = c.captures.comments as {ts.Node}
+      local start <const> = comments[1]:start_point()
+      local loc <const>: Location = {
+         file = file,
+         row = start.row + 1,
+         column = start.column + 1,
+      }
+      local src <const> = comment_block_contents(loc, comments)
+
+      local offset = 1
+      while offset <= #src do
+         local directive_name_start, directive_name_end = src:find("%@teal%-[-a-zA-Z]+", offset)
+         if not directive_name_start then
+            break
+         end
+         local directive <const> = src:sub(directive_name_start, directive_name_end)
+         --print("directive = " .. directive)
+
+         local eq_s, eq_e = src:find("%[()%=*()%[", directive_name_end + 1) as (integer, integer)
+         if not eq_s then
+            offset = directive_name_end + 1
+            io.stderr:write(loc.file, ":", loc.row, ":", loc.column, ": Directive “", directive, "” has no open brackets [[\n")
+            break
+         end
+
+         local inner <const> = trim(src:sub(directive_name_end + 1, eq_s - 1))
+         --print("inner = «" .. inner .. "»")
+
+         local content_start = eq_e + 1
+         local equals <const> = ("="):rep(eq_e - eq_s - 1)
+         local content_end, next_offset = src:find("%]" .. equals .. "%]", content_start)
+         if not content_end then
+            offset = content_start
+            io.stderr:write(loc.file, ":", loc.row, ":", loc.column, ": Unclosed [", equals, "[\n")
+            break
+         end
+
+         offset = (next_offset or #src) + 1
+
+         local callback <const> = directives[directive]
+         if callback then
+            local outer = src:sub(content_start, content_end - 1)
+            callback(loc, inner, outer)
+         else
+            io.stderr:write(loc.file, ":", loc.row, ":", loc.column, ": Unknown directive “", directive, "”\n")
          end
       end
    end
@@ -249,11 +286,11 @@ local function traverse_docs(t: DocDef, prefix?: string, entries?: {DocInfo}): {
             full_name,
             mod = prefix:sub(1, -2),
             index = string.format(
-               '<a href="%s#%s">%s</a>',
-               html_name, full_name, full_name
+               '<a href="#%s">%s</a>',
+               full_name, full_name
             ),
             doc = string.format(
-               '<h2><a name="%s"><code>%s: %s</code></a></h2>\n<p>%s</p>',
+               '<doc-item><a name="%s"><code>%s: %s</code></a><div>%s</div></doc-item>',
                full_name, full_name, typ, content
             )
          })
@@ -274,14 +311,15 @@ end)
 -- dark mode lua manual sorta look
 local default_style <const> = [==[<style>
 html {
-   background-color: #16191a;
+   font-size: 18pt;
+   background-color: #16131F;
 }
 
 body {
-   background-color: #181a1b;
+   background-color: #181520;
    margin: auto;
    max-width: 70em;
-   width: 90%;
+   width: 95%;
    padding: 32px;
    font-family: Helvetica, Arial, sans-serif;
    color: #e8e6e3;
@@ -296,26 +334,49 @@ h2 {
    color: #117dee;
 }
 
+pre {
+   background-color: #2B2735;
+   padding: 0.2em;
+   border-radius: 0.5em;
+   overflow-x: auto;
+}
+
+module-listing {
+   padding: 2em;
+   list-style: none;
+
+   & > a {
+      display: list-item;
+      margin-left: 4em;
+   }
+}
+
+doc-item {
+   display: flex;
+   flex-direction: column;
+   margin-bottom: 2em;
+
+   & > * {
+      &:not(a) {
+          margin-left: 4em;
+      }
+   }
+   & > a {
+      font-size: 1.2em;
+   }
+}
 </style>]==]
 
 do
    io.write("Writing docs to docs/", html_name, "...")
    io.flush()
    local fh = io.open("docs/" .. html_name, "w")
-   local w = function(...: string) fh:write(...) fh:write("\n") end
+   local w <const> = function(...: string) fh:write(...) fh:write("\n") end
 
    w"<html>"
    w(default_style)
-
    w"<body>"
-   w'<table width="100%">'
-   w"<tbody>"
-   w"<tr>"
 
-   local num_entries <const> = math.floor(#doc_entries / 4)
-   local function td() w"<td valign=top>" end
-
-   local current_entries = 0
    local current_module = doc_entries[1].mod
    if current_module == "" then
       current_module = mod_name
@@ -323,36 +384,26 @@ do
 
    local documentation <const> = {}
 
-   td()
-   w("<h4>", current_module, "</h4>")
-   w"<p>"
+   w("<module-listing>")
+   w("<h3>", current_module, "</h3>")
 
    for _, entry in ipairs(doc_entries) do
       if entry.mod ~= "" and entry.mod ~= current_module then
-         w"</p>"
+         w("</module-listing><module-listing>")
          current_module = entry.mod
-         if current_entries > num_entries then
-            current_entries = 0
-            w"</td>"
-            td()
-         end
-         w("<h4>", current_module, "</h4>")
+         w("<h3>", current_module, "</h3>")
          table.insert(documentation, "")
-         w"<p>"
       end
       w(entry.index)
       table.insert(documentation, entry.doc)
-      w"<br>"
-      current_entries = current_entries + 1
    end
 
-   w"</p></td></tr></tbody></table>"
+   w("</module-listing>")
 
-   -- TODO: idk html that well, is there a page break or something that can be used here?
-   w(("<br>"):rep(10))
+   w("<hr>")
 
    for _, doc in ipairs(documentation) do
-      w(doc, "<br>")
+      w(doc)
    end
 
    w"</body></html>"
