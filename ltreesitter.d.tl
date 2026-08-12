@@ -87,12 +87,12 @@ local record ltreesitter
       get_ranges: function(Parser): {Range}
       parse_string: function(Parser, string, ?Encoding, ?Tree): Tree
       parse_with: function(
-          Parser,
-          reader: (function(integer, Point): string),
-          progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
-          encoding?: Encoding,
-          old_tree?: Tree
-       ): Tree
+      Parser,
+      reader: (function(integer, Point): string),
+      progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
+      encoding?: Encoding,
+      old_tree?: Tree
+      ): Tree
       reset: function(Parser)
       set_ranges: function(Parser, {Range}): boolean
    end
@@ -131,16 +131,16 @@ local record ltreesitter
    record Tree is userdata
       copy: function(Tree): Tree
       edit: function(
-         Tree,
-         start_byte: integer,
-         old_end_byte: integer,
-         new_end_byte: integer,
-         start_point_row: integer,
-         start_point_col: integer,
-         old_end_point_row: integer,
-         old_end_point_col: integer,
-         new_end_point_row: integer,
-         new_end_point_col: integer
+      Tree,
+      start_byte: integer,
+      old_end_byte: integer,
+      new_end_byte: integer,
+      start_point_row: integer,
+      start_point_col: integer,
+      old_end_point_row: integer,
+      old_end_point_col: integer,
+      new_end_point_row: integer,
+      new_end_point_col: integer
       )
       edit_s: function(Tree, TreeEdit)
       get_changed_ranges: function(old: Tree, new: Tree): {Range}
@@ -154,21 +154,18 @@ local record ltreesitter
    version: string
 
    -- Inlines
+   enum Encoding
+      "utf-8"
+      "utf-16le"
+      "utf-16be"
+   end
 
-    enum Encoding
-       "utf-8"
-       "utf-16le"
-       "utf-16be"
-    end
-
-    enum SymbolType
-       "regular"
-       "anonymous"
-       "supertype"
-       "auxiliary"
-    end
-
-
+   enum SymbolType
+      "regular"
+      "anonymous"
+      "supertype"
+      "auxiliary"
+   end
    interface Range
       start_byte: integer
       end_byte: integer
@@ -176,8 +173,6 @@ local record ltreesitter
       start_point: Point
       end_point: Point
    end
-
-
    interface TreeEdit
       start_byte: integer
       old_end_byte: integer
@@ -187,39 +182,28 @@ local record ltreesitter
       old_end_point: Point
       new_end_point: Point
    end
-
-
    interface Match
       id: integer
       pattern_index: integer
       capture_count: integer
       captures: {string:Node|{Node}}
    end
-
- type Predicate = function(...: string | Node | {Node}): any... 
-
+   type Predicate = function(...: string | Node | {Node}): any...
    interface Capture
       capture_name: string
    end
-
-
    interface Point
       row: integer
       column: integer
    end
-
-
-    type StateId = integer
-    type Symbol = integer
-    type FieldId = integer
-
-
-    interface LanguageMetadata
-       major_version: integer
-       minor_version: integer
-       patch_version: integer
-    end
-
+   type StateId = integer
+   type Symbol = integer
+   type FieldId = integer
+   interface LanguageMetadata
+      major_version: integer
+      minor_version: integer
+      patch_version: integer
+   end
 end
 
 return ltreesitter

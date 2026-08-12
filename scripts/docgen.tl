@@ -108,7 +108,7 @@ local directives: {string:Directive} = {
    end,
 
    ["@teal-inline"] = function(_: Location, _: string, inline_content: string)
-      ti(inlines, (inline_content:gsub("\n[ \t]*$", "\n")))
+      ti(inlines, (inline_content:gsub("[^\n]+", "   %1")))
    end,
 }
 
@@ -185,6 +185,7 @@ local function proc_file(file: string)
             if initial_indent then
                outer = outer:gsub("\n" .. initial_indent, "\n")
             end
+            outer = trim(outer)
             callback(loc, inner, outer)
          else
             io.stderr:write(loc.file, ":", loc.row, ":", loc.column, ": Unknown directive “", directive, "”\n")
@@ -239,7 +240,7 @@ local function generate_record_defs(defs: {NamedRecordDef}, indent: integer)
       else
          ti(output, def.name)
          ti(output, ": ")
-         ti(output, rec_def)
+         ti(output, (rec_def:gsub("\n +", "\n" .. ("   "):rep(indent))))
          ti(output, "\n")
       end
    end
