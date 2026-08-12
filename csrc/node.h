@@ -16,6 +16,6 @@ void node_push(lua_State *L, int tree_idx, TSNode n);
 MaybeOwnedString node_get_source(lua_State *);
 
 // ( [node_idx]=Node | -- Tree )
-ltreesitter_Tree *node_push_tree(lua_State *L, int node_idx);
+TSTree *node_push_tree(lua_State *L, int node_idx);
 
 #endif

@@ -21,11 +21,10 @@
 #define internal_err "ltreesitter internal error: node kept object is not a tree"
 
 // ( [node_idx]=any | -- tree )
-ltreesitter_Tree *node_push_tree(lua_State *L, int node_idx) {
+TSTree *node_push_tree(lua_State *L, int node_idx) {
 	push_kept(L, node_idx);
-	ltreesitter_Tree *const tree = tree_check(L, -1);
-	if (!tree)
-		luaL_error(L, internal_err);
+	TSTree *const tree = *tree_check(L, -1);
+	if (!tree) luaL_error(L, internal_err);
 	return tree;
 }
 
@@ -463,18 +462,22 @@ static int node_child_by_field_id(lua_State *L) {
 
 MaybeOwnedString node_get_source(lua_State *L) { // node
 	TSNode n = *node_assert(L, -1);
-	ltreesitter_Tree *const tree = node_push_tree(L, -1); // node, tree
-	if (tree->text_or_null_if_function_reader) {
-		uint32_t const start = ts_node_start_byte(n);
-		uint32_t const end = ts_node_end_byte(n);
-		lua_pop(L, 1); // node
-		return (MaybeOwnedString){
-			.owned = false,
-			.data = tree->text_or_null_if_function_reader->text + start,
-			.length = end - start,
-		};
+	(void)node_push_tree(L, -1); // node, tree
+	push_kept(L, -1); // node, tree, source_text or reader
+	{
+		SourceText const *st = source_text_check(L, -1);
+		if (st) {
+			uint32_t const start = ts_node_start_byte(n);
+			uint32_t const end = ts_node_end_byte(n);
+			lua_pop(L, 2); // node
+			return (MaybeOwnedString){
+				.owned = false,
+				.data = st->text + start,
+				.length = end - start,
+			};
+		}
 	}
-	push_kept(L, -1); // node, tree, reader
+	// node, tree, reader
 
 	uint32_t const start_byte = ts_node_start_byte(n);
 	uint32_t const end_byte = ts_node_end_byte(n);

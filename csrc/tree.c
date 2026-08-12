@@ -21,8 +21,8 @@
 // const TSLanguage *ts_tree_language(const TSTree *self);
 // void ts_tree_print_dot_graph(const TSTree *self, int file_descriptor);
 
-static ltreesitter_Tree *push_uninitialized_tree(lua_State *L) {
-	ltreesitter_Tree *tree = lua_newuserdata(L, sizeof *tree);
+static TSTree **push_uninitialized_tree(lua_State *L) {
+	TSTree **tree = lua_newuserdata(L, sizeof *tree);
 	setmetatable(L, LTREESITTER_TREE_METATABLE_NAME);
 	return tree;
 }
@@ -33,10 +33,9 @@ void tree_push(
 	TSTree *t,
 	size_t src_len,
 	char const *src) {
-	SourceText *source = source_text_push(L, src_len, src); // source text
-	ltreesitter_Tree *tree = push_uninitialized_tree(L);    // source text, tree
-	tree->tree = t;
-	tree->text_or_null_if_function_reader = source;
+	(void)source_text_push(L, src_len, src); // source text
+	TSTree **tree = push_uninitialized_tree(L);    // source text, tree
+	*tree = t;
 	bind_lifetimes(L, -1, -2); // tree keeps source text alive
 	lua_remove(L, -2);         // tree
 
@@ -48,9 +47,8 @@ void tree_push_with_reader(
 	TSTree *t,
 	int reader_function_index) {
 	lua_pushvalue(L, reader_function_index);             // reader
-	ltreesitter_Tree *tree = push_uninitialized_tree(L); // reader, tree
-	tree->tree = t;
-	tree->text_or_null_if_function_reader = NULL;
+	TSTree **tree = push_uninitialized_tree(L); // reader, tree
+	*tree = t;
 
 	bind_lifetimes(L, -1, -2); // tree keeps reader alive
 	lua_remove(L, -2);         // tree
@@ -60,8 +58,8 @@ void tree_push_with_reader(
 //   Returns the root node of the given parse tree
 // ]]
 static int tree_push_root(lua_State *L) {
-	ltreesitter_Tree *const t = tree_assert(L, 1);
-	node_push(L, 1, ts_tree_root_node(t->tree));
+	TSTree *const t = *tree_assert(L, 1);
+	node_push(L, 1, ts_tree_root_node(t));
 	return 1;
 }
 
@@ -70,16 +68,16 @@ static int tree_push_root(lua_State *L) {
 //   forward
 // ]]
 static int tree_push_root_with_offset(lua_State *L) {
-	ltreesitter_Tree *const t = tree_assert(L, 1);
+	TSTree *const t = *tree_assert(L, 1);
 	luaL_argcheck(L, lua_type(L, 2) == LUA_TNUMBER, 2, "expected integer");
 	uint32_t offset_bytes = lua_tointeger(L, 2);
 	TSPoint offset_extent = topoint(L, 3);
-	node_push(L, 1, ts_tree_root_node_with_offset(t->tree, offset_bytes, offset_extent));
+	node_push(L, 1, ts_tree_root_node_with_offset(t, offset_bytes, offset_extent));
 	return 1;
 }
 
 static int tree_to_string(lua_State *L) {
-	TSTree *t = tree_assert(L, 1)->tree;
+	TSTree *t = *tree_assert(L, 1);
 	TSNode const root = ts_tree_root_node(t);
 	char *s = ts_node_string(root);
 	lua_pushlstring(L, (char const *)s, strlen(s));
@@ -92,16 +90,10 @@ static int tree_to_string(lua_State *L) {
 // ]]
 static int tree_copy(lua_State *L) {
 	lua_settop(L, 1);
-	ltreesitter_Tree *t = tree_assert(L, 1); // tree
+	TSTree *t = *tree_assert(L, 1); // tree
 	push_kept(L, 1);                         // tree, source text/reader
-	SourceText const *source_text = source_text_assert(L, -1);
-	if (!source_text) {
-		luaL_error(L, "Internal error: Tree child was not a SourceText");
-		return 0;
-	}
-	ltreesitter_Tree *const t_copy = push_uninitialized_tree(L); // tree, source text/reader, new tree
-	t_copy->tree = ts_tree_copy(t->tree);
-	t_copy->text_or_null_if_function_reader = source_text;
+	TSTree **t_copy = push_uninitialized_tree(L); // tree, source text/reader, new tree
+	*t_copy = ts_tree_copy(t);
 	bind_lifetimes(L, -1, -2); // tree keeps source text/reader alive
 	return 1;
 }
@@ -124,9 +116,9 @@ static int tree_copy(lua_State *L) {
 // ]]
 static int tree_edit_s(lua_State *L) {
 	lua_settop(L, 2);
-	ltreesitter_Tree *t = tree_assert(L, 1);
+	TSTree *t = *tree_assert(L, 1);
 	TSInputEdit edit = expect_edit_table_arg(L, 2);
-	ts_tree_edit(t->tree, &edit);
+	ts_tree_edit(t, &edit);
 	return 0;
 }
 
@@ -145,9 +137,9 @@ static int tree_edit_s(lua_State *L) {
 //   Create an edit to the given tree
 // ]]
 static int tree_edit_p(lua_State *L) {
-	ltreesitter_Tree *t = tree_assert(L, 1);
+	TSTree *t = *tree_assert(L, 1);
 	TSInputEdit edit = expect_edit_positional_args(L, 2);
-	ts_tree_edit(t->tree, &edit);
+	ts_tree_edit(t, &edit);
 	return 0;
 }
 
@@ -204,10 +196,10 @@ static void push_range_array(lua_State *L, uint32_t len, TSRange ranges[static l
 //    This would usually be called right after a set of calls to <code>Tree.edit(_s)</code> and <code>Parser.parse_{string,with}</code>
 // ]]
 static int tree_get_changed_ranges(lua_State *L) {
-	ltreesitter_Tree *old = tree_assert(L, 1);
-	ltreesitter_Tree *new = tree_assert(L, 2);
+	TSTree *old = *tree_assert(L, 1);
+	TSTree *new = *tree_assert(L, 2);
 	uint32_t len = 0;
-	TSRange *ranges = ts_tree_get_changed_ranges(old->tree, new->tree, &len);
+	TSRange *ranges = ts_tree_get_changed_ranges(old, new, &len);
 	push_range_array(L, len, ranges);
 	free(ranges);
 	return 1;
@@ -217,21 +209,20 @@ static int tree_get_changed_ranges(lua_State *L) {
 //    Returns the array of ranges used to parse the syntax tree
 // ]]
 static int tree_included_ranges(lua_State *L) {
-	ltreesitter_Tree *t = tree_assert(L, 1);
+	TSTree *t = *tree_assert(L, 1);
 	uint32_t len = 0;
-	TSRange *ranges = ts_tree_included_ranges(t->tree, &len);
+	TSRange *ranges = ts_tree_included_ranges(t, &len);
 	push_range_array(L, len, ranges);
 	free(ranges);
 	return 1;
 }
 
 static int tree_gc(lua_State *L) {
-	ltreesitter_Tree *t = tree_assert(L, 1);
+	TSTree *t = *tree_assert(L, 1);
 #ifdef LOG_GC
 	printf("Tree %p is being garbage collected\n", (void const *)t);
-	printf("    source text=%p\n", (void const *)t->text_or_null_if_function_reader);
 #endif
-	ts_tree_delete(t->tree);
+	ts_tree_delete(t);
 	return 0;
 }
 

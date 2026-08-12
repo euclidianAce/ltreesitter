@@ -13,8 +13,6 @@
 	static inline t *(prefix##_check)(lua_State *L, int idx) { return testudata(L, idx, name); } \
 	static inline t *(prefix##_assert)(lua_State *L, int idx) { return luaL_checkudata(L, idx, name); }
 
-typedef struct ltreesitter_Tree ltreesitter_Tree;
-
 #define LTREESITTER_LANGUAGE_METATABLE_NAME "ltreesitter.Language"
 #define LTREESITTER_PARSER_METATABLE_NAME "ltreesitter.Parser"
 #define LTREESITTER_TREE_METATABLE_NAME "ltreesitter.Tree"
@@ -31,13 +29,6 @@ typedef struct {
 } SourceText;
 #define LTREESITTER_SOURCE_TEXT_METATABLE_NAME "ltreesitter.SourceText"
 
-struct ltreesitter_Tree {
-	TSTree *tree;
-	// TODO: the source text is kept in the registry, we don't need this
-	SourceText const *text_or_null_if_function_reader;
-};
-
-// TODO: TSTreeCursor
 // TODO: TSLookaheadIterator
 
 // pointer will only be valid for as long as it is on the stack as it may be garbage collected

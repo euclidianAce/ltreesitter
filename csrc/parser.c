@@ -100,7 +100,7 @@ static int parser_parse_string(lua_State *L) {
 
 	TSTree *const old_tree = lua_type(L, 4) == LUA_TNIL
 		? NULL
-		: tree_assert(L, 4)->tree;
+		: *tree_assert(L, 4);
 
 	// #CustomEncoding
 	// if (encoding == TSInputEncodingCustom)
@@ -220,7 +220,7 @@ static int parser_parse_with(lua_State *L) {
 	TSTree *old_tree = NULL;
 	TSInputEncoding encoding = encoding_from_str(L, 4);
 	if (!lua_isnil(L, 5)) {
-		old_tree = tree_assert(L, 5)->tree;
+		old_tree = *tree_assert(L, 5);
 	}
 	lua_pop(L, 2);
 	struct CallInfo read_payload = {
