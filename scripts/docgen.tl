@@ -295,8 +295,8 @@ local function traverse_docs(t: DocDef, prefix?: string, entries?: {DocInfo}): {
                full_name, full_name
             ),
             doc = string.format(
-               '<doc-item><a name="%s"><code>%s: %s</code></a><div>%s</div></doc-item>',
-               full_name, full_name, typ, content
+               '<doc-item id="%s"><h2><a href="#%s">❖</a><code>%s: %s</code></h2><div>%s</div></doc-item>',
+               full_name, full_name, full_name, typ, content
             )
          })
       end
@@ -362,12 +362,26 @@ doc-item {
    margin-bottom: 2em;
 
    & > * {
-      &:not(a) {
+      &:not(h2) {
           margin-left: 4em;
       }
    }
-   & > a {
+
+   & > h2 {
+      position: relative;
       font-size: 1.2em;
+
+      & > a {
+         display: none;
+         position: absolute;
+         top: -0.2em; /* This is a hack */
+         left: -1em;
+         padding-right: 0.3em;
+      }
+   }
+
+   &:hover > h2 > a {
+      display: initial;
    }
 }
 </style>]==]
@@ -389,8 +403,7 @@ do
 
    local documentation <const> = {}
 
-   w("<module-listing>")
-   w("<h3>", current_module, "</h3>")
+   w("<nav><module-listing><h3>", current_module, "</h3>")
 
    for _, entry in ipairs(doc_entries) do
       if entry.mod ~= "" and entry.mod ~= current_module then
@@ -403,9 +416,7 @@ do
       table.insert(documentation, entry.doc)
    end
 
-   w("</module-listing>")
-
-   w("<hr>")
+   w("</module-listing></nav><hr>")
 
    for _, doc in ipairs(documentation) do
       w(doc)

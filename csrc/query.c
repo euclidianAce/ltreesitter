@@ -397,14 +397,12 @@ static void query_cursor_set_range(lua_State *L, TSQueryCursor *c) {
 //   it will either be <code>nil</code> or an array of <code>Node</code>
 //
 //   Example:
-//   <p>
 //   <pre>
 //   local q = parser:query[[ (comment) @my_match ]]
 //   for match in q:match(node) do
 //      print(match.captures.my_match)
 //   end
 //   </pre>
-//   </p>
 //
 //   <code>predicates</code> is a map of functions to determine whether a query matches and/or execute side effects
 //
@@ -413,19 +411,29 @@ static void query_cursor_set_range(lua_State *L, TSQueryCursor *c) {
 //
 //   Additionally, you will not have access to the return values of these functions, if you'd like to keep the results of a computation, make your functions have side-effects to write somewhere you can access.
 //
+//   <p>
 //   By default the following predicates are provided.
-//      <code> (#eq? ...) </code> will match if all arguments provided are equal<br>
-//      <code> (#not-eq? a b) </code> will match if the two arguments provided are not equal<br>
-//      <code> (#match? text pattern) </code> will match the provided <code>text</code> matches the given <code>pattern</code>. Matches are determined by Lua's standard <code>string.match</code> function.<br>
-//      <code> (#not-match? text pattern) </code> inverse of <code>match?</code><br>
-//      <code> (#find? text substring) </code> will match if <code>text</code> contains <code>substring</code>. The substring is found with Lua's standard <code>string.find</code>, but the search always starts from the beginning, and pattern matching is disabled. This is equivalent to <code>string.find(text, substring, 0, true)</code><br>
-//      <code> (#not-find? text substring) </code> inverse of <code>find?</code><br>
+//   <ul>
+//      <li><code> (#eq? ...) </code> will match if all arguments provided are equal</li>
+//      <li><code> (#not-eq? a b) </code> will match if the two arguments provided are not equal</li>
+//      <li><code> (#match? text pattern) </code> will match the provided <code>text</code> matches the given <code>pattern</code>. Matches are determined by Lua's standard <code>string.match</code> function.</li>
+//      <li><code> (#not-match? text pattern) </code> inverse of <code>match?</code></li>
+//      <li><code> (#find? text substring) </code> will match if <code>text</code> contains <code>substring</code>. The substring is found with Lua's standard <code>string.find</code>, but the search always starts from the beginning, and pattern matching is disabled. This is equivalent to <code>string.find(text, substring, 0, true)</code></li>
+//      <li><code> (#not-find? text substring) </code> inverse of <code>find?</code></li>
+//   </ul>
+//   </p>
 //
-//   Predicate evaluation order:
+//   Predicate evaluation order:<br>
 //
-//      Since predicates that end with a <code>?</code> affect whether a node matches, these are run first, in the order they appear in the query's source. Once all <code>?</code> queries are run, all the non-<code>?</code> queries are run in the order they appear in the query's source.
+//   <p>
+//   Since predicates that end with a <code>?</code> affect whether a node
+//   matches, these are run first, in the order they appear in the query's
+//   source. Once all <code>?</code> queries are run, all the
+//   non-<code>?</code> queries are run in the order they appear in the query's
+//   source.
+//   </p>
 //
-//   Example:
+//   Example:<br>
 //   The following snippet will match lua functions that have a single LDoc/EmmyLua style comment above them
 //   <pre>
 //   local parser = ltreesitter.require("lua"):parser()
@@ -535,7 +543,8 @@ static int query_capture_factory(lua_State *L) {
 //    print(y) -- => bar
 //    </pre>
 //
-//    If you'd like to interact with the matches/captures of a query, see the Query.match and Query.capture iterators
+//    If you'd like to interact with the matches/captures of a query, see the
+//    <a href=#Query.match>Query.match</a> and <a href=#Query.capture>Query.capture</a> iterators
 // ]===]
 static int query_exec(lua_State *L) {
 	TSQuery *const q = *query_assert(L, 1);
@@ -771,22 +780,22 @@ static int make_cursor(lua_State *L) {
 //
 //   e.g. Given a (c) query like with source:
 //
-//   <code>
-//      local q = c:query [[
-//        ((_ declarator: (identifier) @name)
-//         (#match? @name "[a-z]+")
-//         (#set! @name true))
-//      ]]
-//   </code>
+//   <pre>
+//   local q = c:query [[
+//     ((_ declarator: (identifier) @name)
+//      (#match? @name "[a-z]+")
+//      (#set! @name true))
+//   ]]
+//   </pre>
 //
 //   <code>q:predicates_for_pattern(0)</code> would return:
 //
-//   <code>
-//      {
-//         { "match?", { capture_name = "name" }, "[a-z]+" },
-//         { "set!", { capture_name = "name" }, "true" },
-//      }
-//   </code>
+//   <pre>
+//   {
+//      { "match?", { capture_name = "name" }, "[a-z]+" },
+//      { "set!", { capture_name = "name" }, "true" },
+//   }
+//   </pre>
 // ]==]
 static int predicates_for_pattern(lua_State *L) {
 	TSQuery const *const q = *query_assert(L, 1);

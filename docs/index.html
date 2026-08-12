@@ -26,7 +26,7 @@ h2 {
 
 pre {
    background-color: #2B2735;
-   padding: 0.2em;
+   padding: 0.5em;
    border-radius: 0.5em;
    overflow-x: auto;
 }
@@ -47,18 +47,31 @@ doc-item {
    margin-bottom: 2em;
 
    & > * {
-      &:not(a) {
+      &:not(h2) {
           margin-left: 4em;
       }
    }
-   & > a {
+
+   & > h2 {
+      position: relative;
       font-size: 1.2em;
+
+      & > a {
+         display: none;
+         position: absolute;
+         top: -0.2em; /* This is a hack */
+         left: -1em;
+         padding-right: 0.3em;
+      }
+   }
+
+   &:hover > h2 > a {
+      display: initial;
    }
 }
 </style>
 <body>
-<module-listing>
-<h3>ltreesitter</h3>
+<nav><module-listing><h3>ltreesitter</h3>
 <a href="#TREE_SITTER_LANGUAGE_VERSION">TREE_SITTER_LANGUAGE_VERSION</a>
 <a href="#TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION">TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION</a>
 <a href="#load">load</a>
@@ -191,368 +204,376 @@ doc-item {
 <a href="#Tree.included_ranges">Tree.included_ranges</a>
 <a href="#Tree.root">Tree.root</a>
 <a href="#Tree.root_with_offset">Tree.root_with_offset</a>
-</module-listing>
-<hr>
-<doc-item><a name="TREE_SITTER_LANGUAGE_VERSION"><code>TREE_SITTER_LANGUAGE_VERSION: integer</code></a><div>The current language ABI version supported by the used version of tree-sitter</div></doc-item>
-<doc-item><a name="TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION"><code>TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION: integer</code></a><div>The minimum language ABI version supported by the used version of tree-sitter</div></doc-item>
-<doc-item><a name="load"><code>load: function(file_name: string, language_name: string): Language, string</code></a><div>Load a language from a given file
+</module-listing></nav><hr>
+<doc-item id="TREE_SITTER_LANGUAGE_VERSION"><h2><a href="#TREE_SITTER_LANGUAGE_VERSION">❖</a><code>TREE_SITTER_LANGUAGE_VERSION: integer</code></h2><div>The current language ABI version supported by the used version of tree-sitter</div></doc-item>
+<doc-item id="TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION"><h2><a href="#TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION">❖</a><code>TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION: integer</code></h2><div>The minimum language ABI version supported by the used version of tree-sitter</div></doc-item>
+<doc-item id="load"><h2><a href="#load">❖</a><code>load: function(file_name: string, language_name: string): Language, string</code></h2><div>Load a language from a given file
 
-    Keep in mind that this includes the <code>.so</code>, <code>.dll</code>, or <code>.dynlib</code> extension
+Keep in mind that this includes the <code>.so</code>, <code>.dll</code>, or <code>.dynlib</code> extension
 
-    On Unix this uses dlopen, on Windows this uses LoadLibrary so if a path without a path separator is given, these functions have their own path's that they will search for your file in.
-    So if in doubt use a file path like
-    <pre>
-    local my_language = ltreesitter.load("./my_parser.so", "my_language")
-    </pre></div></doc-item>
-<doc-item><a name="require"><code>require: function(library_file_name: string, language_name?: string): Language, string</code></a><div>Search <code>package.cpath</code> for a parser with the filename <code>library_file_name.so</code> or <code>parsers/library_file_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_'language_name'</code>
-    <code>language_name</code> is optional and will be set to <code>library_file_name</code> if not provided.
+On Unix this uses dlopen, on Windows this uses LoadLibrary so if a path without a path separator is given, these functions have their own path's that they will search for your file in.
+So if in doubt use a file path like
+<pre>
+local my_language = ltreesitter.load("./my_parser.so", "my_language")
+</pre></div></doc-item>
+<doc-item id="require"><h2><a href="#require">❖</a><code>require: function(library_file_name: string, language_name?: string): Language, string</code></h2><div>Search <code>package.cpath</code> for a parser with the filename <code>library_file_name.so</code> or <code>parsers/library_file_name.so</code> (or <code>.dll</code> on Windows) and try to load the symbol <code>tree_sitter_'language_name'</code>
+<code>language_name</code> is optional and will be set to <code>library_file_name</code> if not provided.
 
-    So if you want to load a Lua parser from a file named <code>lua.so</code> then use <code>ltreesitter.require("lua")</code>
-    But if you want to load a Lua parser from a file named <code>parser.so</code> then use <code>ltreesitter.require("parser", "lua")</code>
+So if you want to load a Lua parser from a file named <code>lua.so</code> then use <code>ltreesitter.require("lua")</code>
+But if you want to load a Lua parser from a file named <code>parser.so</code> then use <code>ltreesitter.require("parser", "lua")</code>
 
-    Like the regular <code>require</code>, this will error if the parser is not found or the symbol couldn't be loaded. Use either <code>pcall</code> or <code>ltreesitter.load</code> to not error out on failure.
+Like the regular <code>require</code>, this will error if the parser is not found or the symbol couldn't be loaded. Use either <code>pcall</code> or <code>ltreesitter.load</code> to not error out on failure.
 
-    Returns the language and the path it was loaded from.
+Returns the language and the path it was loaded from.
 
-    <pre>
-    local my_language, loaded_from = ltreesitter.require("my_language")
-    print(my_language:name(), loaded_from) -- "my_language", /home/user/.luarocks/lib/lua/5.4/parsers/my_language.so
-    -- etc.
-    </pre></div></doc-item>
-<doc-item><a name="tree_sitter_version"><code>tree_sitter_version: string</code></a><div>The version of the tree-sitter library ltreesitter was built with</div></doc-item>
-<doc-item><a name="version"><code>version: string</code></a><div>The version of ltreesitter</div></doc-item>
+<pre>
+local my_language, loaded_from = ltreesitter.require("my_language")
+print(my_language:name(), loaded_from) -- "my_language", /home/user/.luarocks/lib/lua/5.4/parsers/my_language.so
+-- etc.
+</pre></div></doc-item>
+<doc-item id="tree_sitter_version"><h2><a href="#tree_sitter_version">❖</a><code>tree_sitter_version: string</code></h2><div>The version of the tree-sitter library ltreesitter was built with</div></doc-item>
+<doc-item id="version"><h2><a href="#version">❖</a><code>version: string</code></h2><div>The version of ltreesitter</div></doc-item>
 
-<doc-item><a name="Cursor.copy"><code>Cursor.copy: function(Cursor): Cursor</code></a><div>Create a copy of the given cursor</div></doc-item>
-<doc-item><a name="Cursor.current_depth"><code>Cursor.current_depth: function(Cursor): integer</code></a><div>Get the depth of the cursor's current node relative to the node the cursor
-   was constructed with</div></doc-item>
-<doc-item><a name="Cursor.current_descendant_index"><code>Cursor.current_descendant_index: function(Cursor): integer</code></a><div>Get the cursor's current node index</div></doc-item>
-<doc-item><a name="Cursor.current_field_id"><code>Cursor.current_field_id: function(Cursor): FieldId</code></a><div>Get the field id of the given cursor's current node<br>
-    May return nil</div></doc-item>
-<doc-item><a name="Cursor.current_field_name"><code>Cursor.current_field_name: function(Cursor): string</code></a><div>Get the field name of the current node under the cursor</div></doc-item>
-<doc-item><a name="Cursor.current_node"><code>Cursor.current_node: function(Cursor): Node</code></a><div>Get the current node under the cursor</div></doc-item>
-<doc-item><a name="Cursor.goto_descendant"><code>Cursor.goto_descendant: function(Cursor, offset: integer)</code></a><div>Move the cursor to the nth descendant of the original node this cursor was
-    constructed with. Zero represents the original node itself.</div></doc-item>
-<doc-item><a name="Cursor.goto_first_child"><code>Cursor.goto_first_child: function(Cursor): boolean</code></a><div>Position the cursor at the first child of the current node
+<doc-item id="Cursor.copy"><h2><a href="#Cursor.copy">❖</a><code>Cursor.copy: function(Cursor): Cursor</code></h2><div>Create a copy of the given cursor</div></doc-item>
+<doc-item id="Cursor.current_depth"><h2><a href="#Cursor.current_depth">❖</a><code>Cursor.current_depth: function(Cursor): integer</code></h2><div>Get the depth of the cursor's current node relative to the node the cursor
+was constructed with</div></doc-item>
+<doc-item id="Cursor.current_descendant_index"><h2><a href="#Cursor.current_descendant_index">❖</a><code>Cursor.current_descendant_index: function(Cursor): integer</code></h2><div>Get the cursor's current node index</div></doc-item>
+<doc-item id="Cursor.current_field_id"><h2><a href="#Cursor.current_field_id">❖</a><code>Cursor.current_field_id: function(Cursor): FieldId</code></h2><div>Get the field id of the given cursor's current node<br>
+May return nil</div></doc-item>
+<doc-item id="Cursor.current_field_name"><h2><a href="#Cursor.current_field_name">❖</a><code>Cursor.current_field_name: function(Cursor): string</code></h2><div>Get the field name of the current node under the cursor</div></doc-item>
+<doc-item id="Cursor.current_node"><h2><a href="#Cursor.current_node">❖</a><code>Cursor.current_node: function(Cursor): Node</code></h2><div>Get the current node under the cursor</div></doc-item>
+<doc-item id="Cursor.goto_descendant"><h2><a href="#Cursor.goto_descendant">❖</a><code>Cursor.goto_descendant: function(Cursor, offset: integer)</code></h2><div>Move the cursor to the nth descendant of the original node this cursor was
+constructed with. Zero represents the original node itself.</div></doc-item>
+<doc-item id="Cursor.goto_first_child"><h2><a href="#Cursor.goto_first_child">❖</a><code>Cursor.goto_first_child: function(Cursor): boolean</code></h2><div>Position the cursor at the first child of the current node
 
-    Returns true if the cursor was able to move</div></doc-item>
-<doc-item><a name="Cursor.goto_first_child_for_byte"><code>Cursor.goto_first_child_for_byte: function(Cursor, integer): integer</code></a><div>Move the given cursor to the first child of its current node that contains
-   or starts after the given offset
+Returns true if the cursor was able to move</div></doc-item>
+<doc-item id="Cursor.goto_first_child_for_byte"><h2><a href="#Cursor.goto_first_child_for_byte">❖</a><code>Cursor.goto_first_child_for_byte: function(Cursor, integer): integer</code></h2><div>Move the given cursor to the first child of its current node that contains
+or starts after the given offset
 
-   Returns the index of the child node or nil if no such child was found</div></doc-item>
-<doc-item><a name="Cursor.goto_first_child_for_point"><code>Cursor.goto_first_child_for_point: function(Cursor, Point): integer</code></a><div>Move the given cursor to the first child of its current node that contains
-    or starts after the given point
+Returns the index of the child node or nil if no such child was found</div></doc-item>
+<doc-item id="Cursor.goto_first_child_for_point"><h2><a href="#Cursor.goto_first_child_for_point">❖</a><code>Cursor.goto_first_child_for_point: function(Cursor, Point): integer</code></h2><div>Move the given cursor to the first child of its current node that contains
+or starts after the given point
 
-    Returns the index of the child node or nil if no such child was found</div></doc-item>
-<doc-item><a name="Cursor.goto_last_child"><code>Cursor.goto_last_child: function(Cursor): boolean</code></a><div>Position the cursor at the first child of the current node
+Returns the index of the child node or nil if no such child was found</div></doc-item>
+<doc-item id="Cursor.goto_last_child"><h2><a href="#Cursor.goto_last_child">❖</a><code>Cursor.goto_last_child: function(Cursor): boolean</code></h2><div>Position the cursor at the first child of the current node
 
-   Returns true if the cursor was able to move</div></doc-item>
-<doc-item><a name="Cursor.goto_next_sibling"><code>Cursor.goto_next_sibling: function(Cursor): boolean</code></a><div>Position the cursor at the next sibling of the current node
+Returns true if the cursor was able to move</div></doc-item>
+<doc-item id="Cursor.goto_next_sibling"><h2><a href="#Cursor.goto_next_sibling">❖</a><code>Cursor.goto_next_sibling: function(Cursor): boolean</code></h2><div>Position the cursor at the next sibling of the current node
 
-   Returns true if there was a sibling to move to</div></doc-item>
-<doc-item><a name="Cursor.goto_parent"><code>Cursor.goto_parent: function(Cursor): boolean</code></a><div>Position the cursor at the parent of the current node</div></doc-item>
-<doc-item><a name="Cursor.goto_previous_sibling"><code>Cursor.goto_previous_sibling: function(Cursor): boolean</code></a><div>Position the cursor at the sibling of the current node
+Returns true if there was a sibling to move to</div></doc-item>
+<doc-item id="Cursor.goto_parent"><h2><a href="#Cursor.goto_parent">❖</a><code>Cursor.goto_parent: function(Cursor): boolean</code></h2><div>Position the cursor at the parent of the current node</div></doc-item>
+<doc-item id="Cursor.goto_previous_sibling"><h2><a href="#Cursor.goto_previous_sibling">❖</a><code>Cursor.goto_previous_sibling: function(Cursor): boolean</code></h2><div>Position the cursor at the sibling of the current node
 
-    Returns true if there was a sibling to move to</div></doc-item>
-<doc-item><a name="Cursor.reset"><code>Cursor.reset: function(Cursor, Node)</code></a><div>Position the cursor at the given node</div></doc-item>
-<doc-item><a name="Cursor.reset_to"><code>Cursor.reset_to: function(Cursor, Cursor)</code></a><div>Re-initialize a tree cursor to the same position as another cursor.</div></doc-item>
+Returns true if there was a sibling to move to</div></doc-item>
+<doc-item id="Cursor.reset"><h2><a href="#Cursor.reset">❖</a><code>Cursor.reset: function(Cursor, Node)</code></h2><div>Position the cursor at the given node</div></doc-item>
+<doc-item id="Cursor.reset_to"><h2><a href="#Cursor.reset_to">❖</a><code>Cursor.reset_to: function(Cursor, Cursor)</code></h2><div>Re-initialize a tree cursor to the same position as another cursor.</div></doc-item>
 
-<doc-item><a name="Language.abi_version"><code>Language.abi_version: function(Language): integer</code></a><div>Get the ABI version number for the given parser's language</div></doc-item>
-<doc-item><a name="Language.field_count"><code>Language.field_count: function(Language): integer</code></a><div>Get the number of distinct field names in the given parser's language</div></doc-item>
-<doc-item><a name="Language.field_id_for_name"><code>Language.field_id_for_name: function(Language, string): FieldId</code></a><div>Get the numeric id for the given field name</div></doc-item>
-<doc-item><a name="Language.metadata"><code>Language.metadata: function(Language): LanguageMetadata</code></a><div>Get the metadata for the given language. This information relies on
-    the language author providing the correct data in the language's
-    <code>tree-sitter.json</code>
+<doc-item id="Language.abi_version"><h2><a href="#Language.abi_version">❖</a><code>Language.abi_version: function(Language): integer</code></h2><div>Get the ABI version number for the given parser's language</div></doc-item>
+<doc-item id="Language.field_count"><h2><a href="#Language.field_count">❖</a><code>Language.field_count: function(Language): integer</code></h2><div>Get the number of distinct field names in the given parser's language</div></doc-item>
+<doc-item id="Language.field_id_for_name"><h2><a href="#Language.field_id_for_name">❖</a><code>Language.field_id_for_name: function(Language, string): FieldId</code></h2><div>Get the numeric id for the given field name</div></doc-item>
+<doc-item id="Language.metadata"><h2><a href="#Language.metadata">❖</a><code>Language.metadata: function(Language): LanguageMetadata</code></h2><div>Get the metadata for the given language. This information relies on
+the language author providing the correct data in the language's
+<code>tree-sitter.json</code>
 
-    May return nil</div></doc-item>
-<doc-item><a name="Language.name"><code>Language.name: function(Language): string</code></a><div>Get the name of the language. May return nil.</div></doc-item>
-<doc-item><a name="Language.name_for_field_id"><code>Language.name_for_field_id: function(Language, FieldId): string</code></a><div>Get the name for a numeric field id</div></doc-item>
-<doc-item><a name="Language.next_state"><code>Language.next_state: function(Language, StateId, Symbol): StateId</code></a><div>Get the next parse state</div></doc-item>
-<doc-item><a name="Language.parser"><code>Language.parser: function(Language): Parser</code></a><div>Create a parser of the given language</div></doc-item>
-<doc-item><a name="Language.query"><code>Language.query: function(Language, string): Query</code></a><div>Create a query out of the given string for this language</div></doc-item>
-<doc-item><a name="Language.state_count"><code>Language.state_count: function(Language): integer</code></a><div>Get the number of valid states in the given language</div></doc-item>
-<doc-item><a name="Language.subtypes"><code>Language.subtypes: function(Language, supertype: Symbol): {Symbol}</code></a><div>Get a list of all supertype symbols for the given language</div></doc-item>
-<doc-item><a name="Language.supertypes"><code>Language.supertypes: function(Language): {Symbol}</code></a><div>Get a list of all supertype symbols for the given language</div></doc-item>
-<doc-item><a name="Language.symbol_count"><code>Language.symbol_count: function(Language): integer</code></a><div>Get the number of distinct node types in the given language</div></doc-item>
-<doc-item><a name="Language.symbol_for_name"><code>Language.symbol_for_name: function(Language, string, is_named: boolean): Symbol</code></a><div>Get the numerical id for the given node type string</div></doc-item>
-<doc-item><a name="Language.symbol_name"><code>Language.symbol_name: function(Language, Symbol): string</code></a><div>Get a node type string for the given symbol id</div></doc-item>
-<doc-item><a name="Language.symbol_type"><code>Language.symbol_type: function(Language, Symbol): SymbolType</code></a><div>Check whether the given node type id belongs to named nodes, anonymous nodes,
-    or hidden nodes</div></doc-item>
+May return nil</div></doc-item>
+<doc-item id="Language.name"><h2><a href="#Language.name">❖</a><code>Language.name: function(Language): string</code></h2><div>Get the name of the language. May return nil.</div></doc-item>
+<doc-item id="Language.name_for_field_id"><h2><a href="#Language.name_for_field_id">❖</a><code>Language.name_for_field_id: function(Language, FieldId): string</code></h2><div>Get the name for a numeric field id</div></doc-item>
+<doc-item id="Language.next_state"><h2><a href="#Language.next_state">❖</a><code>Language.next_state: function(Language, StateId, Symbol): StateId</code></h2><div>Get the next parse state</div></doc-item>
+<doc-item id="Language.parser"><h2><a href="#Language.parser">❖</a><code>Language.parser: function(Language): Parser</code></h2><div>Create a parser of the given language</div></doc-item>
+<doc-item id="Language.query"><h2><a href="#Language.query">❖</a><code>Language.query: function(Language, string): Query</code></h2><div>Create a query out of the given string for this language</div></doc-item>
+<doc-item id="Language.state_count"><h2><a href="#Language.state_count">❖</a><code>Language.state_count: function(Language): integer</code></h2><div>Get the number of valid states in the given language</div></doc-item>
+<doc-item id="Language.subtypes"><h2><a href="#Language.subtypes">❖</a><code>Language.subtypes: function(Language, supertype: Symbol): {Symbol}</code></h2><div>Get a list of all supertype symbols for the given language</div></doc-item>
+<doc-item id="Language.supertypes"><h2><a href="#Language.supertypes">❖</a><code>Language.supertypes: function(Language): {Symbol}</code></h2><div>Get a list of all supertype symbols for the given language</div></doc-item>
+<doc-item id="Language.symbol_count"><h2><a href="#Language.symbol_count">❖</a><code>Language.symbol_count: function(Language): integer</code></h2><div>Get the number of distinct node types in the given language</div></doc-item>
+<doc-item id="Language.symbol_for_name"><h2><a href="#Language.symbol_for_name">❖</a><code>Language.symbol_for_name: function(Language, string, is_named: boolean): Symbol</code></h2><div>Get the numerical id for the given node type string</div></doc-item>
+<doc-item id="Language.symbol_name"><h2><a href="#Language.symbol_name">❖</a><code>Language.symbol_name: function(Language, Symbol): string</code></h2><div>Get a node type string for the given symbol id</div></doc-item>
+<doc-item id="Language.symbol_type"><h2><a href="#Language.symbol_type">❖</a><code>Language.symbol_type: function(Language, Symbol): SymbolType</code></h2><div>Check whether the given node type id belongs to named nodes, anonymous nodes,
+or hidden nodes</div></doc-item>
 
-<doc-item><a name="Node.child"><code>Node.child: function(Node, zero_index: integer): Node</code></a><div>Get the node's <code>zero_index</code>'th child (0-indexed)</div></doc-item>
-<doc-item><a name="Node.child_by_field_id"><code>Node.child_by_field_id: function(Node, FieldId): Node</code></a><div>Get a node's child given a field id</div></doc-item>
-<doc-item><a name="Node.child_by_field_name"><code>Node.child_by_field_name: function(Node, string): Node</code></a><div>Get a node's child given a field name</div></doc-item>
-<doc-item><a name="Node.child_count"><code>Node.child_count: function(Node): integer</code></a><div>Get the number of children a node has</div></doc-item>
-<doc-item><a name="Node.child_with_descendant"><code>Node.child_with_descendant: function(Node, descendant: Node): Node</code></a><div>Get the node that contains <code>descendant</code>. Can return <code>descendant</code> itself</div></doc-item>
-<doc-item><a name="Node.children"><code>Node.children: function(Node): function(): Node</code></a><div>Iterate over a node's children</div></doc-item>
-<doc-item><a name="Node.create_cursor"><code>Node.create_cursor: function(Node): Cursor</code></a><div>Create a new cursor at the given node</div></doc-item>
-<doc-item><a name="Node.descendant_count"><code>Node.descendant_count: function(Node): integer</code></a><div>Returns the number of descendants this node has</div></doc-item>
-<doc-item><a name="Node.descendant_for_byte_range"><code>Node.descendant_for_byte_range: function(Node, start_byte: integer, end_byte: integer): Node</code></a><div>Returns the smallest descendant node that spans the given range</div></doc-item>
-<doc-item><a name="Node.descendant_for_point_range"><code>Node.descendant_for_point_range: function(Node, start_point: Point, end_point: Point): Node</code></a><div>Returns the smallest descendant node that spans the given range</div></doc-item>
-<doc-item><a name="Node.end_byte_offset"><code>Node.end_byte_offset: function(Node): integer</code></a><div>Get the byte offset of the source string that the given node ends at (exclusive)</div></doc-item>
-<doc-item><a name="Node.end_index"><code>Node.end_index: function(Node): integer</code></a><div>Get the inclusive 1-index of the source string that the given node ends at</div></doc-item>
-<doc-item><a name="Node.end_point"><code>Node.end_point: function(Node): Point</code></a><div>Get the row and column of where the given node ends</div></doc-item>
-<doc-item><a name="Node.field_name_for_child"><code>Node.field_name_for_child: function(Node, child_zero_index: integer): string</code></a><div>Returns the field name for the child at the given zero index (if any)</div></doc-item>
-<doc-item><a name="Node.field_name_for_named_child"><code>Node.field_name_for_named_child: function(Node, child_zero_index: integer): string</code></a><div>Returns the field name for the named child at the given zero index (if any)</div></doc-item>
-<doc-item><a name="Node.first_child_for_byte"><code>Node.first_child_for_byte: function(Node, byte_offset: integer): Node</code></a><div>Returns the first child that contains or starts after the given byte offset</div></doc-item>
-<doc-item><a name="Node.first_named_child_for_byte"><code>Node.first_named_child_for_byte: function(Node, byte_offset: integer): Node</code></a><div>Returns the first named child that contains or starts after the given byte offset</div></doc-item>
-<doc-item><a name="Node.grammar_symbol"><code>Node.grammar_symbol: function(Node): Symbol</code></a><div>Returns the type of a given node as a numeric id as it appears in the grammar ignoring aliases
+<doc-item id="Node.child"><h2><a href="#Node.child">❖</a><code>Node.child: function(Node, zero_index: integer): Node</code></h2><div>Get the node's <code>zero_index</code>'th child (0-indexed)</div></doc-item>
+<doc-item id="Node.child_by_field_id"><h2><a href="#Node.child_by_field_id">❖</a><code>Node.child_by_field_id: function(Node, FieldId): Node</code></h2><div>Get a node's child given a field id</div></doc-item>
+<doc-item id="Node.child_by_field_name"><h2><a href="#Node.child_by_field_name">❖</a><code>Node.child_by_field_name: function(Node, string): Node</code></h2><div>Get a node's child given a field name</div></doc-item>
+<doc-item id="Node.child_count"><h2><a href="#Node.child_count">❖</a><code>Node.child_count: function(Node): integer</code></h2><div>Get the number of children a node has</div></doc-item>
+<doc-item id="Node.child_with_descendant"><h2><a href="#Node.child_with_descendant">❖</a><code>Node.child_with_descendant: function(Node, descendant: Node): Node</code></h2><div>Get the node that contains <code>descendant</code>. Can return <code>descendant</code> itself</div></doc-item>
+<doc-item id="Node.children"><h2><a href="#Node.children">❖</a><code>Node.children: function(Node): function(): Node</code></h2><div>Iterate over a node's children</div></doc-item>
+<doc-item id="Node.create_cursor"><h2><a href="#Node.create_cursor">❖</a><code>Node.create_cursor: function(Node): Cursor</code></h2><div>Create a new cursor at the given node</div></doc-item>
+<doc-item id="Node.descendant_count"><h2><a href="#Node.descendant_count">❖</a><code>Node.descendant_count: function(Node): integer</code></h2><div>Returns the number of descendants this node has</div></doc-item>
+<doc-item id="Node.descendant_for_byte_range"><h2><a href="#Node.descendant_for_byte_range">❖</a><code>Node.descendant_for_byte_range: function(Node, start_byte: integer, end_byte: integer): Node</code></h2><div>Returns the smallest descendant node that spans the given range</div></doc-item>
+<doc-item id="Node.descendant_for_point_range"><h2><a href="#Node.descendant_for_point_range">❖</a><code>Node.descendant_for_point_range: function(Node, start_point: Point, end_point: Point): Node</code></h2><div>Returns the smallest descendant node that spans the given range</div></doc-item>
+<doc-item id="Node.end_byte_offset"><h2><a href="#Node.end_byte_offset">❖</a><code>Node.end_byte_offset: function(Node): integer</code></h2><div>Get the byte offset of the source string that the given node ends at (exclusive)</div></doc-item>
+<doc-item id="Node.end_index"><h2><a href="#Node.end_index">❖</a><code>Node.end_index: function(Node): integer</code></h2><div>Get the inclusive 1-index of the source string that the given node ends at</div></doc-item>
+<doc-item id="Node.end_point"><h2><a href="#Node.end_point">❖</a><code>Node.end_point: function(Node): Point</code></h2><div>Get the row and column of where the given node ends</div></doc-item>
+<doc-item id="Node.field_name_for_child"><h2><a href="#Node.field_name_for_child">❖</a><code>Node.field_name_for_child: function(Node, child_zero_index: integer): string</code></h2><div>Returns the field name for the child at the given zero index (if any)</div></doc-item>
+<doc-item id="Node.field_name_for_named_child"><h2><a href="#Node.field_name_for_named_child">❖</a><code>Node.field_name_for_named_child: function(Node, child_zero_index: integer): string</code></h2><div>Returns the field name for the named child at the given zero index (if any)</div></doc-item>
+<doc-item id="Node.first_child_for_byte"><h2><a href="#Node.first_child_for_byte">❖</a><code>Node.first_child_for_byte: function(Node, byte_offset: integer): Node</code></h2><div>Returns the first child that contains or starts after the given byte offset</div></doc-item>
+<doc-item id="Node.first_named_child_for_byte"><h2><a href="#Node.first_named_child_for_byte">❖</a><code>Node.first_named_child_for_byte: function(Node, byte_offset: integer): Node</code></h2><div>Returns the first named child that contains or starts after the given byte offset</div></doc-item>
+<doc-item id="Node.grammar_symbol"><h2><a href="#Node.grammar_symbol">❖</a><code>Node.grammar_symbol: function(Node): Symbol</code></h2><div>Returns the type of a given node as a numeric id as it appears in the grammar ignoring aliases
 
-    This is what should be used in <code>Parser:language_next_state()</code> instead of <code>Node:symbol</code></div></doc-item>
-<doc-item><a name="Node.grammar_type"><code>Node.grammar_type: function(Node): string</code></a><div>Returns the type of a given node as a string as it appears in the grammar ignoring aliases</div></doc-item>
-<doc-item><a name="Node.has_changes"><code>Node.has_changes: function(Node): boolean</code></a><div>Returns true when the node has been changed by an edit</div></doc-item>
-<doc-item><a name="Node.has_error"><code>Node.has_error: function(Node): boolean</code></a><div>Returns true when the node is an error</div></doc-item>
-<doc-item><a name="Node.is_extra"><code>Node.is_extra: function(Node): boolean</code></a><div>Get whether or not the current node is extra</div></doc-item>
-<doc-item><a name="Node.is_missing"><code>Node.is_missing: function(Node): boolean</code></a><div>Get whether or not the current node is missing</div></doc-item>
-<doc-item><a name="Node.is_named"><code>Node.is_named: function(Node): boolean</code></a><div>Get whether or not the current node is named</div></doc-item>
-<doc-item><a name="Node.named_child"><code>Node.named_child: function(Node, zero_index: integer): Node</code></a><div>Get the node's <code>zero_index</code>'th named child</div></doc-item>
-<doc-item><a name="Node.named_child_count"><code>Node.named_child_count: function(Node): integer</code></a><div>Get the number of named children a node has</div></doc-item>
-<doc-item><a name="Node.named_children"><code>Node.named_children: function(Node): function(): Node</code></a><div>Iterate over a node's named children</div></doc-item>
-<doc-item><a name="Node.named_descendant_for_byte_range"><code>Node.named_descendant_for_byte_range: function(Node): Node</code></a><div>Returns the smallest named descendant node that spans the given range</div></doc-item>
-<doc-item><a name="Node.named_descendant_for_point_range"><code>Node.named_descendant_for_point_range: function(Node): Node</code></a><div>Returns the smallest named descendant node that spans the given range</div></doc-item>
-<doc-item><a name="Node.next_named_sibling"><code>Node.next_named_sibling: function(Node): Node</code></a><div>Get a node's next named sibling</div></doc-item>
-<doc-item><a name="Node.next_parse_state"><code>Node.next_parse_state: function(Node): StateId</code></a><div>Get the parse state after this node</div></doc-item>
-<doc-item><a name="Node.next_sibling"><code>Node.next_sibling: function(Node): Node</code></a><div>Get a node's next sibling</div></doc-item>
-<doc-item><a name="Node.parent"><code>Node.parent: function(Node): Node</code></a><div>Returns the parent of a given node.
+This is what should be used in <code>Parser:language_next_state()</code> instead of <code>Node:symbol</code></div></doc-item>
+<doc-item id="Node.grammar_type"><h2><a href="#Node.grammar_type">❖</a><code>Node.grammar_type: function(Node): string</code></h2><div>Returns the type of a given node as a string as it appears in the grammar ignoring aliases</div></doc-item>
+<doc-item id="Node.has_changes"><h2><a href="#Node.has_changes">❖</a><code>Node.has_changes: function(Node): boolean</code></h2><div>Returns true when the node has been changed by an edit</div></doc-item>
+<doc-item id="Node.has_error"><h2><a href="#Node.has_error">❖</a><code>Node.has_error: function(Node): boolean</code></h2><div>Returns true when the node is an error</div></doc-item>
+<doc-item id="Node.is_extra"><h2><a href="#Node.is_extra">❖</a><code>Node.is_extra: function(Node): boolean</code></h2><div>Get whether or not the current node is extra</div></doc-item>
+<doc-item id="Node.is_missing"><h2><a href="#Node.is_missing">❖</a><code>Node.is_missing: function(Node): boolean</code></h2><div>Get whether or not the current node is missing</div></doc-item>
+<doc-item id="Node.is_named"><h2><a href="#Node.is_named">❖</a><code>Node.is_named: function(Node): boolean</code></h2><div>Get whether or not the current node is named</div></doc-item>
+<doc-item id="Node.named_child"><h2><a href="#Node.named_child">❖</a><code>Node.named_child: function(Node, zero_index: integer): Node</code></h2><div>Get the node's <code>zero_index</code>'th named child</div></doc-item>
+<doc-item id="Node.named_child_count"><h2><a href="#Node.named_child_count">❖</a><code>Node.named_child_count: function(Node): integer</code></h2><div>Get the number of named children a node has</div></doc-item>
+<doc-item id="Node.named_children"><h2><a href="#Node.named_children">❖</a><code>Node.named_children: function(Node): function(): Node</code></h2><div>Iterate over a node's named children</div></doc-item>
+<doc-item id="Node.named_descendant_for_byte_range"><h2><a href="#Node.named_descendant_for_byte_range">❖</a><code>Node.named_descendant_for_byte_range: function(Node): Node</code></h2><div>Returns the smallest named descendant node that spans the given range</div></doc-item>
+<doc-item id="Node.named_descendant_for_point_range"><h2><a href="#Node.named_descendant_for_point_range">❖</a><code>Node.named_descendant_for_point_range: function(Node): Node</code></h2><div>Returns the smallest named descendant node that spans the given range</div></doc-item>
+<doc-item id="Node.next_named_sibling"><h2><a href="#Node.next_named_sibling">❖</a><code>Node.next_named_sibling: function(Node): Node</code></h2><div>Get a node's next named sibling</div></doc-item>
+<doc-item id="Node.next_parse_state"><h2><a href="#Node.next_parse_state">❖</a><code>Node.next_parse_state: function(Node): StateId</code></h2><div>Get the parse state after this node</div></doc-item>
+<doc-item id="Node.next_sibling"><h2><a href="#Node.next_sibling">❖</a><code>Node.next_sibling: function(Node): Node</code></h2><div>Get a node's next sibling</div></doc-item>
+<doc-item id="Node.parent"><h2><a href="#Node.parent">❖</a><code>Node.parent: function(Node): Node</code></h2><div>Returns the parent of a given node.
 
-    It is recommended to use <code>Node.child_with_descendant</code> for iterating over
-    ancestors</div></doc-item>
-<doc-item><a name="Node.parse_state"><code>Node.parse_state: function(Node): StateId</code></a><div>Get this node's parse state</div></doc-item>
-<doc-item><a name="Node.prev_named_sibling"><code>Node.prev_named_sibling: function(Node): Node</code></a><div>Get a node's previous named sibling</div></doc-item>
-<doc-item><a name="Node.prev_sibling"><code>Node.prev_sibling: function(Node): Node</code></a><div>Get a node's previous sibling</div></doc-item>
-<doc-item><a name="Node.source"><code>Node.source: function(Node): string</code></a><div>Get the substring of the source that was parsed to create <code>Node</code></div></doc-item>
-<doc-item><a name="Node.start_byte_offset"><code>Node.start_byte_offset: function(Node): integer</code></a><div>Get the byte offset of the source string that the given node starts at</div></doc-item>
-<doc-item><a name="Node.start_index"><code>Node.start_index: function(Node): integer</code></a><div>Get the inclusive 1-index of the source string that the given node starts at</div></doc-item>
-<doc-item><a name="Node.start_point"><code>Node.start_point: function(Node): Point</code></a><div>Get the row and column of where the given node starts</div></doc-item>
-<doc-item><a name="Node.symbol"><code>Node.symbol: function(Node): Symbol</code></a><div>Returns the type of a given node as a numeric id</div></doc-item>
-<doc-item><a name="Node.type"><code>Node.type: function(Node): string</code></a><div>Get the type of the given node</div></doc-item>
+It is recommended to use <code>Node.child_with_descendant</code> for iterating over
+ancestors</div></doc-item>
+<doc-item id="Node.parse_state"><h2><a href="#Node.parse_state">❖</a><code>Node.parse_state: function(Node): StateId</code></h2><div>Get this node's parse state</div></doc-item>
+<doc-item id="Node.prev_named_sibling"><h2><a href="#Node.prev_named_sibling">❖</a><code>Node.prev_named_sibling: function(Node): Node</code></h2><div>Get a node's previous named sibling</div></doc-item>
+<doc-item id="Node.prev_sibling"><h2><a href="#Node.prev_sibling">❖</a><code>Node.prev_sibling: function(Node): Node</code></h2><div>Get a node's previous sibling</div></doc-item>
+<doc-item id="Node.source"><h2><a href="#Node.source">❖</a><code>Node.source: function(Node): string</code></h2><div>Get the substring of the source that was parsed to create <code>Node</code></div></doc-item>
+<doc-item id="Node.start_byte_offset"><h2><a href="#Node.start_byte_offset">❖</a><code>Node.start_byte_offset: function(Node): integer</code></h2><div>Get the byte offset of the source string that the given node starts at</div></doc-item>
+<doc-item id="Node.start_index"><h2><a href="#Node.start_index">❖</a><code>Node.start_index: function(Node): integer</code></h2><div>Get the inclusive 1-index of the source string that the given node starts at</div></doc-item>
+<doc-item id="Node.start_point"><h2><a href="#Node.start_point">❖</a><code>Node.start_point: function(Node): Point</code></h2><div>Get the row and column of where the given node starts</div></doc-item>
+<doc-item id="Node.symbol"><h2><a href="#Node.symbol">❖</a><code>Node.symbol: function(Node): Symbol</code></h2><div>Returns the type of a given node as a numeric id</div></doc-item>
+<doc-item id="Node.type"><h2><a href="#Node.type">❖</a><code>Node.type: function(Node): string</code></h2><div>Get the type of the given node</div></doc-item>
 
-<doc-item><a name="Parser.get_ranges"><code>Parser.get_ranges: function(Parser): {Range}</code></a><div>Get the ranges of text that the parser will include when parsing</div></doc-item>
-<doc-item><a name="Parser.parse_string"><code>Parser.parse_string: function(Parser, string, ?Encoding, ?Tree): Tree</code></a><div>Uses the given parser to parse the string
+<doc-item id="Parser.get_ranges"><h2><a href="#Parser.get_ranges">❖</a><code>Parser.get_ranges: function(Parser): {Range}</code></h2><div>Get the ranges of text that the parser will include when parsing</div></doc-item>
+<doc-item id="Parser.parse_string"><h2><a href="#Parser.parse_string">❖</a><code>Parser.parse_string: function(Parser, string, ?Encoding, ?Tree): Tree</code></h2><div>Uses the given parser to parse the string
 
-   If <code>Tree</code> is provided then it will be used to create a new updated tree
-   (but it is the responsibility of the programmer to make the correct <code>Tree:edit</code> calls)</div></doc-item>
-<doc-item><a name="Parser.parse_with"><code>Parser.parse_with: function(
+If <code>Tree</code> is provided then it will be used to create a new updated tree
+(but it is the responsibility of the programmer to make the correct <code>Tree:edit</code> calls)</div></doc-item>
+<doc-item id="Parser.parse_with"><h2><a href="#Parser.parse_with">❖</a><code>Parser.parse_with: function(
           Parser,
           reader: (function(integer, Point): string),
           progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
           encoding?: Encoding,
           old_tree?: Tree
-       ): Tree</code></a><div><code>reader</code> should be a function that takes a byte index
-    and a <code>Point</code> and returns the text at that point. The
-    function should return either <code>nil</code> or an empty string
-    to signal that there is no more text.
+       ): Tree</code></h2><div><code>reader</code> should be a function that takes a byte index
+and a <code>Point</code> and returns the text at that point. The
+function should return either <code>nil</code> or an empty string
+to signal that there is no more text.
 
-    <code>progress_callback</code> should be a function that takes a boolean
-    signalling if an error has occurred, and an integer byte offset. This
-    function will be called intermittently while parsing and may return <code>true</code>
-    to cancel parsing.
+<code>progress_callback</code> should be a function that takes a boolean
+signalling if an error has occurred, and an integer byte offset. This
+function will be called intermittently while parsing and may return <code>true</code>
+to cancel parsing.
 
-    A <code>Tree</code> can be provided to reuse parts of it for parsing,
-    provided that <code>Tree:edit</code> has been called previously
+A <code>Tree</code> can be provided to reuse parts of it for parsing,
+provided that <code>Tree:edit</code> has been called previously
 
-    <code>encoding</code> defaults to <code>"utf-8"</code> when not provided.
+<code>encoding</code> defaults to <code>"utf-8"</code> when not provided.
 
-    May return nil if the progress callback cancelled parsing</div></doc-item>
-<doc-item><a name="Parser.reset"><code>Parser.reset: function(Parser)</code></a><div>Reset the parser, causing the next parse to start from the beginning</div></doc-item>
-<doc-item><a name="Parser.set_ranges"><code>Parser.set_ranges: function(Parser, {Range}): boolean</code></a><div>Sets the ranges that <code>Parser</code> will include when parsing, so you don't have to parse an entire document, but the ranges in the tree will still match the document.
-    The array of <code>Range</code>s must satisfy the following relationship: for a positive integer <code>i</code> within the length of <code>ranges: {Range}</code>:
-    <pre>
-    ranges[i].end_byte <= ranges[i + 1].start_byte
-    </pre>
+May return nil if the progress callback cancelled parsing</div></doc-item>
+<doc-item id="Parser.reset"><h2><a href="#Parser.reset">❖</a><code>Parser.reset: function(Parser)</code></h2><div>Reset the parser, causing the next parse to start from the beginning</div></doc-item>
+<doc-item id="Parser.set_ranges"><h2><a href="#Parser.set_ranges">❖</a><code>Parser.set_ranges: function(Parser, {Range}): boolean</code></h2><div>Sets the ranges that <code>Parser</code> will include when parsing, so you don't have to parse an entire document, but the ranges in the tree will still match the document.
+The array of <code>Range</code>s must satisfy the following relationship: for a positive integer <code>i</code> within the length of <code>ranges: {Range}</code>:
+<pre>
+ranges[i].end_byte <= ranges[i + 1].start_byte
+</pre>
 
-    returns whether or not setting the range succeeded</div></doc-item>
+returns whether or not setting the range succeeded</div></doc-item>
 
-<doc-item><a name="Query.capture"><code>Query.capture: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): (Node, string)</code></a><div>Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs.
-    <code>start</code> and <code>end</code> are optional.
-    They must be passed together with the same type, describing either two bytes or two points.
-    If passed, the query will be executed within the range denoted.
-    If not passed, the default behaviour is to execute the query through the entire range of the node.
+<doc-item id="Query.capture"><h2><a href="#Query.capture">❖</a><code>Query.capture: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): (Node, string)</code></h2><div>Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs.
+<code>start</code> and <code>end</code> are optional.
+They must be passed together with the same type, describing either two bytes or two points.
+If passed, the query will be executed within the range denoted.
+If not passed, the default behaviour is to execute the query through the entire range of the node.
 
-    <pre>
-    local q = parser:query[[ (comment) @my_match ]]
-    for capture, name in q:capture(node) do
-       print(capture, name) -- => (comment), "my_match"
-    end
-    </pre></div></doc-item>
-<doc-item><a name="Query.capture_count"><code>Query.capture_count: function(Query): integer</code></a><div>Returns the number of captures this query has</div></doc-item>
-<doc-item><a name="Query.cursor"><code>Query.cursor: function(Query, Node): QueryCursor</code></a><div>Create a query cursor from the given query, executing over the given node.</div></doc-item>
-<doc-item><a name="Query.disable_capture"><code>Query.disable_capture: function(Query, name: string)</code></a><div>Disable a certain capture within a query, preventing it from being returned in matches.
+<pre>
+local q = parser:query[[ (comment) @my_match ]]
+for capture, name in q:capture(node) do
+   print(capture, name) -- => (comment), "my_match"
+end
+</pre></div></doc-item>
+<doc-item id="Query.capture_count"><h2><a href="#Query.capture_count">❖</a><code>Query.capture_count: function(Query): integer</code></h2><div>Returns the number of captures this query has</div></doc-item>
+<doc-item id="Query.cursor"><h2><a href="#Query.cursor">❖</a><code>Query.cursor: function(Query, Node): QueryCursor</code></h2><div>Create a query cursor from the given query, executing over the given node.</div></doc-item>
+<doc-item id="Query.disable_capture"><h2><a href="#Query.disable_capture">❖</a><code>Query.disable_capture: function(Query, name: string)</code></h2><div>Disable a certain capture within a query, preventing it from being returned in matches.
 
-    Currently there is no way to undo this.</div></doc-item>
-<doc-item><a name="Query.disable_pattern"><code>Query.disable_pattern: function(Query, pattern_zero_index: integer)</code></a><div>Disable a certain pattern within a query, preventing it from being returned in matches.
+Currently there is no way to undo this.</div></doc-item>
+<doc-item id="Query.disable_pattern"><h2><a href="#Query.disable_pattern">❖</a><code>Query.disable_pattern: function(Query, pattern_zero_index: integer)</code></h2><div>Disable a certain pattern within a query, preventing it from being returned in matches.
 
-    Currently there is no way to undo this.</div></doc-item>
-<doc-item><a name="Query.end_byte_for_pattern"><code>Query.end_byte_for_pattern: function(Query, pattern_zero_index: integer): integer</code></a><div>Returns the byte offset where the given pattern ends in the query's source</div></doc-item>
-<doc-item><a name="Query.exec"><code>Query.exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point)</code></a><div>Runs a query. That's it. Nothing more, nothing less.
-    This is intended to be used with predicates that have side effects,
-    i.e. for when you would use <code>Query.match</code> or
-    <code>Query.capture</code>, but do nothing in the for loop.
-    <code>start</code> and <code>end</code> are optional.
-    They must be passed together with the same type, describing either two bytes or two points.
-    If passed, the query will be executed within the range denoted.
-    If not passed, the default behaviour is to execute the query through the entire range of the node.
+Currently there is no way to undo this.</div></doc-item>
+<doc-item id="Query.end_byte_for_pattern"><h2><a href="#Query.end_byte_for_pattern">❖</a><code>Query.end_byte_for_pattern: function(Query, pattern_zero_index: integer): integer</code></h2><div>Returns the byte offset where the given pattern ends in the query's source</div></doc-item>
+<doc-item id="Query.exec"><h2><a href="#Query.exec">❖</a><code>Query.exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point)</code></h2><div>Runs a query. That's it. Nothing more, nothing less.
+This is intended to be used with predicates that have side effects,
+i.e. for when you would use <code>Query.match</code> or
+<code>Query.capture</code>, but do nothing in the for loop.
+<code>start</code> and <code>end</code> are optional.
+They must be passed together with the same type, describing either two bytes or two points.
+If passed, the query will be executed within the range denoted.
+If not passed, the default behaviour is to execute the query through the entire range of the node.
 
-    <pre>
-    local parser = ltreesitter.require("teal"):parser()
+<pre>
+local parser = ltreesitter.require("teal"):parser()
 
-    -- grab a node to query against
-    local root_node = parser:parse_string[[
-       local x: string = "foo"
-       local y: string = "bar"
-    ]]:root()
+-- grab a node to query against
+local root_node = parser:parse_string[[
+   local x: string = "foo"
+   local y: string = "bar"
+]]:root()
 
-    parser
-       :query[[(
-          (var_declaration
-             (var) @var-name
-             (string) @value)
-          (#set! @var-name @value)
-       )]]
-       :exec(root_node, {["set!"] = function(a, b) _G[a] = b:sub(2, -2) end})
+parser
+   :query[[(
+      (var_declaration
+         (var) @var-name
+         (string) @value)
+      (#set! @var-name @value)
+   )]]
+   :exec(root_node, {["set!"] = function(a, b) _G[a] = b:sub(2, -2) end})
 
-    print(x) -- => foo
-    print(y) -- => bar
-    </pre>
+print(x) -- => foo
+print(y) -- => bar
+</pre>
 
-    If you'd like to interact with the matches/captures of a query, see the Query.match and Query.capture iterators</div></doc-item>
-<doc-item><a name="Query.is_pattern_guaranteed_at_step"><code>Query.is_pattern_guaranteed_at_step: function(Query, pattern_zero_index: integer): boolean</code></a><div>Returns whether the pattern at the given index is guaranteed to match when it is reached</div></doc-item>
-<doc-item><a name="Query.is_pattern_non_local"><code>Query.is_pattern_non_local: function(Query, pattern_zero_index: integer): boolean</code></a><div>Returns whether the pattern at the given index is non-local</div></doc-item>
-<doc-item><a name="Query.is_pattern_rooted"><code>Query.is_pattern_rooted: function(Query, pattern_zero_index: integer): boolean</code></a><div>Returns whether the pattern at the given index is rooted</div></doc-item>
-<doc-item><a name="Query.match"><code>Query.match: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): Match</code></a><div>Iterate over the matches of a given query.
-   <code>start</code> and <code>end</code> are optional.
-   They must be passed together with the same type, describing either two bytes or two points.
-   If passed, the query will be executed within the range denoted.
-   If not passed, the default behaviour is to execute the query through the entire range of the node.
-   <br>
+If you'd like to interact with the matches/captures of a query, see the
+<a href=#Query.match>Query.match</a> and <a href=#Query.capture>Query.capture</a> iterators</div></doc-item>
+<doc-item id="Query.is_pattern_guaranteed_at_step"><h2><a href="#Query.is_pattern_guaranteed_at_step">❖</a><code>Query.is_pattern_guaranteed_at_step: function(Query, pattern_zero_index: integer): boolean</code></h2><div>Returns whether the pattern at the given index is guaranteed to match when it is reached</div></doc-item>
+<doc-item id="Query.is_pattern_non_local"><h2><a href="#Query.is_pattern_non_local">❖</a><code>Query.is_pattern_non_local: function(Query, pattern_zero_index: integer): boolean</code></h2><div>Returns whether the pattern at the given index is non-local</div></doc-item>
+<doc-item id="Query.is_pattern_rooted"><h2><a href="#Query.is_pattern_rooted">❖</a><code>Query.is_pattern_rooted: function(Query, pattern_zero_index: integer): boolean</code></h2><div>Returns whether the pattern at the given index is rooted</div></doc-item>
+<doc-item id="Query.match"><h2><a href="#Query.match">❖</a><code>Query.match: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): Match</code></h2><div>Iterate over the matches of a given query.
+<code>start</code> and <code>end</code> are optional.
+They must be passed together with the same type, describing either two bytes or two points.
+If passed, the query will be executed within the range denoted.
+If not passed, the default behaviour is to execute the query through the entire range of the node.
+<br>
 
-   The match object is a record populated with all the information given by treesitter
-   <pre>
-   interface Match
-      id: integer
-      pattern_index: integer
-      capture_count: integer
-      captures: {string:Node|{Node}}
+The match object is a record populated with all the information given by treesitter
+<pre>
+interface Match
+   id: integer
+   pattern_index: integer
+   capture_count: integer
+   captures: {string:Node|{Node}}
+end
+</pre>
+
+If a capture can only contain at most one node (as is the case with regular <code>(node) @capture-name</code> patterns and <code>(node)? @capture-name</code> patterns),
+it will either be <code>nil</code> or that <code>Node</code>.
+
+If a capture can contain multiple nodes (as is the case with <code>(node)* @capture-name</code> and <code>(node)+ @capture-name</code> patterns)
+it will either be <code>nil</code> or an array of <code>Node</code>
+
+Example:
+<pre>
+local q = parser:query[[ (comment) @my_match ]]
+for match in q:match(node) do
+   print(match.captures.my_match)
+end
+</pre>
+
+<code>predicates</code> is a map of functions to determine whether a query matches and/or execute side effects
+
+Predicates that end in a <code>'?'</code> character will be seen as conditions that must be met for the pattern to be matched.
+Predicates that don't will be seen just as functions to be executed given the matches provided.
+
+Additionally, you will not have access to the return values of these functions, if you'd like to keep the results of a computation, make your functions have side-effects to write somewhere you can access.
+
+<p>
+By default the following predicates are provided.
+<ul>
+   <li><code> (#eq? ...) </code> will match if all arguments provided are equal</li>
+   <li><code> (#not-eq? a b) </code> will match if the two arguments provided are not equal</li>
+   <li><code> (#match? text pattern) </code> will match the provided <code>text</code> matches the given <code>pattern</code>. Matches are determined by Lua's standard <code>string.match</code> function.</li>
+   <li><code> (#not-match? text pattern) </code> inverse of <code>match?</code></li>
+   <li><code> (#find? text substring) </code> will match if <code>text</code> contains <code>substring</code>. The substring is found with Lua's standard <code>string.find</code>, but the search always starts from the beginning, and pattern matching is disabled. This is equivalent to <code>string.find(text, substring, 0, true)</code></li>
+   <li><code> (#not-find? text substring) </code> inverse of <code>find?</code></li>
+</ul>
+</p>
+
+Predicate evaluation order:<br>
+
+<p>
+Since predicates that end with a <code>?</code> affect whether a node
+matches, these are run first, in the order they appear in the query's
+source. Once all <code>?</code> queries are run, all the
+non-<code>?</code> queries are run in the order they appear in the query's
+source.
+</p>
+
+Example:<br>
+The following snippet will match lua functions that have a single LDoc/EmmyLua style comment above them
+<pre>
+local parser = ltreesitter.require("lua"):parser()
+
+-- grab a node to query against
+local root_node = parser:parse_string[[
+   ---@Doc this does stuff
+   local function stuff_doer()
+      do_stuff()
    end
-   </pre>
+]]:root()
 
-   If a capture can only contain at most one node (as is the case with regular <code>(node) @capture-name</code> patterns and <code>(node)? @capture-name</code> patterns),
-   it will either be <code>nil</code> or that <code>Node</code>.
-
-   If a capture can contain multiple nodes (as is the case with <code>(node)* @capture-name</code> and <code>(node)+ @capture-name</code> patterns)
-   it will either be <code>nil</code> or an array of <code>Node</code>
-
-   Example:
-   <p>
-   <pre>
-   local q = parser:query[[ (comment) @my_match ]]
-   for match in q:match(node) do
-      print(match.captures.my_match)
-   end
-   </pre>
-   </p>
-
-   <code>predicates</code> is a map of functions to determine whether a query matches and/or execute side effects
-
-   Predicates that end in a <code>'?'</code> character will be seen as conditions that must be met for the pattern to be matched.
-   Predicates that don't will be seen just as functions to be executed given the matches provided.
-
-   Additionally, you will not have access to the return values of these functions, if you'd like to keep the results of a computation, make your functions have side-effects to write somewhere you can access.
-
-   By default the following predicates are provided.
-      <code> (#eq? ...) </code> will match if all arguments provided are equal<br>
-      <code> (#not-eq? a b) </code> will match if the two arguments provided are not equal<br>
-      <code> (#match? text pattern) </code> will match the provided <code>text</code> matches the given <code>pattern</code>. Matches are determined by Lua's standard <code>string.match</code> function.<br>
-      <code> (#not-match? text pattern) </code> inverse of <code>match?</code><br>
-      <code> (#find? text substring) </code> will match if <code>text</code> contains <code>substring</code>. The substring is found with Lua's standard <code>string.find</code>, but the search always starts from the beginning, and pattern matching is disabled. This is equivalent to <code>string.find(text, substring, 0, true)</code><br>
-      <code> (#not-find? text substring) </code> inverse of <code>find?</code><br>
-
-   Predicate evaluation order:
-
-      Since predicates that end with a <code>?</code> affect whether a node matches, these are run first, in the order they appear in the query's source. Once all <code>?</code> queries are run, all the non-<code>?</code> queries are run in the order they appear in the query's source.
-
-   Example:
-   The following snippet will match lua functions that have a single LDoc/EmmyLua style comment above them
-   <pre>
-   local parser = ltreesitter.require("lua"):parser()
-
-   -- grab a node to query against
-   local root_node = parser:parse_string[[
-      ---@Doc this does stuff
-      local function stuff_doer()
-         do_stuff()
+for match in parser
+   :query[[(
+      (comment) @the-comment
+      .
+      (function_definition
+         (function_name) @the-function-name)
+      (#is-doc-comment? @the-comment)
+   )]]
+   :match(root_node, {
+      ["is-doc-comment?"] = function(str)
+         return str:source():sub(1, 4) == "---@"
       end
-   ]]:root()
+   })
+do
+   print("Function: " .. match.captures["the-function-name"] .. " has documentation")
+   print("   " .. match.captures["the-comment"])
+end
+</pre></div></doc-item>
+<doc-item id="Query.pattern_count"><h2><a href="#Query.pattern_count">❖</a><code>Query.pattern_count: function(Query): integer</code></h2><div>Returns the number of patterns this query has</div></doc-item>
+<doc-item id="Query.predicates_for_pattern"><h2><a href="#Query.predicates_for_pattern">❖</a><code>Query.predicates_for_pattern: function(Query, pattern_index: integer): {{string | Capture}}</code></h2><div>Given a pattern index, return an array representing each predicate
 
-   for match in parser
-      :query[[(
-         (comment) @the-comment
-         .
-         (function_definition
-            (function_name) @the-function-name)
-         (#is-doc-comment? @the-comment)
-      )]]
-      :match(root_node, {
-         ["is-doc-comment?"] = function(str)
-            return str:source():sub(1, 4) == "---@"
-         end
-      })
-   do
-      print("Function: " .. match.captures["the-function-name"] .. " has documentation")
-      print("   " .. match.captures["the-comment"])
-   end
-   </pre></div></doc-item>
-<doc-item><a name="Query.pattern_count"><code>Query.pattern_count: function(Query): integer</code></a><div>Returns the number of patterns this query has</div></doc-item>
-<doc-item><a name="Query.predicates_for_pattern"><code>Query.predicates_for_pattern: function(Query, pattern_index: integer): {{string | Capture}}</code></a><div>Given a pattern index, return an array representing each predicate
+Each predicate is an array of either strings, representing literal strings
+in the predicate, or a table with a <code>capture_name</code> field, representing a
+<code>@capture</code> in the predicate.
 
-   Each predicate is an array of either strings, representing literal strings
-   in the predicate, or a table with a <code>capture_name</code> field, representing a
-   <code>@capture</code> in the predicate.
+e.g. Given a (c) query like with source:
 
-   e.g. Given a (c) query like with source:
+<pre>
+local q = c:query [[
+  ((_ declarator: (identifier) @name)
+   (#match? @name "[a-z]+")
+   (#set! @name true))
+]]
+</pre>
 
-   <code>
-      local q = c:query [[
-        ((_ declarator: (identifier) @name)
-         (#match? @name "[a-z]+")
-         (#set! @name true))
-      ]]
-   </code>
+<code>q:predicates_for_pattern(0)</code> would return:
 
-   <code>q:predicates_for_pattern(0)</code> would return:
+<pre>
+{
+   { "match?", { capture_name = "name" }, "[a-z]+" },
+   { "set!", { capture_name = "name" }, "true" },
+}
+</pre></div></doc-item>
+<doc-item id="Query.start_byte_for_pattern"><h2><a href="#Query.start_byte_for_pattern">❖</a><code>Query.start_byte_for_pattern: function(Query, pattern_zero_index: integer): integer</code></h2><div>Returns the byte offset where the given pattern starts in the query's source</div></doc-item>
+<doc-item id="Query.string_count"><h2><a href="#Query.string_count">❖</a><code>Query.string_count: function(Query): integer</code></h2><div>Returns the number of strings this query has</div></doc-item>
 
-   <code>
-      {
-         { "match?", { capture_name = "name" }, "[a-z]+" },
-         { "set!", { capture_name = "name" }, "true" },
-      }
-   </code></div></doc-item>
-<doc-item><a name="Query.start_byte_for_pattern"><code>Query.start_byte_for_pattern: function(Query, pattern_zero_index: integer): integer</code></a><div>Returns the byte offset where the given pattern starts in the query's source</div></doc-item>
-<doc-item><a name="Query.string_count"><code>Query.string_count: function(Query): integer</code></a><div>Returns the number of strings this query has</div></doc-item>
+<doc-item id="QueryCursor.did_exceed_match_limit"><h2><a href="#QueryCursor.did_exceed_match_limit">❖</a><code>QueryCursor.did_exceed_match_limit: function(QueryCursor): boolean</code></h2><div>Returns true if the given cursor exceeded its match limit. See
+<code>set_match_limit</code> and <code>match_limit</code></div></doc-item>
+<doc-item id="QueryCursor.match_limit"><h2><a href="#QueryCursor.match_limit">❖</a><code>QueryCursor.match_limit: function(QueryCursor): integer</code></h2><div>Get the match limit of the given cursor. See <code>set_match_limit</code> and
+<code>did_exceed_match_limit</code></div></doc-item>
+<doc-item id="QueryCursor.next_capture_without_executing_predicates"><h2><a href="#QueryCursor.next_capture_without_executing_predicates">❖</a><code>QueryCursor.next_capture_without_executing_predicates: function(QueryCursor): Node, string</code></h2><div>Find the next capture of the given cursor. As implied by the name, this does
+<em>NOT</em> execute any predicates. See <code>Query.predicates_for_pattern</code> or
+<code>Query.capture</code> for executing predicates.</div></doc-item>
+<doc-item id="QueryCursor.next_match_without_executing_predicates"><h2><a href="#QueryCursor.next_match_without_executing_predicates">❖</a><code>QueryCursor.next_match_without_executing_predicates: function(QueryCursor): Match</code></h2><div>Find the next match of the given cursor. As implied by the name, this does
+<em>NOT</em> execute any predicates. See <code>Query.predicates_for_pattern</code> or
+<code>Query.match</code> for executing predicates.</div></doc-item>
+<doc-item id="QueryCursor.remove_match"><h2><a href="#QueryCursor.remove_match">❖</a><code>QueryCursor.remove_match: function(QueryCursor, match_id: integer)</code></h2><div>Prevent the given query cursor from matching the given match id</div></doc-item>
+<doc-item id="QueryCursor.set_byte_range"><h2><a href="#QueryCursor.set_byte_range">❖</a><code>QueryCursor.set_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean</code></h2><div>returns true when the given range was non-empty</div></doc-item>
+<doc-item id="QueryCursor.set_containing_byte_range"><h2><a href="#QueryCursor.set_containing_byte_range">❖</a><code>QueryCursor.set_containing_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean</code></h2><div>Set the byte range within which all matches must be <em>fully</em> contained.</div></doc-item>
+<doc-item id="QueryCursor.set_containing_point_range"><h2><a href="#QueryCursor.set_containing_point_range">❖</a><code>QueryCursor.set_containing_point_range: function(QueryCursor, start_point: Point, end_point: Point): boolean</code></h2><div>Set the byte range within which all matches must be <em>fully</em> contained.</div></doc-item>
+<doc-item id="QueryCursor.set_match_limit"><h2><a href="#QueryCursor.set_match_limit">❖</a><code>QueryCursor.set_match_limit: function(QueryCursor, integer)</code></h2><div>Set the maximum number of in-progress matches allowed by this query cursor.
 
-<doc-item><a name="QueryCursor.did_exceed_match_limit"><code>QueryCursor.did_exceed_match_limit: function(QueryCursor): boolean</code></a><div>Returns true if the given cursor exceeded its match limit. See
-   <code>set_match_limit</code> and <code>match_limit</code></div></doc-item>
-<doc-item><a name="QueryCursor.match_limit"><code>QueryCursor.match_limit: function(QueryCursor): integer</code></a><div>Get the match limit of the given cursor. See <code>set_match_limit</code> and
-    <code>did_exceed_match_limit</code></div></doc-item>
-<doc-item><a name="QueryCursor.next_capture_without_executing_predicates"><code>QueryCursor.next_capture_without_executing_predicates: function(QueryCursor): Node, string</code></a><div>Find the next capture of the given cursor. As implied by the name, this does
-    <em>NOT</em> execute any predicates. See <code>Query.predicates_for_pattern</code> or
-    <code>Query.capture</code> for executing predicates.</div></doc-item>
-<doc-item><a name="QueryCursor.next_match_without_executing_predicates"><code>QueryCursor.next_match_without_executing_predicates: function(QueryCursor): Match</code></a><div>Find the next match of the given cursor. As implied by the name, this does
-    <em>NOT</em> execute any predicates. See <code>Query.predicates_for_pattern</code> or
-    <code>Query.match</code> for executing predicates.</div></doc-item>
-<doc-item><a name="QueryCursor.remove_match"><code>QueryCursor.remove_match: function(QueryCursor, match_id: integer)</code></a><div>Prevent the given query cursor from matching the given match id</div></doc-item>
-<doc-item><a name="QueryCursor.set_byte_range"><code>QueryCursor.set_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean</code></a><div>returns true when the given range was non-empty</div></doc-item>
-<doc-item><a name="QueryCursor.set_containing_byte_range"><code>QueryCursor.set_containing_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean</code></a><div>Set the byte range within which all matches must be <em>fully</em> contained.</div></doc-item>
-<doc-item><a name="QueryCursor.set_containing_point_range"><code>QueryCursor.set_containing_point_range: function(QueryCursor, start_point: Point, end_point: Point): boolean</code></a><div>Set the byte range within which all matches must be <em>fully</em> contained.</div></doc-item>
-<doc-item><a name="QueryCursor.set_match_limit"><code>QueryCursor.set_match_limit: function(QueryCursor, integer)</code></a><div>Set the maximum number of in-progress matches allowed by this query cursor.
+Set to nil to set to the maximum limit (2^32-1)</div></doc-item>
+<doc-item id="QueryCursor.set_max_start_depth"><h2><a href="#QueryCursor.set_max_start_depth">❖</a><code>QueryCursor.set_max_start_depth: function(QueryCursor, integer)</code></h2><div>Set the maximum start depth of the given cursor. Set to nil to set the maximum.
 
-   Set to nil to set to the maximum limit (2^32-1)</div></doc-item>
-<doc-item><a name="QueryCursor.set_max_start_depth"><code>QueryCursor.set_max_start_depth: function(QueryCursor, integer)</code></a><div>Set the maximum start depth of the given cursor. Set to nil to set the maximum.
+This prevents cursors from exploring children nodes at a certain depth.</div></doc-item>
+<doc-item id="QueryCursor.set_point_range"><h2><a href="#QueryCursor.set_point_range">❖</a><code>QueryCursor.set_point_range: function(QueryCursor, start: Point, end_: Point): boolean</code></h2><div>returns true when the given range was non-empty</div></doc-item>
 
-    This prevents cursors from exploring children nodes at a certain depth.</div></doc-item>
-<doc-item><a name="QueryCursor.set_point_range"><code>QueryCursor.set_point_range: function(QueryCursor, start: Point, end_: Point): boolean</code></a><div>returns true when the given range was non-empty</div></doc-item>
-
-<doc-item><a name="Tree.copy"><code>Tree.copy: function(Tree): Tree</code></a><div>Creates a copy of the tree. Tree-sitter recommends to create copies if you are going to use multithreading since tree accesses are not thread-safe, but copying them is cheap and quick</div></doc-item>
-<doc-item><a name="Tree.edit"><code>Tree.edit: function(
+<doc-item id="Tree.copy"><h2><a href="#Tree.copy">❖</a><code>Tree.copy: function(Tree): Tree</code></h2><div>Creates a copy of the tree. Tree-sitter recommends to create copies if you are going to use multithreading since tree accesses are not thread-safe, but copying them is cheap and quick</div></doc-item>
+<doc-item id="Tree.edit"><h2><a href="#Tree.edit">❖</a><code>Tree.edit: function(
          Tree,
          start_byte: integer,
          old_end_byte: integer,
@@ -563,12 +584,12 @@ doc-item {
          old_end_point_col: integer,
          new_end_point_row: integer,
          new_end_point_col: integer
-      )</code></a><div>Create an edit to the given tree</div></doc-item>
-<doc-item><a name="Tree.edit_s"><code>Tree.edit_s: function(Tree, TreeEdit)</code></a><div>Create an edit to the given tree</div></doc-item>
-<doc-item><a name="Tree.get_changed_ranges"><code>Tree.get_changed_ranges: function(old: Tree, new: Tree): {Range}</code></a><div>Compare an old syntax tree to a new syntax tree.
-    This would usually be called right after a set of calls to <code>Tree.edit(_s)</code> and <code>Parser.parse_{string,with}</code></div></doc-item>
-<doc-item><a name="Tree.included_ranges"><code>Tree.included_ranges: function(Tree): {Range}</code></a><div>Returns the array of ranges used to parse the syntax tree</div></doc-item>
-<doc-item><a name="Tree.root"><code>Tree.root: function(Tree): Node</code></a><div>Returns the root node of the given parse tree</div></doc-item>
-<doc-item><a name="Tree.root_with_offset"><code>Tree.root_with_offset: function(Tree, offset_bytes: integer, offset_extent: Point): Node</code></a><div>Returns the root node of the given parse tree, but with its position shifted
-   forward</div></doc-item>
+      )</code></h2><div>Create an edit to the given tree</div></doc-item>
+<doc-item id="Tree.edit_s"><h2><a href="#Tree.edit_s">❖</a><code>Tree.edit_s: function(Tree, TreeEdit)</code></h2><div>Create an edit to the given tree</div></doc-item>
+<doc-item id="Tree.get_changed_ranges"><h2><a href="#Tree.get_changed_ranges">❖</a><code>Tree.get_changed_ranges: function(old: Tree, new: Tree): {Range}</code></h2><div>Compare an old syntax tree to a new syntax tree.
+This would usually be called right after a set of calls to <code>Tree.edit(_s)</code> and <code>Parser.parse_{string,with}</code></div></doc-item>
+<doc-item id="Tree.included_ranges"><h2><a href="#Tree.included_ranges">❖</a><code>Tree.included_ranges: function(Tree): {Range}</code></h2><div>Returns the array of ranges used to parse the syntax tree</div></doc-item>
+<doc-item id="Tree.root"><h2><a href="#Tree.root">❖</a><code>Tree.root: function(Tree): Node</code></h2><div>Returns the root node of the given parse tree</div></doc-item>
+<doc-item id="Tree.root_with_offset"><h2><a href="#Tree.root_with_offset">❖</a><code>Tree.root_with_offset: function(Tree, offset_bytes: integer, offset_extent: Point): Node</code></h2><div>Returns the root node of the given parse tree, but with its position shifted
+forward</div></doc-item>
 </body></html>
