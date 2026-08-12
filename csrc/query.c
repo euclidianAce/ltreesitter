@@ -797,6 +797,7 @@ static int make_cursor(lua_State *L) {
 //   }
 //   </pre>
 // ]==]
+// TODO: I'd like a better way of representing capture names that doesn't have to allocate a table
 static int predicates_for_pattern(lua_State *L) {
 	TSQuery const *const q = *query_assert(L, 1);
 	lua_Integer pattern_index = luaL_checkinteger(L, 2);

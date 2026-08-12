@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <tree_sitter/api.h>
+
 #define TODO(L) luaL_error(L, "TODO: %s:%d", __FILE__, __LINE__)
 #define ALLOC_FAIL(L) luaL_error(L, "%s:%d Memory allocation failed!", __FILE__, __LINE__)
 #define UNREACHABLE(L) luaL_error(L, "%s:%d Unreachable code reached!", __FILE__, __LINE__)
@@ -72,6 +74,8 @@ bool expect_nested_field(lua_State *L, int idx, char const *parent_name, char co
 int absindex(lua_State *L, int idx);
 
 uint32_t u32_argcheck(lua_State *L, int idx);
+TSInputEdit expect_edit_table_arg(lua_State *L, int arg);
+TSInputEdit expect_edit_positional_args(lua_State *L, int first_arg);
 
 // ( T -- T )
 void setmetatable(lua_State *L, char const *mt_name);

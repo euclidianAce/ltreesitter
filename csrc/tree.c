@@ -110,9 +110,9 @@ static inline bool is_non_negative(lua_State *L, int i) {
 	return lua_tonumber(L, i) >= 0;
 }
 
-// Maybe make this Tree.Edit?
+// Maybe make this Edit?
 // @teal-inline [[
-//   interface TreeEdit
+//   interface Edit
 //      start_byte: integer
 //      old_end_byte: integer
 //      new_end_byte: integer
@@ -123,60 +123,14 @@ static inline bool is_non_negative(lua_State *L, int i) {
 //   end
 // ]]
 
-// @teal-export Tree.edit_s: function(Tree, TreeEdit) [[
+// @teal-export Tree.edit_s: function(Tree, Edit) [[
 //    Create an edit to the given tree
 // ]]
 static int tree_edit_s(lua_State *L) {
 	lua_settop(L, 2);
-	luaL_checkstack(L, 15, "Internal allocation failed");
 	ltreesitter_Tree *t = tree_assert(L, 1);
-
-	// get the edit struct from table
-	luaL_argcheck(L, lua_type(L, 2) == LUA_TTABLE, 2, "expected table");
-
-	expect_field(L, 2, "start_byte", LUA_TNUMBER);
-	expect_field(L, 2, "old_end_byte", LUA_TNUMBER);
-	expect_field(L, 2, "new_end_byte", LUA_TNUMBER);
-
-	expect_field(L, 2, "start_point", LUA_TTABLE);
-	expect_field(L, -1, "row", LUA_TNUMBER);
-	expect_field(L, -2, "column", LUA_TNUMBER);
-
-	expect_field(L, 2, "old_end_point", LUA_TTABLE);
-	expect_nested_field(L, -1, "old_end_point", "row", LUA_TNUMBER);
-	expect_nested_field(L, -2, "old_end_point", "column", LUA_TNUMBER);
-
-	expect_field(L, 2, "new_end_point", LUA_TTABLE);
-	expect_nested_field(L, -1, "new_end_point", "row", LUA_TNUMBER);
-	expect_nested_field(L, -2, "new_end_point", "column", LUA_TNUMBER);
-
-	// type checked stack
-	// 1.   tree
-	// 2.   table argument
-	// 3.   start_byte (u32)
-	// 4.   old_end_byte (u32)
-	// 5.   new_end_byte (u32)
-	// 6.   start_point { .row (u32), .column (u32) }
-	// 7.   start_point.row (u32)
-	// 8.   start_point.col (u32)
-	// 9.   old_end_point { .row (u32), .column (u32) }
-	// 10.  old_end_point.row (u32)
-	// 11.  old_end_point.col (u32)
-	// 12.  new_end_point { .row (u32), .column (u32) }
-	// 13.  new_end_point.row (u32)
-	// 14.  new_end_point.col (u32)
-
-	ts_tree_edit(
-		t->tree,
-		&(const TSInputEdit){
-			.start_byte = lua_tointeger(L, 3),
-			.old_end_byte = lua_tointeger(L, 4),
-			.new_end_byte = lua_tointeger(L, 5),
-
-			.start_point = {.row = lua_tointeger(L, 7), .column = lua_tointeger(L, 8)},
-			.old_end_point = {.row = lua_tointeger(L, 10), .column = lua_tointeger(L, 11)},
-			.new_end_point = {.row = lua_tointeger(L, 13), .column = lua_tointeger(L, 14)},
-		});
+	TSInputEdit edit = expect_edit_table_arg(L, 2);
+	ts_tree_edit(t->tree, &edit);
 	return 0;
 }
 
@@ -196,15 +150,7 @@ static int tree_edit_s(lua_State *L) {
 // ]]
 static int tree_edit_p(lua_State *L) {
 	ltreesitter_Tree *t = tree_assert(L, 1);
-	TSInputEdit edit = {
-		.start_byte = u32_argcheck(L, 2),
-		.old_end_byte = u32_argcheck(L, 3),
-		.new_end_byte = u32_argcheck(L, 4),
-		.start_point = {.row = u32_argcheck(L, 5), .column = u32_argcheck(L, 6)},
-		.old_end_point = {.row = u32_argcheck(L, 7), .column = u32_argcheck(L, 8)},
-		.new_end_point = {.row = u32_argcheck(L, 9), .column = u32_argcheck(L, 10)},
-	};
-
+	TSInputEdit edit = expect_edit_positional_args(L, 2);
 	ts_tree_edit(t->tree, &edit);
 	return 0;
 }
@@ -220,7 +166,7 @@ static int tree_edit_p(lua_State *L) {
 //    old_end_point_col: integer,
 //    new_end_point_row: integer,
 //    new_end_point_col: integer
-// ) & function(Tree, TreeEdit) [[
+// ) & function(Tree, Edit) [[
 //   Create an edit to the given tree
 // ]]
 static int tree_edit(lua_State *L) {

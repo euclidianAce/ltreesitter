@@ -309,3 +309,79 @@ uint32_t u32_argcheck(lua_State *L, int idx) {
 	luaL_argcheck(L, arg >= 0 && arg <= UINT32_MAX, idx, "expected an integer within [0, 2^32-1]");
 	return (uint32_t)arg;
 }
+
+// ( any -- )
+static uint32_t u32_check(lua_State *L, int argument_index, char const *field_name) {
+	char buf[256];
+	int type = lua_type(L, -1);
+	if (type != LUA_TNUMBER) {
+		snprintf(buf, sizeof buf, "Expected field `%s' to be a integer within [0, 2^32-1], but got a `%s'", field_name, lua_typename(L, type));
+		luaL_argerror(L, argument_index, buf);
+		return 0;
+	}
+
+	lua_Integer arg = lua_tointeger(L, -1);
+	if (!(arg >= 0 && arg <= UINT32_MAX)) {
+		char const *as_str = lua_tostring(L, -1);
+		snprintf(buf, sizeof buf, "Expected field `%s' to be an within [0, 2^32-1], but got %s", field_name, as_str);
+		luaL_argerror(L, argument_index, buf);
+		return 0;
+	}
+	lua_pop(L, 1);
+	return (uint32_t)arg;
+}
+
+TSInputEdit expect_edit_table_arg(lua_State *L, int arg) {
+	TSInputEdit edit;
+
+	luaL_argcheck(L, lua_type(L, arg) == LUA_TTABLE, 2, "expected table");
+
+	expect_field(L, arg, "start_byte", LUA_TNUMBER);
+	edit.start_byte = u32_check(L, arg, "start_byte");
+	expect_field(L, arg, "old_end_byte", LUA_TNUMBER);
+	edit.old_end_byte = u32_check(L, arg, "old_end_byte");
+	expect_field(L, arg, "new_end_byte", LUA_TNUMBER);
+	edit.new_end_byte = u32_check(L, arg, "new_end_byte");
+
+	expect_field(L, arg, "start_point", LUA_TTABLE);
+	expect_field(L, -1, "row", LUA_TNUMBER);
+	edit.start_point.row = u32_check(L, arg, "start_point.row");
+	expect_field(L, -1, "column", LUA_TNUMBER);
+	edit.start_point.column = u32_check(L, arg, "start_point.column");
+	lua_pop(L, 1);
+
+	expect_field(L, arg, "old_end_point", LUA_TTABLE);
+	expect_nested_field(L, -1, "old_end_point", "row", LUA_TNUMBER);
+	edit.old_end_point.row = u32_check(L, arg, "old_end_point.row");
+	expect_nested_field(L, -1, "old_end_point", "column", LUA_TNUMBER);
+	edit.old_end_point.column = u32_check(L, arg, "old_end_point.column");
+	lua_pop(L, 1);
+
+	expect_field(L, arg, "new_end_point", LUA_TTABLE);
+	expect_nested_field(L, -1, "new_end_point", "row", LUA_TNUMBER);
+	edit.new_end_point.row = u32_check(L, arg, "new_end_point.row");
+	expect_nested_field(L, -1, "new_end_point", "column", LUA_TNUMBER);
+	edit.new_end_point.column = u32_check(L, arg, "new_end_point.column");
+	lua_pop(L, 1);
+
+	return edit;
+}
+
+TSInputEdit expect_edit_positional_args(lua_State *L, int first_arg) {
+	TSInputEdit edit;
+
+	edit.start_byte           = u32_argcheck(L, first_arg + 0);
+	edit.old_end_byte         = u32_argcheck(L, first_arg + 1);
+	edit.new_end_byte         = u32_argcheck(L, first_arg + 2);
+
+	edit.start_point.row      = u32_argcheck(L, first_arg + 3);
+	edit.start_point.column   = u32_argcheck(L, first_arg + 4);
+
+	edit.old_end_point.row    = u32_argcheck(L, first_arg + 5);
+	edit.old_end_point.column = u32_argcheck(L, first_arg + 6);
+
+	edit.new_end_point.row    = u32_argcheck(L, first_arg + 7);
+	edit.new_end_point.column = u32_argcheck(L, first_arg + 8);
+
+	return edit;
+}

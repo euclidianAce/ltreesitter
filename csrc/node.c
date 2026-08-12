@@ -17,7 +17,6 @@
 
 // TODO
 // const TSLanguage *ts_node_language(TSNode self);
-// void ts_node_edit(TSNode *self, const TSInputEdit *edit);
 
 #define internal_err "ltreesitter internal error: node kept object is not a tree"
 
@@ -709,6 +708,60 @@ static int named_descendant_for_point_range(lua_State *L) {
 	return 1;
 }
 
+// @teal-export Node.edit_p: function(
+//    Node,
+//    start_byte: integer,
+//    old_end_byte: integer,
+//    new_end_byte: integer,
+//    start_point_row: integer,
+//    start_point_col: integer,
+//    old_end_point_row: integer,
+//    old_end_point_col: integer,
+//    new_end_point_row: integer,
+//    new_end_point_col: integer
+// ) [[
+//   Create an edit to the given node
+// ]]
+static int edit_p(lua_State *L) {
+	TSNode *n = node_assert(L, 1);
+	TSInputEdit edit = expect_edit_positional_args(L, 2);
+	ts_node_edit(n, &edit);
+	return 0;
+}
+
+// @teal-export Node.edit_s: function(Node, Edit) [[
+//   Create an edit to the given node
+// ]]
+static int edit_s(lua_State *L) {
+	TSNode *n = node_assert(L, 1);
+	TSInputEdit edit = expect_edit_table_arg(L, 2);
+	ts_node_edit(n, &edit);
+	return 0;
+}
+
+// @teal-export Node.edit: function(
+//    Node,
+//    start_byte: integer,
+//    old_end_byte: integer,
+//    new_end_byte: integer,
+//    start_point_row: integer,
+//    start_point_col: integer,
+//    old_end_point_row: integer,
+//    old_end_point_col: integer,
+//    new_end_point_row: integer,
+//    new_end_point_col: integer
+// ) & function(Node, Edit) [[
+//   Create an edit to the given node
+// ]]
+static int edit(lua_State *L) {
+	(void)node_assert(L, 1);
+	if (lua_isnumber(L, 2))
+		edit_p(L);
+	else
+		edit_s(L);
+	return 0;
+}
+
 static const luaL_Reg node_methods[] = {
 	{"child", node_child},
 	{"child_by_field_id", node_child_by_field_id},
@@ -720,6 +773,9 @@ static const luaL_Reg node_methods[] = {
 	{"descendant_count", descendant_count},
 	{"descendant_for_byte_range", descendant_for_byte_range},
 	{"descendant_for_point_range", descendant_for_point_range},
+	{"edit", edit},
+	{"edit_p", edit_p},
+	{"edit_s", edit_s},
 	{"end_byte_offset", node_end_byte},
 	{"end_index", node_end_byte},
 	{"end_point", node_end_point},
