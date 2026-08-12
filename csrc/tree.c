@@ -106,10 +106,6 @@ static int tree_copy(lua_State *L) {
 	return 1;
 }
 
-static inline bool is_non_negative(lua_State *L, int i) {
-	return lua_tonumber(L, i) >= 0;
-}
-
 // Maybe make this Edit?
 // @teal-inline [[
 //   interface Edit
