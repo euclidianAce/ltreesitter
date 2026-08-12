@@ -3,24 +3,6 @@
 local record ltreesitter
    -- Exports
 
-   record Cursor is userdata
-      copy: function(Cursor): Cursor
-      current_depth: function(Cursor): integer
-      current_descendant_index: function(Cursor): integer
-      current_field_id: function(Cursor): FieldId
-      current_field_name: function(Cursor): string
-      current_node: function(Cursor): Node
-      goto_descendant: function(Cursor, offset: integer)
-      goto_first_child: function(Cursor): boolean
-      goto_first_child_for_byte: function(Cursor, integer): integer
-      goto_first_child_for_point: function(Cursor, Point): integer
-      goto_last_child: function(Cursor): boolean
-      goto_next_sibling: function(Cursor): boolean
-      goto_parent: function(Cursor): boolean
-      goto_previous_sibling: function(Cursor): boolean
-      reset: function(Cursor, Node)
-      reset_to: function(Cursor, Cursor)
-   end
    record Language is userdata
       abi_version: function(Language): integer
       field_count: function(Language): integer
@@ -46,10 +28,36 @@ local record ltreesitter
       child_count: function(Node): integer
       child_with_descendant: function(Node, descendant: Node): Node
       children: function(Node): function(): Node
-      create_cursor: function(Node): Cursor
+      create_cursor: function(Node): TreeCursor
       descendant_count: function(Node): integer
       descendant_for_byte_range: function(Node, start_byte: integer, end_byte: integer): Node
       descendant_for_point_range: function(Node, start_point: Point, end_point: Point): Node
+      edit: function(
+      Node,
+      start_byte: integer,
+      old_end_byte: integer,
+      new_end_byte: integer,
+      start_point_row: integer,
+      start_point_col: integer,
+      old_end_point_row: integer,
+      old_end_point_col: integer,
+      new_end_point_row: integer,
+      new_end_point_col: integer
+      )
+      edit: function(Node, Edit)
+      edit_p: function(
+      Node,
+      start_byte: integer,
+      old_end_byte: integer,
+      new_end_byte: integer,
+      start_point_row: integer,
+      start_point_col: integer,
+      old_end_point_row: integer,
+      old_end_point_col: integer,
+      new_end_point_row: integer,
+      new_end_point_col: integer
+      )
+      edit_s: function(Node, Edit)
       end_byte_offset: function(Node): integer
       end_index: function(Node): integer
       end_point: function(Node): Point
@@ -64,6 +72,7 @@ local record ltreesitter
       is_extra: function(Node): boolean
       is_missing: function(Node): boolean
       is_named: function(Node): boolean
+      language: function(Node): Language
       named_child: function(Node, zero_index: integer): Node
       named_child_count: function(Node): integer
       named_children: function(Node): function(): Node
@@ -142,7 +151,7 @@ local record ltreesitter
       new_end_point_row: integer,
       new_end_point_col: integer
       )
-      edit: function(Tree, TreeEdit)
+      edit: function(Tree, Edit)
       edit_p: function(
       Tree,
       start_byte: integer,
@@ -155,11 +164,30 @@ local record ltreesitter
       new_end_point_row: integer,
       new_end_point_col: integer
       )
-      edit_s: function(Tree, TreeEdit)
+      edit_s: function(Tree, Edit)
       get_changed_ranges: function(old: Tree, new: Tree): {Range}
       included_ranges: function(Tree): {Range}
+      language: function(Tree): Language
       root: function(Tree): Node
       root_with_offset: function(Tree, offset_bytes: integer, offset_extent: Point): Node
+   end
+   record TreeCursor is userdata
+      copy: function(TreeCursor): TreeCursor
+      current_depth: function(TreeCursor): integer
+      current_descendant_index: function(TreeCursor): integer
+      current_field_id: function(TreeCursor): FieldId
+      current_field_name: function(TreeCursor): string
+      current_node: function(TreeCursor): Node
+      goto_descendant: function(TreeCursor, offset: integer)
+      goto_first_child: function(TreeCursor): boolean
+      goto_first_child_for_byte: function(TreeCursor, integer): integer
+      goto_first_child_for_point: function(TreeCursor, Point): integer
+      goto_last_child: function(TreeCursor): boolean
+      goto_next_sibling: function(TreeCursor): boolean
+      goto_parent: function(TreeCursor): boolean
+      goto_previous_sibling: function(TreeCursor): boolean
+      reset: function(TreeCursor, Node)
+      reset_to: function(TreeCursor, TreeCursor)
    end
    load: function(file_name: string, language_name: string): Language, string
    require: function(library_file_name: string, language_name?: string): Language, string
@@ -186,7 +214,7 @@ local record ltreesitter
       start_point: Point
       end_point: Point
    end
-   interface TreeEdit
+   interface Edit
       start_byte: integer
       old_end_byte: integer
       new_end_byte: integer

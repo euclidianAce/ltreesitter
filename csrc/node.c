@@ -560,8 +560,8 @@ static int node_get_source_method(lua_State *L) {
 	return 1;
 }
 
-// @teal-export Node.create_cursor: function(Node): Cursor [[
-//    Create a new cursor at the given node
+// @teal-export Node.create_cursor: function(Node): TreeCursor [[
+//    Create a new tree cursor at the given node
 // ]]
 static int node_tree_cursor_create(lua_State *L) {
 	lua_settop(L, 1);

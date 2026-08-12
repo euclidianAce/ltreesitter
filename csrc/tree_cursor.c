@@ -13,7 +13,7 @@ TSTreeCursor *tree_cursor_push(lua_State *L, int kept_idx, TSNode n) {
 	return c;
 }
 
-// @teal-export Cursor.current_node: function(Cursor): Node [[
+// @teal-export TreeCursor.current_node: function(TreeCursor): Node [[
 //   Get the current node under the cursor
 // ]]
 static int tree_cursor_current_node(lua_State *L) {
@@ -25,7 +25,7 @@ static int tree_cursor_current_node(lua_State *L) {
 	return 1;
 }
 
-// @teal-export Cursor.current_field_name: function(Cursor): string [[
+// @teal-export TreeCursor.current_field_name: function(TreeCursor): string [[
 //   Get the field name of the current node under the cursor
 // ]]
 static int tree_cursor_current_field_name(lua_State *L) {
@@ -39,7 +39,7 @@ static int tree_cursor_current_field_name(lua_State *L) {
 	return 1;
 }
 
-// @teal-export Cursor.reset: function(Cursor, Node) [[
+// @teal-export TreeCursor.reset: function(TreeCursor, Node) [[
 //   Position the cursor at the given node
 // ]]
 static int tree_cursor_reset(lua_State *L) {
@@ -49,7 +49,7 @@ static int tree_cursor_reset(lua_State *L) {
 	return 0;
 }
 
-// @teal-export Cursor.goto_parent: function(Cursor): boolean [[
+// @teal-export TreeCursor.goto_parent: function(TreeCursor): boolean [[
 //   Position the cursor at the parent of the current node
 // ]]
 static int tree_cursor_goto_parent(lua_State *L) {
@@ -58,7 +58,7 @@ static int tree_cursor_goto_parent(lua_State *L) {
 	return 1;
 }
 
-// @teal-export Cursor.goto_next_sibling: function(Cursor): boolean [[
+// @teal-export TreeCursor.goto_next_sibling: function(TreeCursor): boolean [[
 //   Position the cursor at the next sibling of the current node
 //
 //   Returns true if there was a sibling to move to
@@ -69,7 +69,7 @@ static int tree_cursor_goto_next_sibling(lua_State *L) {
 	return 1;
 }
 
-// @teal-export Cursor.goto_previous_sibling: function(Cursor): boolean [[
+// @teal-export TreeCursor.goto_previous_sibling: function(TreeCursor): boolean [[
 //    Position the cursor at the sibling of the current node
 //
 //    Returns true if there was a sibling to move to
@@ -80,7 +80,7 @@ static int tree_cursor_goto_previous_sibling(lua_State *L) {
 	return 1;
 }
 
-// @teal-export Cursor.goto_first_child: function(Cursor): boolean [[
+// @teal-export TreeCursor.goto_first_child: function(TreeCursor): boolean [[
 //    Position the cursor at the first child of the current node
 //
 //    Returns true if the cursor was able to move
@@ -91,7 +91,7 @@ static int tree_cursor_goto_first_child(lua_State *L) {
 	return 1;
 }
 
-// @teal-export Cursor.goto_last_child: function(Cursor): boolean [[
+// @teal-export TreeCursor.goto_last_child: function(TreeCursor): boolean [[
 //   Position the cursor at the first child of the current node
 //
 //   Returns true if the cursor was able to move
@@ -102,7 +102,7 @@ static int tree_cursor_goto_last_child(lua_State *L) {
 	return 1;
 }
 
-// @teal-export Cursor.goto_first_child_for_byte: function(Cursor, integer): integer [[
+// @teal-export TreeCursor.goto_first_child_for_byte: function(TreeCursor, integer): integer [[
 //   Move the given cursor to the first child of its current node that contains
 //   or starts after the given offset
 //
@@ -120,7 +120,7 @@ static int tree_cursor_goto_first_child_for_byte(lua_State *L) {
 	return 1;
 }
 
-// @teal-export Cursor.goto_first_child_for_point: function(Cursor, Point): integer [[
+// @teal-export TreeCursor.goto_first_child_for_point: function(TreeCursor, Point): integer [[
 //    Move the given cursor to the first child of its current node that contains
 //    or starts after the given point
 //
@@ -138,7 +138,7 @@ static int tree_cursor_goto_first_child_for_point(lua_State *L) {
 	return 1;
 }
 
-// @teal-export Cursor.reset_to: function(Cursor, Cursor) [[
+// @teal-export TreeCursor.reset_to: function(TreeCursor, TreeCursor) [[
 //   Re-initialize a tree cursor to the same position as another cursor.
 // ]]
 static int tree_cursor_reset_to(lua_State *L) {
@@ -148,7 +148,7 @@ static int tree_cursor_reset_to(lua_State *L) {
 	return 0;
 }
 
-// @teal-export Cursor.goto_descendant: function(Cursor, offset: integer) [[
+// @teal-export TreeCursor.goto_descendant: function(TreeCursor, offset: integer) [[
 //    Move the cursor to the nth descendant of the original node this cursor was
 //    constructed with. Zero represents the original node itself.
 // ]]
@@ -160,7 +160,7 @@ static int tree_cursor_goto_descendant(lua_State *L) {
 	return 0;
 }
 
-// @teal-export Cursor.current_descendant_index: function(Cursor): integer [[
+// @teal-export TreeCursor.current_descendant_index: function(TreeCursor): integer [[
 //   Get the cursor's current node index
 // ]]
 static int tree_cursor_current_descendant_index(lua_State *L) {
@@ -169,7 +169,7 @@ static int tree_cursor_current_descendant_index(lua_State *L) {
 	return 1;
 }
 
-// @teal-export Cursor.current_depth: function(Cursor): integer [[
+// @teal-export TreeCursor.current_depth: function(TreeCursor): integer [[
 //   Get the depth of the cursor's current node relative to the node the cursor
 //   was constructed with
 // ]] */
@@ -179,7 +179,7 @@ static int tree_cursor_current_depth(lua_State *L) {
 	return 1;
 }
 
-// @teal-export Cursor.copy: function(Cursor): Cursor [[
+// @teal-export TreeCursor.copy: function(TreeCursor): TreeCursor [[
 //   Create a copy of the given cursor
 // ]]
 static int tree_cursor_copy(lua_State *L) {
@@ -195,7 +195,7 @@ static int tree_cursor_copy(lua_State *L) {
 	return 1;
 }
 
-// @teal-export Cursor.current_field_id: function(Cursor): FieldId [[
+// @teal-export TreeCursor.current_field_id: function(TreeCursor): FieldId [[
 //    Get the field id of the given cursor's current node<br>
 //    May return nil
 // ]]

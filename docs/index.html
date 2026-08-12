@@ -79,24 +79,6 @@ doc-item {
 <a href="#tree_sitter_version">tree_sitter_version</a>
 <a href="#version">version</a>
 </module-listing><module-listing>
-<h3>Cursor</h3>
-<a href="#Cursor.copy">Cursor.copy</a>
-<a href="#Cursor.current_depth">Cursor.current_depth</a>
-<a href="#Cursor.current_descendant_index">Cursor.current_descendant_index</a>
-<a href="#Cursor.current_field_id">Cursor.current_field_id</a>
-<a href="#Cursor.current_field_name">Cursor.current_field_name</a>
-<a href="#Cursor.current_node">Cursor.current_node</a>
-<a href="#Cursor.goto_descendant">Cursor.goto_descendant</a>
-<a href="#Cursor.goto_first_child">Cursor.goto_first_child</a>
-<a href="#Cursor.goto_first_child_for_byte">Cursor.goto_first_child_for_byte</a>
-<a href="#Cursor.goto_first_child_for_point">Cursor.goto_first_child_for_point</a>
-<a href="#Cursor.goto_last_child">Cursor.goto_last_child</a>
-<a href="#Cursor.goto_next_sibling">Cursor.goto_next_sibling</a>
-<a href="#Cursor.goto_parent">Cursor.goto_parent</a>
-<a href="#Cursor.goto_previous_sibling">Cursor.goto_previous_sibling</a>
-<a href="#Cursor.reset">Cursor.reset</a>
-<a href="#Cursor.reset_to">Cursor.reset_to</a>
-</module-listing><module-listing>
 <h3>Language</h3>
 <a href="#Language.abi_version">Language.abi_version</a>
 <a href="#Language.field_count">Language.field_count</a>
@@ -126,6 +108,9 @@ doc-item {
 <a href="#Node.descendant_count">Node.descendant_count</a>
 <a href="#Node.descendant_for_byte_range">Node.descendant_for_byte_range</a>
 <a href="#Node.descendant_for_point_range">Node.descendant_for_point_range</a>
+<a href="#Node.edit">Node.edit</a>
+<a href="#Node.edit_p">Node.edit_p</a>
+<a href="#Node.edit_s">Node.edit_s</a>
 <a href="#Node.end_byte_offset">Node.end_byte_offset</a>
 <a href="#Node.end_index">Node.end_index</a>
 <a href="#Node.end_point">Node.end_point</a>
@@ -140,6 +125,7 @@ doc-item {
 <a href="#Node.is_extra">Node.is_extra</a>
 <a href="#Node.is_missing">Node.is_missing</a>
 <a href="#Node.is_named">Node.is_named</a>
+<a href="#Node.language">Node.language</a>
 <a href="#Node.named_child">Node.named_child</a>
 <a href="#Node.named_child_count">Node.named_child_count</a>
 <a href="#Node.named_children">Node.named_children</a>
@@ -203,8 +189,27 @@ doc-item {
 <a href="#Tree.edit_s">Tree.edit_s</a>
 <a href="#Tree.get_changed_ranges">Tree.get_changed_ranges</a>
 <a href="#Tree.included_ranges">Tree.included_ranges</a>
+<a href="#Tree.language">Tree.language</a>
 <a href="#Tree.root">Tree.root</a>
 <a href="#Tree.root_with_offset">Tree.root_with_offset</a>
+</module-listing><module-listing>
+<h3>TreeCursor</h3>
+<a href="#TreeCursor.copy">TreeCursor.copy</a>
+<a href="#TreeCursor.current_depth">TreeCursor.current_depth</a>
+<a href="#TreeCursor.current_descendant_index">TreeCursor.current_descendant_index</a>
+<a href="#TreeCursor.current_field_id">TreeCursor.current_field_id</a>
+<a href="#TreeCursor.current_field_name">TreeCursor.current_field_name</a>
+<a href="#TreeCursor.current_node">TreeCursor.current_node</a>
+<a href="#TreeCursor.goto_descendant">TreeCursor.goto_descendant</a>
+<a href="#TreeCursor.goto_first_child">TreeCursor.goto_first_child</a>
+<a href="#TreeCursor.goto_first_child_for_byte">TreeCursor.goto_first_child_for_byte</a>
+<a href="#TreeCursor.goto_first_child_for_point">TreeCursor.goto_first_child_for_point</a>
+<a href="#TreeCursor.goto_last_child">TreeCursor.goto_last_child</a>
+<a href="#TreeCursor.goto_next_sibling">TreeCursor.goto_next_sibling</a>
+<a href="#TreeCursor.goto_parent">TreeCursor.goto_parent</a>
+<a href="#TreeCursor.goto_previous_sibling">TreeCursor.goto_previous_sibling</a>
+<a href="#TreeCursor.reset">TreeCursor.reset</a>
+<a href="#TreeCursor.reset_to">TreeCursor.reset_to</a>
 </module-listing></nav><hr>
 <doc-item id="TREE_SITTER_LANGUAGE_VERSION"><h2><a href="#TREE_SITTER_LANGUAGE_VERSION">❖</a><code>TREE_SITTER_LANGUAGE_VERSION: integer</code></h2><div>The current language ABI version supported by the used version of tree-sitter</div></doc-item>
 <doc-item id="TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION"><h2><a href="#TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION">❖</a><code>TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION: integer</code></h2><div>The minimum language ABI version supported by the used version of tree-sitter</div></doc-item>
@@ -235,40 +240,6 @@ print(my_language:name(), loaded_from) -- "my_language", /home/user/.luarocks/li
 <doc-item id="tree_sitter_version"><h2><a href="#tree_sitter_version">❖</a><code>tree_sitter_version: string</code></h2><div>The version of the tree-sitter library ltreesitter was built with</div></doc-item>
 <doc-item id="version"><h2><a href="#version">❖</a><code>version: string</code></h2><div>The version of ltreesitter</div></doc-item>
 
-<doc-item id="Cursor.copy"><h2><a href="#Cursor.copy">❖</a><code>Cursor.copy: function(Cursor): Cursor</code></h2><div>Create a copy of the given cursor</div></doc-item>
-<doc-item id="Cursor.current_depth"><h2><a href="#Cursor.current_depth">❖</a><code>Cursor.current_depth: function(Cursor): integer</code></h2><div>Get the depth of the cursor's current node relative to the node the cursor
-was constructed with</div></doc-item>
-<doc-item id="Cursor.current_descendant_index"><h2><a href="#Cursor.current_descendant_index">❖</a><code>Cursor.current_descendant_index: function(Cursor): integer</code></h2><div>Get the cursor's current node index</div></doc-item>
-<doc-item id="Cursor.current_field_id"><h2><a href="#Cursor.current_field_id">❖</a><code>Cursor.current_field_id: function(Cursor): FieldId</code></h2><div>Get the field id of the given cursor's current node<br>
-May return nil</div></doc-item>
-<doc-item id="Cursor.current_field_name"><h2><a href="#Cursor.current_field_name">❖</a><code>Cursor.current_field_name: function(Cursor): string</code></h2><div>Get the field name of the current node under the cursor</div></doc-item>
-<doc-item id="Cursor.current_node"><h2><a href="#Cursor.current_node">❖</a><code>Cursor.current_node: function(Cursor): Node</code></h2><div>Get the current node under the cursor</div></doc-item>
-<doc-item id="Cursor.goto_descendant"><h2><a href="#Cursor.goto_descendant">❖</a><code>Cursor.goto_descendant: function(Cursor, offset: integer)</code></h2><div>Move the cursor to the nth descendant of the original node this cursor was
-constructed with. Zero represents the original node itself.</div></doc-item>
-<doc-item id="Cursor.goto_first_child"><h2><a href="#Cursor.goto_first_child">❖</a><code>Cursor.goto_first_child: function(Cursor): boolean</code></h2><div>Position the cursor at the first child of the current node
-
-Returns true if the cursor was able to move</div></doc-item>
-<doc-item id="Cursor.goto_first_child_for_byte"><h2><a href="#Cursor.goto_first_child_for_byte">❖</a><code>Cursor.goto_first_child_for_byte: function(Cursor, integer): integer</code></h2><div>Move the given cursor to the first child of its current node that contains
-or starts after the given offset
-
-Returns the index of the child node or nil if no such child was found</div></doc-item>
-<doc-item id="Cursor.goto_first_child_for_point"><h2><a href="#Cursor.goto_first_child_for_point">❖</a><code>Cursor.goto_first_child_for_point: function(Cursor, Point): integer</code></h2><div>Move the given cursor to the first child of its current node that contains
-or starts after the given point
-
-Returns the index of the child node or nil if no such child was found</div></doc-item>
-<doc-item id="Cursor.goto_last_child"><h2><a href="#Cursor.goto_last_child">❖</a><code>Cursor.goto_last_child: function(Cursor): boolean</code></h2><div>Position the cursor at the first child of the current node
-
-Returns true if the cursor was able to move</div></doc-item>
-<doc-item id="Cursor.goto_next_sibling"><h2><a href="#Cursor.goto_next_sibling">❖</a><code>Cursor.goto_next_sibling: function(Cursor): boolean</code></h2><div>Position the cursor at the next sibling of the current node
-
-Returns true if there was a sibling to move to</div></doc-item>
-<doc-item id="Cursor.goto_parent"><h2><a href="#Cursor.goto_parent">❖</a><code>Cursor.goto_parent: function(Cursor): boolean</code></h2><div>Position the cursor at the parent of the current node</div></doc-item>
-<doc-item id="Cursor.goto_previous_sibling"><h2><a href="#Cursor.goto_previous_sibling">❖</a><code>Cursor.goto_previous_sibling: function(Cursor): boolean</code></h2><div>Position the cursor at the sibling of the current node
-
-Returns true if there was a sibling to move to</div></doc-item>
-<doc-item id="Cursor.reset"><h2><a href="#Cursor.reset">❖</a><code>Cursor.reset: function(Cursor, Node)</code></h2><div>Position the cursor at the given node</div></doc-item>
-<doc-item id="Cursor.reset_to"><h2><a href="#Cursor.reset_to">❖</a><code>Cursor.reset_to: function(Cursor, Cursor)</code></h2><div>Re-initialize a tree cursor to the same position as another cursor.</div></doc-item>
-
 <doc-item id="Language.abi_version"><h2><a href="#Language.abi_version">❖</a><code>Language.abi_version: function(Language): integer</code></h2><div>Get the ABI version number for the given parser's language</div></doc-item>
 <doc-item id="Language.field_count"><h2><a href="#Language.field_count">❖</a><code>Language.field_count: function(Language): integer</code></h2><div>Get the number of distinct field names in the given parser's language</div></doc-item>
 <doc-item id="Language.field_id_for_name"><h2><a href="#Language.field_id_for_name">❖</a><code>Language.field_id_for_name: function(Language, string): FieldId</code></h2><div>Get the numeric id for the given field name</div></doc-item>
@@ -297,10 +268,35 @@ or hidden nodes</div></doc-item>
 <doc-item id="Node.child_count"><h2><a href="#Node.child_count">❖</a><code>Node.child_count: function(Node): integer</code></h2><div>Get the number of children a node has</div></doc-item>
 <doc-item id="Node.child_with_descendant"><h2><a href="#Node.child_with_descendant">❖</a><code>Node.child_with_descendant: function(Node, descendant: Node): Node</code></h2><div>Get the node that contains <code>descendant</code>. Can return <code>descendant</code> itself</div></doc-item>
 <doc-item id="Node.children"><h2><a href="#Node.children">❖</a><code>Node.children: function(Node): function(): Node</code></h2><div>Iterate over a node's children</div></doc-item>
-<doc-item id="Node.create_cursor"><h2><a href="#Node.create_cursor">❖</a><code>Node.create_cursor: function(Node): Cursor</code></h2><div>Create a new cursor at the given node</div></doc-item>
+<doc-item id="Node.create_cursor"><h2><a href="#Node.create_cursor">❖</a><code>Node.create_cursor: function(Node): TreeCursor</code></h2><div>Create a new tree cursor at the given node</div></doc-item>
 <doc-item id="Node.descendant_count"><h2><a href="#Node.descendant_count">❖</a><code>Node.descendant_count: function(Node): integer</code></h2><div>Returns the number of descendants this node has</div></doc-item>
 <doc-item id="Node.descendant_for_byte_range"><h2><a href="#Node.descendant_for_byte_range">❖</a><code>Node.descendant_for_byte_range: function(Node, start_byte: integer, end_byte: integer): Node</code></h2><div>Returns the smallest descendant node that spans the given range</div></doc-item>
 <doc-item id="Node.descendant_for_point_range"><h2><a href="#Node.descendant_for_point_range">❖</a><code>Node.descendant_for_point_range: function(Node, start_point: Point, end_point: Point): Node</code></h2><div>Returns the smallest descendant node that spans the given range</div></doc-item>
+<doc-item id="Node.edit"><h2><a href="#Node.edit">❖</a><code>Node.edit: function(
+    Node,
+    start_byte: integer,
+    old_end_byte: integer,
+    new_end_byte: integer,
+    start_point_row: integer,
+    start_point_col: integer,
+    old_end_point_row: integer,
+    old_end_point_col: integer,
+    new_end_point_row: integer,
+    new_end_point_col: integer
+ ) & function(Node, Edit)</code></h2><div>Create an edit to the given node</div></doc-item>
+<doc-item id="Node.edit_p"><h2><a href="#Node.edit_p">❖</a><code>Node.edit_p: function(
+    Node,
+    start_byte: integer,
+    old_end_byte: integer,
+    new_end_byte: integer,
+    start_point_row: integer,
+    start_point_col: integer,
+    old_end_point_row: integer,
+    old_end_point_col: integer,
+    new_end_point_row: integer,
+    new_end_point_col: integer
+ )</code></h2><div>Create an edit to the given node</div></doc-item>
+<doc-item id="Node.edit_s"><h2><a href="#Node.edit_s">❖</a><code>Node.edit_s: function(Node, Edit)</code></h2><div>Create an edit to the given node</div></doc-item>
 <doc-item id="Node.end_byte_offset"><h2><a href="#Node.end_byte_offset">❖</a><code>Node.end_byte_offset: function(Node): integer</code></h2><div>Get the byte offset of the source string that the given node ends at (exclusive)</div></doc-item>
 <doc-item id="Node.end_index"><h2><a href="#Node.end_index">❖</a><code>Node.end_index: function(Node): integer</code></h2><div>Get the inclusive 1-index of the source string that the given node ends at</div></doc-item>
 <doc-item id="Node.end_point"><h2><a href="#Node.end_point">❖</a><code>Node.end_point: function(Node): Point</code></h2><div>Get the row and column of where the given node ends</div></doc-item>
@@ -317,6 +313,7 @@ This is what should be used in <code>Parser:language_next_state()</code> instead
 <doc-item id="Node.is_extra"><h2><a href="#Node.is_extra">❖</a><code>Node.is_extra: function(Node): boolean</code></h2><div>Get whether or not the current node is extra</div></doc-item>
 <doc-item id="Node.is_missing"><h2><a href="#Node.is_missing">❖</a><code>Node.is_missing: function(Node): boolean</code></h2><div>Get whether or not the current node is missing</div></doc-item>
 <doc-item id="Node.is_named"><h2><a href="#Node.is_named">❖</a><code>Node.is_named: function(Node): boolean</code></h2><div>Get whether or not the current node is named</div></doc-item>
+<doc-item id="Node.language"><h2><a href="#Node.language">❖</a><code>Node.language: function(Node): Language</code></h2><div>Returns the language used to parse the Node</div></doc-item>
 <doc-item id="Node.named_child"><h2><a href="#Node.named_child">❖</a><code>Node.named_child: function(Node, zero_index: integer): Node</code></h2><div>Get the node's <code>zero_index</code>'th named child</div></doc-item>
 <doc-item id="Node.named_child_count"><h2><a href="#Node.named_child_count">❖</a><code>Node.named_child_count: function(Node): integer</code></h2><div>Get the number of named children a node has</div></doc-item>
 <doc-item id="Node.named_children"><h2><a href="#Node.named_children">❖</a><code>Node.named_children: function(Node): function(): Node</code></h2><div>Iterate over a node's named children</div></doc-item>
@@ -585,7 +582,7 @@ This prevents cursors from exploring children nodes at a certain depth.</div></d
     old_end_point_col: integer,
     new_end_point_row: integer,
     new_end_point_col: integer
- ) & function(Tree, TreeEdit)</code></h2><div>Create an edit to the given tree</div></doc-item>
+ ) & function(Tree, Edit)</code></h2><div>Create an edit to the given tree</div></doc-item>
 <doc-item id="Tree.edit_p"><h2><a href="#Tree.edit_p">❖</a><code>Tree.edit_p: function(
     Tree,
     start_byte: integer,
@@ -598,11 +595,46 @@ This prevents cursors from exploring children nodes at a certain depth.</div></d
     new_end_point_row: integer,
     new_end_point_col: integer
  )</code></h2><div>Create an edit to the given tree</div></doc-item>
-<doc-item id="Tree.edit_s"><h2><a href="#Tree.edit_s">❖</a><code>Tree.edit_s: function(Tree, TreeEdit)</code></h2><div>Create an edit to the given tree</div></doc-item>
+<doc-item id="Tree.edit_s"><h2><a href="#Tree.edit_s">❖</a><code>Tree.edit_s: function(Tree, Edit)</code></h2><div>Create an edit to the given tree</div></doc-item>
 <doc-item id="Tree.get_changed_ranges"><h2><a href="#Tree.get_changed_ranges">❖</a><code>Tree.get_changed_ranges: function(old: Tree, new: Tree): {Range}</code></h2><div>Compare an old syntax tree to a new syntax tree.
 This would usually be called right after a set of calls to <code>Tree.edit(_s)</code> and <code>Parser.parse_{string,with}</code></div></doc-item>
 <doc-item id="Tree.included_ranges"><h2><a href="#Tree.included_ranges">❖</a><code>Tree.included_ranges: function(Tree): {Range}</code></h2><div>Returns the array of ranges used to parse the syntax tree</div></doc-item>
+<doc-item id="Tree.language"><h2><a href="#Tree.language">❖</a><code>Tree.language: function(Tree): Language</code></h2><div>Returns the language used to parse the tree</div></doc-item>
 <doc-item id="Tree.root"><h2><a href="#Tree.root">❖</a><code>Tree.root: function(Tree): Node</code></h2><div>Returns the root node of the given parse tree</div></doc-item>
 <doc-item id="Tree.root_with_offset"><h2><a href="#Tree.root_with_offset">❖</a><code>Tree.root_with_offset: function(Tree, offset_bytes: integer, offset_extent: Point): Node</code></h2><div>Returns the root node of the given parse tree, but with its position shifted
 forward</div></doc-item>
+
+<doc-item id="TreeCursor.copy"><h2><a href="#TreeCursor.copy">❖</a><code>TreeCursor.copy: function(TreeCursor): TreeCursor</code></h2><div>Create a copy of the given cursor</div></doc-item>
+<doc-item id="TreeCursor.current_depth"><h2><a href="#TreeCursor.current_depth">❖</a><code>TreeCursor.current_depth: function(TreeCursor): integer</code></h2><div>Get the depth of the cursor's current node relative to the node the cursor
+was constructed with</div></doc-item>
+<doc-item id="TreeCursor.current_descendant_index"><h2><a href="#TreeCursor.current_descendant_index">❖</a><code>TreeCursor.current_descendant_index: function(TreeCursor): integer</code></h2><div>Get the cursor's current node index</div></doc-item>
+<doc-item id="TreeCursor.current_field_id"><h2><a href="#TreeCursor.current_field_id">❖</a><code>TreeCursor.current_field_id: function(TreeCursor): FieldId</code></h2><div>Get the field id of the given cursor's current node<br>
+May return nil</div></doc-item>
+<doc-item id="TreeCursor.current_field_name"><h2><a href="#TreeCursor.current_field_name">❖</a><code>TreeCursor.current_field_name: function(TreeCursor): string</code></h2><div>Get the field name of the current node under the cursor</div></doc-item>
+<doc-item id="TreeCursor.current_node"><h2><a href="#TreeCursor.current_node">❖</a><code>TreeCursor.current_node: function(TreeCursor): Node</code></h2><div>Get the current node under the cursor</div></doc-item>
+<doc-item id="TreeCursor.goto_descendant"><h2><a href="#TreeCursor.goto_descendant">❖</a><code>TreeCursor.goto_descendant: function(TreeCursor, offset: integer)</code></h2><div>Move the cursor to the nth descendant of the original node this cursor was
+constructed with. Zero represents the original node itself.</div></doc-item>
+<doc-item id="TreeCursor.goto_first_child"><h2><a href="#TreeCursor.goto_first_child">❖</a><code>TreeCursor.goto_first_child: function(TreeCursor): boolean</code></h2><div>Position the cursor at the first child of the current node
+
+Returns true if the cursor was able to move</div></doc-item>
+<doc-item id="TreeCursor.goto_first_child_for_byte"><h2><a href="#TreeCursor.goto_first_child_for_byte">❖</a><code>TreeCursor.goto_first_child_for_byte: function(TreeCursor, integer): integer</code></h2><div>Move the given cursor to the first child of its current node that contains
+or starts after the given offset
+
+Returns the index of the child node or nil if no such child was found</div></doc-item>
+<doc-item id="TreeCursor.goto_first_child_for_point"><h2><a href="#TreeCursor.goto_first_child_for_point">❖</a><code>TreeCursor.goto_first_child_for_point: function(TreeCursor, Point): integer</code></h2><div>Move the given cursor to the first child of its current node that contains
+or starts after the given point
+
+Returns the index of the child node or nil if no such child was found</div></doc-item>
+<doc-item id="TreeCursor.goto_last_child"><h2><a href="#TreeCursor.goto_last_child">❖</a><code>TreeCursor.goto_last_child: function(TreeCursor): boolean</code></h2><div>Position the cursor at the first child of the current node
+
+Returns true if the cursor was able to move</div></doc-item>
+<doc-item id="TreeCursor.goto_next_sibling"><h2><a href="#TreeCursor.goto_next_sibling">❖</a><code>TreeCursor.goto_next_sibling: function(TreeCursor): boolean</code></h2><div>Position the cursor at the next sibling of the current node
+
+Returns true if there was a sibling to move to</div></doc-item>
+<doc-item id="TreeCursor.goto_parent"><h2><a href="#TreeCursor.goto_parent">❖</a><code>TreeCursor.goto_parent: function(TreeCursor): boolean</code></h2><div>Position the cursor at the parent of the current node</div></doc-item>
+<doc-item id="TreeCursor.goto_previous_sibling"><h2><a href="#TreeCursor.goto_previous_sibling">❖</a><code>TreeCursor.goto_previous_sibling: function(TreeCursor): boolean</code></h2><div>Position the cursor at the sibling of the current node
+
+Returns true if there was a sibling to move to</div></doc-item>
+<doc-item id="TreeCursor.reset"><h2><a href="#TreeCursor.reset">❖</a><code>TreeCursor.reset: function(TreeCursor, Node)</code></h2><div>Position the cursor at the given node</div></doc-item>
+<doc-item id="TreeCursor.reset_to"><h2><a href="#TreeCursor.reset_to">❖</a><code>TreeCursor.reset_to: function(TreeCursor, TreeCursor)</code></h2><div>Re-initialize a tree cursor to the same position as another cursor.</div></doc-item>
 </body></html>
