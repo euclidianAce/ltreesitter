@@ -94,6 +94,9 @@ void unref_from_registry(lua_State *, int ref);
 // ( [idx]=any -- )
 void *testudata(lua_State *, int idx, char const *);
 
+FILE *testfile(lua_State *, int idx);
+int fd_from_file(FILE *);
+
 #if LUA_VERSION_NUM > 501
 void dump_stack(lua_State *L, int from);
 #endif

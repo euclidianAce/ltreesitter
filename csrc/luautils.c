@@ -1,5 +1,5 @@
-
 #include "luautils.h"
+#include <stdio.h>
 
 char *str_ldup(char const *s, const size_t len) {
 	char *dup = malloc(sizeof(char) * (len + 1));
@@ -384,4 +384,29 @@ TSInputEdit expect_edit_positional_args(lua_State *L, int first_arg) {
 	edit.new_end_point.column = u32_argcheck(L, first_arg + 8);
 
 	return edit;
+}
+
+#ifndef LUA_FILEHANDLE
+#define LUA_FILEHANDLE "FILE*"
+#endif
+
+FILE *testfile(lua_State *L, int idx) {
+	// either a `FILE**` or a `luaL_Stream*`, but `luaL_Stream`'s first member
+	// is a `FILE*` so its fine (per the C standard) to reference it as a
+	// pointer to its first field
+
+	FILE **ptr = testudata(L, idx, LUA_FILEHANDLE);
+	return ptr ? *ptr : NULL;
+}
+
+int fd_from_file(FILE *f) {
+	int fd = -1;
+#ifdef _WIN32
+	int _fileno(FILE *);
+	fd = _fileno(f);
+#else
+	int fileno(FILE *);
+	fd = fileno(f);
+#endif
+	return fd;
 }

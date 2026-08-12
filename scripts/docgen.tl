@@ -1,4 +1,3 @@
-
 local lfs <const> = require("lfs")
 local ts <const> = require("ltreesitter")
 local c_lang <const> = ts.require("c")

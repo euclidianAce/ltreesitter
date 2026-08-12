@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "luautils.h"
 #include "language.h"
@@ -13,13 +14,6 @@
 #include "object.h"
 #include "tree.h"
 #include "types.h"
-
-#ifdef LOG_GC
-#include <stdio.h>
-#endif
-
-// TODO
-// void ts_tree_print_dot_graph(const TSTree *self, int file_descriptor);
 
 static TSTree **push_uninitialized_tree(lua_State *L) {
 	TSTree **tree = lua_newuserdata(L, sizeof *tree);
@@ -235,6 +229,19 @@ static int tree_gc(lua_State *L) {
 	return 0;
 }
 
+// @teal-export Tree.print_dot_graph: function(Tree, ?FILE) [[
+//    Write a DOT graph to the given file. Defaults to standard error.
+// ]]
+static int print_dot_graph(lua_State *L) {
+	TSTree const *t = *tree_assert(L, 1);
+	FILE *f = testfile(L, 2);
+	if (!f) f = stderr;
+	fflush(f);
+	int fd = fd_from_file(f);
+	ts_tree_print_dot_graph(t, fd);
+	return 0;
+}
+
 static const luaL_Reg tree_methods[] = {
 	{"copy", tree_copy},
 	{"edit", tree_edit},
@@ -243,6 +250,7 @@ static const luaL_Reg tree_methods[] = {
 	{"get_changed_ranges", tree_get_changed_ranges},
 	{"included_ranges", tree_included_ranges},
 	{"language", tree_lang},
+	{"print_dot_graph", print_dot_graph},
 	{"root", tree_push_root},
 	{"root_with_offset", tree_push_root_with_offset},
 	{NULL, NULL}};

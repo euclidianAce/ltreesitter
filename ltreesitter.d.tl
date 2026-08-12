@@ -103,6 +103,7 @@ local record ltreesitter
          encoding?: Encoding,
          old_tree?: Tree
       ): Tree
+      print_dot_graphs: function(Parser, ?FILE)
       reset: function(Parser)
       set_ranges: function(Parser, {Range}): boolean
    end
@@ -195,6 +196,7 @@ local record ltreesitter
       get_changed_ranges: function(old: Tree, new: Tree): {Range}
       included_ranges: function(Tree): {Range}
       language: function(Tree): Language
+      print_dot_graph: function(Tree, ?FILE)
       root: function(Tree): Node
       root_with_offset: function(Tree, offset_bytes: integer, offset_extent: Point): Node
    end

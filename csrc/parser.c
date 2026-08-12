@@ -408,6 +408,20 @@ static int parser_language(lua_State *L) {
 	return 1;
 }
 
+// @teal-export Parser.print_dot_graphs: function(Parser, ?FILE) [[
+//    Set the file that the parser should dump debugging DOT graphs to during
+//    parsing.
+// ]]
+static int print_dot_graphs(lua_State *L) {
+	TSParser *p = *parser_assert(L, 1);
+	FILE *f = testfile(L, 2);
+	if (!f) f = stderr;
+	fflush(f);
+	int fd = fd_from_file(f);
+	ts_parser_print_dot_graphs(p, fd);
+	return 0;
+}
+
 static const luaL_Reg parser_methods[] = {
 	{"reset", parser_reset},
 	{"set_ranges", parser_set_ranges},
@@ -417,6 +431,8 @@ static const luaL_Reg parser_methods[] = {
 	{"parse_with", parser_parse_with},
 
 	{"language", parser_language},
+
+	{"print_dot_graphs", print_dot_graphs},
 
 	{NULL, NULL}};
 static const luaL_Reg parser_metamethods[] = {

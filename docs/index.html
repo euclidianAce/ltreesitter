@@ -159,6 +159,7 @@ doc-item {
 <a href="#Parser.language">Parser.language</a>
 <a href="#Parser.parse_string">Parser.parse_string</a>
 <a href="#Parser.parse_with">Parser.parse_with</a>
+<a href="#Parser.print_dot_graphs">Parser.print_dot_graphs</a>
 <a href="#Parser.reset">Parser.reset</a>
 <a href="#Parser.set_ranges">Parser.set_ranges</a>
 </module-listing><module-listing>
@@ -200,6 +201,7 @@ doc-item {
 <a href="#Tree.get_changed_ranges">Tree.get_changed_ranges</a>
 <a href="#Tree.included_ranges">Tree.included_ranges</a>
 <a href="#Tree.language">Tree.language</a>
+<a href="#Tree.print_dot_graph">Tree.print_dot_graph</a>
 <a href="#Tree.root">Tree.root</a>
 <a href="#Tree.root_with_offset">Tree.root_with_offset</a>
 </module-listing><module-listing>
@@ -380,6 +382,8 @@ provided that <code>Tree:edit</code> has been called previously
 <p><code>encoding</code> defaults to <code>"utf-8"</code> when not provided.</p>
 
 <p>May return nil if the progress callback cancelled parsing.</p></div></doc-item>
+<doc-item id="Parser.print_dot_graphs"><h2><a href="#Parser.print_dot_graphs">❖</a><code>Parser.print_dot_graphs: function(Parser, ?FILE)</code></h2><div>Set the file that the parser should dump debugging DOT graphs to during
+parsing.</div></doc-item>
 <doc-item id="Parser.reset"><h2><a href="#Parser.reset">❖</a><code>Parser.reset: function(Parser)</code></h2><div>Reset the parser, causing the next parse to start from the beginning</div></doc-item>
 <doc-item id="Parser.set_ranges"><h2><a href="#Parser.set_ranges">❖</a><code>Parser.set_ranges: function(Parser, {Range}): boolean</code></h2><div>Sets the ranges that <code>Parser</code> will include when parsing, so you don't have to parse an entire document, but the ranges in the tree will still match the document.
 The array of <code>Range</code>s must satisfy the following relationship: for a positive integer <code>i</code> within the length of <code>ranges: {Range}</code>:
@@ -647,6 +651,7 @@ This prevents cursors from exploring children nodes at a certain depth.</div></d
 This would usually be called right after a set of calls to <code>Tree.edit(_s)</code> and <code>Parser.parse_{string,with}</code></div></doc-item>
 <doc-item id="Tree.included_ranges"><h2><a href="#Tree.included_ranges">❖</a><code>Tree.included_ranges: function(Tree): {Range}</code></h2><div>Returns the array of ranges used to parse the syntax tree</div></doc-item>
 <doc-item id="Tree.language"><h2><a href="#Tree.language">❖</a><code>Tree.language: function(Tree): Language</code></h2><div>Returns the language used to parse the tree</div></doc-item>
+<doc-item id="Tree.print_dot_graph"><h2><a href="#Tree.print_dot_graph">❖</a><code>Tree.print_dot_graph: function(Tree, ?FILE)</code></h2><div>Write a DOT graph to the given file. Defaults to standard error.</div></doc-item>
 <doc-item id="Tree.root"><h2><a href="#Tree.root">❖</a><code>Tree.root: function(Tree): Node</code></h2><div>Returns the root node of the given parse tree</div></doc-item>
 <doc-item id="Tree.root_with_offset"><h2><a href="#Tree.root_with_offset">❖</a><code>Tree.root_with_offset: function(Tree, offset_bytes: integer, offset_extent: Point): Node</code></h2><div>Returns the root node of the given parse tree, but with its position shifted
 forward</div></doc-item>
