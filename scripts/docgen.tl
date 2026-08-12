@@ -401,6 +401,12 @@ do
    w(default_style)
    w"<body>"
 
+   w "<div><h2>Note:</h2>"
+   w "<ul>"
+   w "<li>This documentation is for the latest main branch. <em>NOT</em> the latest release.</li>"
+   w '<li>The annotated types are for <a href="https://github.com/teal-language/tl">Teal</a>, where all types may implicitly be <code>nil</code></li>'
+   w "</ul></div>"
+
    local current_module = doc_entries[1].mod
    if current_module == "" then
       current_module = mod_name
