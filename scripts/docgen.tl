@@ -180,6 +180,11 @@ local function proc_file(file: string)
          local callback <const> = directives[directive]
          if callback then
             local outer = src:sub(content_start, content_end - 1)
+            outer = outer:gsub("^[ \t]*\n+", "")
+            local initial_indent <const> = outer:match("^ +")
+            if initial_indent then
+               outer = outer:gsub("\n" .. initial_indent, "\n")
+            end
             callback(loc, inner, outer)
          else
             io.stderr:write(loc.file, ":", loc.row, ":", loc.column, ": Unknown directive “", directive, "”\n")
@@ -336,7 +341,7 @@ h2 {
 
 pre {
    background-color: #2B2735;
-   padding: 0.2em;
+   padding: 0.5em;
    border-radius: 0.5em;
    overflow-x: auto;
 }
