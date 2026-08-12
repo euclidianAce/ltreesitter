@@ -94,6 +94,7 @@ local record ltreesitter
    end
    record Parser is userdata
       get_ranges: function(Parser): {Range}
+      language: function(Parser): Language
       parse_string: function(Parser, string, ?Encoding, ?Tree): Tree
       parse_with: function(
          Parser,

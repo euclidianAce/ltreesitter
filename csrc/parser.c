@@ -399,6 +399,9 @@ static int parser_get_ranges(lua_State *L) {
 	return 1;
 }
 
+// @teal-export Parser.language: function(Parser): Language [[
+//    Get the language associated with this parser
+// ]]
 static int parser_language(lua_State *L) {
 	(void)parser_assert(L, 1);
 	push_kept(L, -1);
