@@ -17,6 +17,7 @@
 // ]]
 
 #define dynlib_registry_field "dynlibs"
+#define language_registry_field "language_ptrs"
 
 void setup_dynlib_cache(lua_State *L) {
 	newtable_with_mode(L, false, true);
@@ -91,6 +92,19 @@ TSLanguage const *language_load_from(Dynlib dl, size_t lang_name_len, char const
 	return tree_sitter_lang();
 }
 
+// ( -- Language )
+static void make_language(lua_State *L, TSLanguage const *lang) {
+	TSLanguage const **result = lua_newuserdata(L, sizeof(TSLanguage const *));
+	*result = lang;
+	setmetatable(L, LTREESITTER_LANGUAGE_METATABLE_NAME);
+
+	push_registry_field(L, language_registry_field); // lang, reg
+	lua_pushlightuserdata(L, (void *)lang); // lang, reg, <light> lang
+	lua_pushvalue(L, -3); // lang, reg, <light> lang, lang
+	lua_rawset(L, -3); // lang, reg
+	lua_pop(L, 1); // lang
+}
+
 int language_load(lua_State *L) {
 	char const *dl_file = luaL_checkstring(L, 1);
 	size_t lang_name_len = 0;
@@ -127,10 +141,7 @@ int language_load(lua_State *L) {
 		return 1;
 	}
 
-	TSLanguage const **result = lua_newuserdata(L, sizeof(TSLanguage *));
-	*result = lang;
-	setmetatable(L, LTREESITTER_LANGUAGE_METATABLE_NAME);
-	// dynlib | nothing, lang
+	make_language(L, lang); // dynlib | nothing, lang
 
 	if (!cached) {
 		cache_dynlib(L, dl_file, opened);
@@ -140,6 +151,13 @@ int language_load(lua_State *L) {
 	bind_lifetimes(L, -1, -2); // language keeps dll alive
 
 	return 1;
+}
+
+void language_get_by_ptr(lua_State *L, TSLanguage const *lang) {
+	push_registry_field(L, language_registry_field); //  reg
+	lua_pushlightuserdata(L, (void *)lang); // reg, <light>lang
+	lua_rawget(L, -2); // reg, ?lang
+	lua_remove(L, -2); // ?lang
 }
 
 static bool try_load_from_path(
@@ -203,9 +221,7 @@ static bool try_load_from_path(
 
 	// assert(lang);
 
-	TSLanguage const **result = lua_newuserdata(L, sizeof(TSLanguage const *));
-	*result = lang;
-	setmetatable(L, LTREESITTER_LANGUAGE_METATABLE_NAME);
+	make_language(L, lang);
 
 	// dynlib | nothing, lang
 
@@ -661,4 +677,9 @@ static const luaL_Reg language_metamethods[] = {
 
 void language_init_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_LANGUAGE_METATABLE_NAME, language_metamethods, language_methods);
+}
+
+void language_setup_registry_table(lua_State *L) {
+	lua_newtable(L);
+	set_registry_field(L, language_registry_field);
 }

@@ -44,6 +44,7 @@ int luaopen_ltreesitter(lua_State *L) {
 	setup_registry_index(L);
 	setup_object_table(L);
 	setup_dynlib_cache(L);
+	language_setup_registry_table(L);
 
 	query_setup_predicate_tables(L);
 
@@ -60,7 +61,7 @@ int luaopen_ltreesitter(lua_State *L) {
 	lua_setfield(L, -2, "TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION");
 
 	// @teal-export tree_sitter_version: string [[The version of the tree-sitter library ltreesitter was built with]]
-	lua_pushstring(L, "0.25.8");
+	lua_pushstring(L, "0.26.12");
 	lua_setfield(L, -2, "tree_sitter_version");
 
 	return 1;

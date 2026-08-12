@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "luautils.h"
+#include "language.h"
 #include "node.h"
 #include "object.h"
 #include "tree.h"
@@ -18,7 +19,6 @@
 #endif
 
 // TODO
-// const TSLanguage *ts_tree_language(const TSTree *self);
 // void ts_tree_print_dot_graph(const TSTree *self, int file_descriptor);
 
 static TSTree **push_uninitialized_tree(lua_State *L) {
@@ -217,6 +217,15 @@ static int tree_included_ranges(lua_State *L) {
 	return 1;
 }
 
+// @teal-export Tree.language: function(Tree): Language [[
+//     Returns the language used to parse the tree
+// ]]
+static int tree_lang(lua_State *L) {
+	TSTree const *t = *tree_assert(L, 1);
+	language_get_by_ptr(L, ts_tree_language(t));
+	return 1;
+}
+
 static int tree_gc(lua_State *L) {
 	TSTree *t = *tree_assert(L, 1);
 #ifdef LOG_GC
@@ -233,6 +242,7 @@ static const luaL_Reg tree_methods[] = {
 	{"edit_s", tree_edit_s},
 	{"get_changed_ranges", tree_get_changed_ranges},
 	{"included_ranges", tree_included_ranges},
+	{"language", tree_lang},
 	{"root", tree_push_root},
 	{"root_with_offset", tree_push_root_with_offset},
 	{NULL, NULL}};

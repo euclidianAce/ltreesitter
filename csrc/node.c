@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include "luautils.h"
+#include "language.h"
 #include "node.h"
 #include "object.h"
 #include "tree.h"
@@ -14,9 +15,6 @@
 #include "types.h"
 
 #include <tree_sitter/api.h>
-
-// TODO
-// const TSLanguage *ts_node_language(TSNode self);
 
 #define internal_err "ltreesitter internal error: node kept object is not a tree"
 
@@ -765,6 +763,15 @@ static int edit(lua_State *L) {
 	return 0;
 }
 
+// @teal-export Node.language: function(Node): Language [[
+//     Returns the language used to parse the Node
+// ]]
+static int lang(lua_State *L) {
+	TSNode n = *node_assert(L, 1);
+	language_get_by_ptr(L, ts_node_language(n));
+	return 1;
+}
+
 static const luaL_Reg node_methods[] = {
 	{"child", node_child},
 	{"child_by_field_id", node_child_by_field_id},
@@ -794,6 +801,7 @@ static const luaL_Reg node_methods[] = {
 	{"is_extra", node_is_extra},
 	{"is_missing", node_is_missing},
 	{"is_named", node_is_named},
+	{"language", lang},
 	{"named_child", node_named_child},
 	{"named_child_count", node_named_child_count},
 	{"named_children", node_named_children},

@@ -5,8 +5,8 @@ local util = {}
 
 function util.assert_userdata_type(obj, mt_name, message)
 	assert(mt_name, "You forgot to put a __name for the metatable you dingus.")
-	assert.are.equal(type(obj), "userdata", "object is not a userdata")
-	assert.are.equal(getmetatable(obj).__name, mt_name, message)
+	assert.is("userdata", type(obj), "object is not a userdata")
+	assert.are.equal(mt_name, getmetatable(obj).__name, message)
 	return obj
 end
 

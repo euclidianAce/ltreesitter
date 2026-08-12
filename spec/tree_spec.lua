@@ -3,19 +3,28 @@ local ts = require("ltreesitter")
 local util = require("spec.util")
 
 describe("Tree", function()
-	local p, t
+	local c, p, t
 	setup(function()
-		local _
-		_, p = util.load_c_parser()
+		c, p = util.load_c_parser()
 		t = assert(p:parse_string[[ int main(void) { return 0; } ]])
 	end)
-	it("copy should return a ltreesitter.TSTree", function()
+
+	describe("language", function()
+		it("should return a ltreesitter.Language", function()
+			util.assert_userdata_type(t:language(), "ltreesitter.Language")
+		end)
+		it("should return the correct language", function()
+			assert.are.equal(t:language(), c)
+		end)
+	end)
+
+	it("copy should return a ltreesitter.Tree", function()
 		util.assert_userdata_type(
 			t:copy(),
 			"ltreesitter.Tree"
 		)
 	end)
-	it("root should return a ltreesitter.TSNode", function()
+	it("root should return a ltreesitter.Node", function()
 		util.assert_userdata_type(
 			t:root(),
 			"ltreesitter.Node"
