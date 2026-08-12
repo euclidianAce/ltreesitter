@@ -41,6 +41,10 @@ module-listing {
    }
 }
 
+code {
+   white-space: pre;
+}
+
 doc-item {
    display: flex;
    flex-direction: column;
@@ -288,7 +292,7 @@ or hidden nodes</div></doc-item>
     old_end_point_col: integer,
     new_end_point_row: integer,
     new_end_point_col: integer
- ) & function(Node, Edit)</code></h2><div>Create an edit to the given node</div></doc-item>
+)</code><br><code>Node.edit: function(Node, Edit)</code></h2><div>Create an edit to the given node</div></doc-item>
 <doc-item id="Node.edit_p"><h2><a href="#Node.edit_p">❖</a><code>Node.edit_p: function(
     Node,
     start_byte: integer,
@@ -300,7 +304,7 @@ or hidden nodes</div></doc-item>
     old_end_point_col: integer,
     new_end_point_row: integer,
     new_end_point_col: integer
- )</code></h2><div>Create an edit to the given node</div></doc-item>
+)</code></h2><div>Create an edit to the given node</div></doc-item>
 <doc-item id="Node.edit_s"><h2><a href="#Node.edit_s">❖</a><code>Node.edit_s: function(Node, Edit)</code></h2><div>Create an edit to the given node</div></doc-item>
 <doc-item id="Node.end_byte_offset"><h2><a href="#Node.end_byte_offset">❖</a><code>Node.end_byte_offset: function(Node): integer</code></h2><div>Get the byte offset of the source string that the given node ends at (exclusive)</div></doc-item>
 <doc-item id="Node.end_index"><h2><a href="#Node.end_index">❖</a><code>Node.end_index: function(Node): integer</code></h2><div>Get the inclusive 1-index of the source string that the given node ends at</div></doc-item>
@@ -352,7 +356,7 @@ If <code>Tree</code> is provided then it will be used to create a new updated tr
           progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
           encoding?: Encoding,
           old_tree?: Tree
-       ): Tree</code></h2><div><code>reader</code> should be a function that takes a byte index
+): Tree</code></h2><div><code>reader</code> should be a function that takes a byte index
 and a <code>Point</code> and returns the text at that point. The
 function should return either <code>nil</code> or an empty string
 to signal that there is no more text.
@@ -587,7 +591,7 @@ This prevents cursors from exploring children nodes at a certain depth.</div></d
     old_end_point_col: integer,
     new_end_point_row: integer,
     new_end_point_col: integer
- ) & function(Tree, Edit)</code></h2><div>Create an edit to the given tree</div></doc-item>
+)</code><br><code>Tree.edit: function(Tree, Edit)</code></h2><div>Create an edit to the given tree</div></doc-item>
 <doc-item id="Tree.edit_p"><h2><a href="#Tree.edit_p">❖</a><code>Tree.edit_p: function(
     Tree,
     start_byte: integer,
@@ -599,7 +603,7 @@ This prevents cursors from exploring children nodes at a certain depth.</div></d
     old_end_point_col: integer,
     new_end_point_row: integer,
     new_end_point_col: integer
- )</code></h2><div>Create an edit to the given tree</div></doc-item>
+)</code></h2><div>Create an edit to the given tree</div></doc-item>
 <doc-item id="Tree.edit_s"><h2><a href="#Tree.edit_s">❖</a><code>Tree.edit_s: function(Tree, Edit)</code></h2><div>Create an edit to the given tree</div></doc-item>
 <doc-item id="Tree.get_changed_ranges"><h2><a href="#Tree.get_changed_ranges">❖</a><code>Tree.get_changed_ranges: function(old: Tree, new: Tree): {Range}</code></h2><div>Compare an old syntax tree to a new syntax tree.
 This would usually be called right after a set of calls to <code>Tree.edit(_s)</code> and <code>Parser.parse_{string,with}</code></div></doc-item>

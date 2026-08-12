@@ -17,7 +17,7 @@ end
 local files <const> = {}
 for f in lfs.dir("csrc") do
    if f:match("%.c$") then
-      table.insert(files, "csrc/" .. f)
+      ti(files, "csrc/" .. f)
    end
 end
 
@@ -61,7 +61,7 @@ local function insert_into(
 )
    local components <const>: {string} = {}
    for comp in split(name, ".", true) do
-      table.insert(components, comp)
+      ti(components, comp)
    end
 
    if #components > 1 then
@@ -292,17 +292,24 @@ local function traverse_docs(t: DocDef, prefix?: string, entries?: {DocInfo}): {
             content = ""
          end
 
-         table.insert(entries, {
+         local pre <const> = '<doc-item id="' .. full_name .. '"><h2><a href="#' .. full_name .. '">❖</a>'
+         local suf <const> = "</h2><div>" .. content .. "</div></doc-item>"
+         local mid = {}
+         for chunk in split(typ, "&", true) do
+            chunk = trim(chunk)
+            chunk = chunk:gsub("\n([ \t]+)([^\n]*)$", "\n%2")
+            ti(mid, "<code>" .. full_name .. ": " .. chunk .. "</code><br>")
+         end
+         mid[#mid] = mid[#mid]:gsub("<br>$", "")
+
+         ti(entries, {
             full_name,
             mod = prefix:sub(1, -2),
             index = string.format(
                '<a href="#%s">%s</a>',
                full_name, full_name
             ),
-            doc = string.format(
-               '<doc-item id="%s"><h2><a href="#%s">❖</a><code>%s: %s</code></h2><div>%s</div></doc-item>',
-               full_name, full_name, full_name, typ, content
-            )
+            doc = pre .. table.concat(mid) .. suf,
          })
       end
    end
@@ -359,6 +366,10 @@ module-listing {
       display: list-item;
       margin-left: 4em;
    }
+}
+
+code {
+   white-space: pre;
 }
 
 doc-item {
@@ -421,10 +432,10 @@ do
          w("</module-listing><module-listing>")
          current_module = entry.mod
          w("<h3>", current_module, "</h3>")
-         table.insert(documentation, "")
+         ti(documentation, "")
       end
       w(entry.index)
-      table.insert(documentation, entry.doc)
+      ti(documentation, entry.doc)
    end
 
    w("</module-listing></nav><hr>")
