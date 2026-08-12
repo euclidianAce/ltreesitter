@@ -142,6 +142,19 @@ local record ltreesitter
       new_end_point_row: integer,
       new_end_point_col: integer
       )
+      edit: function(Tree, TreeEdit)
+      edit_p: function(
+      Tree,
+      start_byte: integer,
+      old_end_byte: integer,
+      new_end_byte: integer,
+      start_point_row: integer,
+      start_point_col: integer,
+      old_end_point_row: integer,
+      old_end_point_col: integer,
+      new_end_point_row: integer,
+      new_end_point_col: integer
+      )
       edit_s: function(Tree, TreeEdit)
       get_changed_ranges: function(old: Tree, new: Tree): {Range}
       included_ranges: function(Tree): {Range}

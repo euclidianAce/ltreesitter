@@ -38,7 +38,7 @@ local function trim(s: string): string
    return s:match("^%s*(.-)%s*$")
 end
 
-local function split(str: string, del: string, no_patt: boolean): function(): string
+local function split(str: string, del: string, no_patt?: boolean): function(): string
    local i = 0
    local prev_i, s: integer, integer
    return function(): string
@@ -89,12 +89,12 @@ local interface Location
    column: integer
 end
 
-local type Directive = function(Location, first: string, inner_content: string)
+local type Directive = function(Location, inner: string, bracket_content: string)
 
 -- TODO: should probably just use the teal parser to pull out these type definitions
 local directives: {string:Directive} = {
    ["@teal-export"] = function(l: Location, inner: string, documentation: string)
-      local name <const>, typedef = inner:match("%s*(.-)%s*:%s*(.*)")
+      local name <const>, typedef <const> = inner:match("%s*(.-)%s*:%s*(.*)")
       assert(typedef, l.file .. ":" .. l.row .. ":" .. l.column .. ": No typedef after teal-export?")
       if not documentation then
          io.stderr:write(l.file, ":", l.row, ":", l.column, ": Exported item ‘", name, "’ has no documentation!\n")
@@ -228,9 +228,9 @@ local function generate_record_defs(defs: {NamedRecordDef}, indent: integer)
    if not defs then return end
    indent = indent or 0
    for _, def in ipairs(defs) do
-      ti(output, ("   "):rep(indent))
       local rec_def <const> = def.def
       if rec_def is {NamedRecordDef} then
+         ti(output, ("   "):rep(indent))
          ti(output, "record ")
          ti(output, def.name)
          ti(output, " is userdata\n")
@@ -238,10 +238,14 @@ local function generate_record_defs(defs: {NamedRecordDef}, indent: integer)
          ti(output, ("   "):rep(indent))
          ti(output, "end\n")
       else
-         ti(output, def.name)
-         ti(output, ": ")
-         ti(output, (rec_def:gsub("\n +", "\n" .. ("   "):rep(indent))))
-         ti(output, "\n")
+         for t in split(rec_def, "&", true) do
+            t = trim(t)
+            ti(output, ("   "):rep(indent))
+            ti(output, def.name)
+            ti(output, ": ")
+            ti(output, (t:gsub("\n +", "\n" .. ("   "):rep(indent))))
+            ti(output, "\n")
+         end
       end
    end
 end

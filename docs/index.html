@@ -199,6 +199,7 @@ doc-item {
 <h3>Tree</h3>
 <a href="#Tree.copy">Tree.copy</a>
 <a href="#Tree.edit">Tree.edit</a>
+<a href="#Tree.edit_p">Tree.edit_p</a>
 <a href="#Tree.edit_s">Tree.edit_s</a>
 <a href="#Tree.get_changed_ranges">Tree.get_changed_ranges</a>
 <a href="#Tree.included_ranges">Tree.included_ranges</a>
@@ -574,17 +575,29 @@ This prevents cursors from exploring children nodes at a certain depth.</div></d
 
 <doc-item id="Tree.copy"><h2><a href="#Tree.copy">❖</a><code>Tree.copy: function(Tree): Tree</code></h2><div>Creates a copy of the tree. Tree-sitter recommends to create copies if you are going to use multithreading since tree accesses are not thread-safe, but copying them is cheap and quick</div></doc-item>
 <doc-item id="Tree.edit"><h2><a href="#Tree.edit">❖</a><code>Tree.edit: function(
-         Tree,
-         start_byte: integer,
-         old_end_byte: integer,
-         new_end_byte: integer,
-         start_point_row: integer,
-         start_point_col: integer,
-         old_end_point_row: integer,
-         old_end_point_col: integer,
-         new_end_point_row: integer,
-         new_end_point_col: integer
-      )</code></h2><div>Create an edit to the given tree</div></doc-item>
+    Tree,
+    start_byte: integer,
+    old_end_byte: integer,
+    new_end_byte: integer,
+    start_point_row: integer,
+    start_point_col: integer,
+    old_end_point_row: integer,
+    old_end_point_col: integer,
+    new_end_point_row: integer,
+    new_end_point_col: integer
+ ) & function(Tree, TreeEdit)</code></h2><div>Create an edit to the given tree</div></doc-item>
+<doc-item id="Tree.edit_p"><h2><a href="#Tree.edit_p">❖</a><code>Tree.edit_p: function(
+    Tree,
+    start_byte: integer,
+    old_end_byte: integer,
+    new_end_byte: integer,
+    start_point_row: integer,
+    start_point_col: integer,
+    old_end_point_row: integer,
+    old_end_point_col: integer,
+    new_end_point_row: integer,
+    new_end_point_col: integer
+ )</code></h2><div>Create an edit to the given tree</div></doc-item>
 <doc-item id="Tree.edit_s"><h2><a href="#Tree.edit_s">❖</a><code>Tree.edit_s: function(Tree, TreeEdit)</code></h2><div>Create an edit to the given tree</div></doc-item>
 <doc-item id="Tree.get_changed_ranges"><h2><a href="#Tree.get_changed_ranges">❖</a><code>Tree.get_changed_ranges: function(old: Tree, new: Tree): {Range}</code></h2><div>Compare an old syntax tree to a new syntax tree.
 This would usually be called right after a set of calls to <code>Tree.edit(_s)</code> and <code>Parser.parse_{string,with}</code></div></doc-item>
