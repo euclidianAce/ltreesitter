@@ -372,98 +372,104 @@ static void query_cursor_set_range(lua_State *L, TSQueryCursor *c) {
 	}
 }
 
-// @teal-export Query.match: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): Match [====[
-//   Iterate over the matches of a given query.
-//   <code>start</code> and <code>end</code> are optional.
-//   They must be passed together with the same type, describing either two bytes or two points.
-//   If passed, the query will be executed within the range denoted.
-//   If not passed, the default behaviour is to execute the query through the entire range of the node.
-//   <br>
+// @teal-export Query.match: function(
+//    Query,
+//    Node,
+//    predicates?: {string:Predicate},
+//    start?: integer | Point,
+//    end_?: integer | Point
+// ): function(): Match [====[
+//    Iterate over the matches of a given query.
+//    <code>start</code> and <code>end</code> are optional.
+//    They must be passed together with the same type, describing either two bytes or two points.
+//    If passed, the query will be executed within the range denoted.
+//    If not passed, the default behaviour is to execute the query through the entire range of the node.
+//    <br>
 //
-//   The match object is a record populated with all the information given by treesitter
-//   <pre>
-//   interface Match
-//      id: integer
-//      pattern_index: integer
-//      capture_count: integer
-//      captures: {string:Node|{Node}}
-//   end
-//   </pre>
+//    The match object is a record populated with all the information given by treesitter
+//    <pre>
+//    interface Match
+//       id: integer
+//       pattern_index: integer
+//       capture_count: integer
+//       captures: {string:Node|{Node}}
+//    end
+//    </pre>
 //
-//   If a capture can only contain at most one node (as is the case with regular <code>(node) @capture-name</code> patterns and <code>(node)? @capture-name</code> patterns),
-//   it will either be <code>nil</code> or that <code>Node</code>.
+//    If a capture can only contain at most one node (as is the case with regular <code>(node) @capture-name</code> patterns and <code>(node)? @capture-name</code> patterns),
+//    it will either be <code>nil</code> or that <code>Node</code>.
 //
-//   If a capture can contain multiple nodes (as is the case with <code>(node)* @capture-name</code> and <code>(node)+ @capture-name</code> patterns)
-//   it will either be <code>nil</code> or an array of <code>Node</code>
+//    If a capture can contain multiple nodes (as is the case with <code>(node)* @capture-name</code> and <code>(node)+ @capture-name</code> patterns)
+//    it will either be <code>nil</code> or an array of <code>Node</code>
 //
-//   Example:
-//   <pre>
-//   local q = parser:query[[ (comment) @my_match ]]
-//   for match in q:match(node) do
-//      print(match.captures.my_match)
-//   end
-//   </pre>
+//    Example:
+//    <pre>
+//    local q = parser:query[[ (comment) @my_match ]]
+//    for match in q:match(node) do
+//       print(match.captures.my_match)
+//    end
+//    </pre>
 //
-//   <code>predicates</code> is a map of functions to determine whether a query matches and/or execute side effects
+//    <code>predicates</code> is a map of functions to determine whether a query matches and/or execute side effects
 //
-//   Predicates that end in a <code>'?'</code> character will be seen as conditions that must be met for the pattern to be matched.
-//   Predicates that don't will be seen just as functions to be executed given the matches provided.
+//    Predicates that end in a <code>'?'</code> character will be seen as conditions that must be met for the pattern to be matched.
+//    Predicates that don't will be seen just as functions to be executed given the matches provided.
 //
-//   Additionally, you will not have access to the return values of these functions, if you'd like to keep the results of a computation, make your functions have side-effects to write somewhere you can access.
+//    Additionally, you will not have access to the return values of these functions, if you'd like to keep the results of a computation, make your functions have side-effects to write somewhere you can access.
 //
-//   <p>
-//   By default the following predicates are provided.
-//   <ul>
-//      <li><code> (#eq? ...) </code> will match if all arguments provided are equal</li>
-//      <li><code> (#not-eq? a b) </code> will match if the two arguments provided are not equal</li>
-//      <li><code> (#match? text pattern) </code> will match the provided <code>text</code> matches the given <code>pattern</code>. Matches are determined by Lua's standard <code>string.match</code> function.</li>
-//      <li><code> (#not-match? text pattern) </code> inverse of <code>match?</code></li>
-//      <li><code> (#find? text substring) </code> will match if <code>text</code> contains <code>substring</code>. The substring is found with Lua's standard <code>string.find</code>, but the search always starts from the beginning, and pattern matching is disabled. This is equivalent to <code>string.find(text, substring, 0, true)</code></li>
-//      <li><code> (#not-find? text substring) </code> inverse of <code>find?</code></li>
-//   </ul>
-//   </p>
+//    <p>
+//    By default the following predicates are provided.
+//    <ul>
+//       <li><code> (#eq? ...) </code> will match if all arguments provided are equal</li>
+//       <li><code> (#not-eq? a b) </code> will match if the two arguments provided are not equal</li>
+//       <li><code> (#match? text pattern) </code> will match the provided <code>text</code> matches the given <code>pattern</code>. Matches are determined by Lua's standard <code>string.match</code> function.</li>
+//       <li><code> (#not-match? text pattern) </code> inverse of <code>match?</code></li>
+//       <li><code> (#find? text substring) </code> will match if <code>text</code> contains <code>substring</code>. The substring is found with Lua's standard <code>string.find</code>, but the search always starts from the beginning, and pattern matching is disabled. This is equivalent to <code>string.find(text, substring, 0, true)</code></li>
+//       <li><code> (#not-find? text substring) </code> inverse of <code>find?</code></li>
+//    </ul>
+//    </p>
 //
-//   Predicate evaluation order:<br>
+//    Predicate evaluation order:<br>
 //
-//   <p>
-//   Since predicates that end with a <code>?</code> affect whether a node
-//   matches, these are run first, in the order they appear in the query's
-//   source. Once all <code>?</code> queries are run, all the
-//   non-<code>?</code> queries are run in the order they appear in the query's
-//   source.
-//   </p>
+//    <p>
+//    Since predicates that end with a <code>?</code> affect whether a node
+//    matches, these are run first, in the order they appear in the query's
+//    source. Once all <code>?</code> queries are run, all the
+//    non-<code>?</code> queries are run in the order they appear in the query's
+//    source.
+//    </p>
 //
-//   Example:<br>
-//   The following snippet will match lua functions that have a single LDoc/EmmyLua style comment above them
-//   <pre>
-//   local parser = ltreesitter.require("lua"):parser()
+//    Example:<br>
+//    The following snippet will match lua functions that have a single LDoc/EmmyLua style comment above them
+//    <pre>
+//    local parser = ltreesitter.require("lua"):parser()
 //
-//   -- grab a node to query against
-//   local root_node = parser:parse_string[[
-//      ---@Doc this does stuff
-//      local function stuff_doer()
-//         do_stuff()
-//      end
-//   ]]:root()
+//    -- grab a node to query against
+//    local root_node = parser:parse_string[[
+//       ---@Doc this does stuff
+//       local function stuff_doer()
+//          do_stuff()
+//       end
+//    ]]:root()
 //
-//   for match in parser
-//      :query[[(
-//         (comment) @the-comment
-//         .
-//         (function_definition
-//            (function_name) @the-function-name)
-//         (#is-doc-comment? @the-comment)
-//      )]]
-//      :match(root_node, {
-//         ["is-doc-comment?"] = function(str)
-//            return str:source():sub(1, 4) == "---@"
-//         end
-//      })
-//   do
-//      print("Function: " .. match.captures["the-function-name"] .. " has documentation")
-//      print("   " .. match.captures["the-comment"])
-//   end
-//   </pre>
+//    for match in parser
+//       :query[[(
+//          (comment) @the-comment
+//          .
+//          (function_definition
+//             (function_name) @the-function-name)
+//          (#is-doc-comment? @the-comment)
+//       )]]
+//       :match(root_node, {
+//          ["is-doc-comment?"] = function(str)
+//             return str:source():sub(1, 4) == "---@"
+//          end
+//       })
+//    do
+//       print("Function: " .. match.captures["the-function-name"] .. " has documentation")
+//       print("   " .. match.captures["the-comment"])
+//    end
+//    </pre>
 // ]====]
 static int query_match_factory(lua_State *L) {
 	TSQuery *const q = *query_assert(L, 1);
@@ -480,12 +486,18 @@ static int query_match_factory(lua_State *L) {
 	return 1;
 }
 
-// @teal-export Query.capture: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): (Node, string) [===[
-//    Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs.
-//    <code>start</code> and <code>end</code> are optional.
-//    They must be passed together with the same type, describing either two bytes or two points.
-//    If passed, the query will be executed within the range denoted.
-//    If not passed, the default behaviour is to execute the query through the entire range of the node.
+// @teal-export Query.capture: function(
+//    Query,
+//    Node,
+//    predicates?: {string:Predicate},
+//    start?: integer | Point,
+//    end_?: integer | Point
+// ): function(): (Node, string) [===[
+//    Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs.<br>
+//    <code>start</code> and <code>end</code> are optional.<br>
+//    They must be passed together with the same type, describing either two bytes or two points.<br>
+//    If passed, the query will be executed within the range denoted.<br>
+//    If not passed, the default behaviour is to execute the query through the entire range of the node.<br>
 //
 //    <pre>
 //    local q = parser:query[[ (comment) @my_match ]]
@@ -511,15 +523,25 @@ static int query_capture_factory(lua_State *L) {
 
 // @teal-inline [[ type Predicate = function(...: string | Node | {Node}): any... ]]
 
-// @teal-export Query.exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point) [===[
-//    Runs a query. That's it. Nothing more, nothing less.
+// @teal-export Query.exec: function(
+//    Query,
+//    Node,
+//    predicates?: {string:Predicate},
+//    start?: integer | Point,
+//    end_?: integer | Point
+// ) [===[
+//    Runs a query. That's it. Nothing more, nothing less.<br>
+//
+//    <p>
 //    This is intended to be used with predicates that have side effects,
 //    i.e. for when you would use <code>Query.match</code> or
 //    <code>Query.capture</code>, but do nothing in the for loop.
-//    <code>start</code> and <code>end</code> are optional.
-//    They must be passed together with the same type, describing either two bytes or two points.
-//    If passed, the query will be executed within the range denoted.
-//    If not passed, the default behaviour is to execute the query through the entire range of the node.
+//    </p>
+//
+//    <code>start</code> and <code>end</code> are optional.<br>
+//    They must be passed together with the same type, describing either two bytes or two points.<br>
+//    If passed, the query will be executed within the range denoted.<br>
+//    If not passed, the default behaviour is to execute the query through the entire range of the node.<br>
 //
 //    <pre>
 //    local parser = ltreesitter.require("teal"):parser()

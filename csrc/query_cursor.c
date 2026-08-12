@@ -156,7 +156,11 @@ static int set_max_start_depth(lua_State *L) {
 	return 0;
 }
 
-// @teal-export QueryCursor.set_containing_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean [[
+// @teal-export QueryCursor.set_containing_byte_range: function(
+//    QueryCursor,
+//    start_byte: integer,
+//    end_byte: integer
+// ): boolean [[
 //    Set the byte range within which all matches must be <em>fully</em> contained.
 // ]]
 static int set_containing_byte_range(lua_State *L) {
@@ -167,7 +171,11 @@ static int set_containing_byte_range(lua_State *L) {
 	return 1;
 }
 
-// @teal-export QueryCursor.set_containing_point_range: function(QueryCursor, start_point: Point, end_point: Point): boolean [[
+// @teal-export QueryCursor.set_containing_point_range: function(
+//    QueryCursor,
+//    start_point: Point,
+//    end_point: Point
+// ): boolean [[
 //    Set the byte range within which all matches must be <em>fully</em> contained.
 // ]]
 static int set_containing_point_range(lua_State *L) {

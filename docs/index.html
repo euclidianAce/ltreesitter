@@ -351,27 +351,33 @@ ancestors</div></doc-item>
 If <code>Tree</code> is provided then it will be used to create a new updated tree
 (but it is the responsibility of the programmer to make the correct <code>Tree:edit</code> calls)</div></doc-item>
 <doc-item id="Parser.parse_with"><h2><a href="#Parser.parse_with">❖</a><code>Parser.parse_with: function(
-          Parser,
-          reader: (function(integer, Point): string),
-          progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
-          encoding?: Encoding,
-          old_tree?: Tree
-): Tree</code></h2><div><code>reader</code> should be a function that takes a byte index
+    Parser,
+    reader: (function(integer, Point): string),
+    progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
+    encoding?: Encoding,
+    old_tree?: Tree
+): Tree</code></h2><div><p>
+<code>reader</code> should be a function that takes a byte index
 and a <code>Point</code> and returns the text at that point. The
 function should return either <code>nil</code> or an empty string
 to signal that there is no more text.
+</p>
 
+<p>
 <code>progress_callback</code> should be a function that takes a boolean
 signalling if an error has occurred, and an integer byte offset. This
 function will be called intermittently while parsing and may return <code>true</code>
 to cancel parsing.
+</p>
 
+<p>
 A <code>Tree</code> can be provided to reuse parts of it for parsing,
 provided that <code>Tree:edit</code> has been called previously
+</p>
 
-<code>encoding</code> defaults to <code>"utf-8"</code> when not provided.
+<p><code>encoding</code> defaults to <code>"utf-8"</code> when not provided.</p>
 
-May return nil if the progress callback cancelled parsing</div></doc-item>
+<p>May return nil if the progress callback cancelled parsing.</p></div></doc-item>
 <doc-item id="Parser.reset"><h2><a href="#Parser.reset">❖</a><code>Parser.reset: function(Parser)</code></h2><div>Reset the parser, causing the next parse to start from the beginning</div></doc-item>
 <doc-item id="Parser.set_ranges"><h2><a href="#Parser.set_ranges">❖</a><code>Parser.set_ranges: function(Parser, {Range}): boolean</code></h2><div>Sets the ranges that <code>Parser</code> will include when parsing, so you don't have to parse an entire document, but the ranges in the tree will still match the document.
 The array of <code>Range</code>s must satisfy the following relationship: for a positive integer <code>i</code> within the length of <code>ranges: {Range}</code>:
@@ -381,11 +387,17 @@ ranges[i].end_byte <= ranges[i + 1].start_byte
 
 returns whether or not setting the range succeeded</div></doc-item>
 
-<doc-item id="Query.capture"><h2><a href="#Query.capture">❖</a><code>Query.capture: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): (Node, string)</code></h2><div>Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs.
-<code>start</code> and <code>end</code> are optional.
-They must be passed together with the same type, describing either two bytes or two points.
-If passed, the query will be executed within the range denoted.
-If not passed, the default behaviour is to execute the query through the entire range of the node.
+<doc-item id="Query.capture"><h2><a href="#Query.capture">❖</a><code>Query.capture: function(
+    Query,
+    Node,
+    predicates?: {string:Predicate},
+    start?: integer | Point,
+    end_?: integer | Point
+): function(): (Node, string)</code></h2><div>Iterate over the captures of a given query in <code>Node</code>, <code>name</code> pairs.<br>
+<code>start</code> and <code>end</code> are optional.<br>
+They must be passed together with the same type, describing either two bytes or two points.<br>
+If passed, the query will be executed within the range denoted.<br>
+If not passed, the default behaviour is to execute the query through the entire range of the node.<br>
 
 <pre>
 local q = parser:query[[ (comment) @my_match ]]
@@ -402,14 +414,24 @@ Currently there is no way to undo this.</div></doc-item>
 
 Currently there is no way to undo this.</div></doc-item>
 <doc-item id="Query.end_byte_for_pattern"><h2><a href="#Query.end_byte_for_pattern">❖</a><code>Query.end_byte_for_pattern: function(Query, pattern_zero_index: integer): integer</code></h2><div>Returns the byte offset where the given pattern ends in the query's source</div></doc-item>
-<doc-item id="Query.exec"><h2><a href="#Query.exec">❖</a><code>Query.exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point)</code></h2><div>Runs a query. That's it. Nothing more, nothing less.
+<doc-item id="Query.exec"><h2><a href="#Query.exec">❖</a><code>Query.exec: function(
+    Query,
+    Node,
+    predicates?: {string:Predicate},
+    start?: integer | Point,
+    end_?: integer | Point
+)</code></h2><div>Runs a query. That's it. Nothing more, nothing less.<br>
+
+<p>
 This is intended to be used with predicates that have side effects,
 i.e. for when you would use <code>Query.match</code> or
 <code>Query.capture</code>, but do nothing in the for loop.
-<code>start</code> and <code>end</code> are optional.
-They must be passed together with the same type, describing either two bytes or two points.
-If passed, the query will be executed within the range denoted.
-If not passed, the default behaviour is to execute the query through the entire range of the node.
+</p>
+
+<code>start</code> and <code>end</code> are optional.<br>
+They must be passed together with the same type, describing either two bytes or two points.<br>
+If passed, the query will be executed within the range denoted.<br>
+If not passed, the default behaviour is to execute the query through the entire range of the node.<br>
 
 <pre>
 local parser = ltreesitter.require("teal"):parser()
@@ -438,7 +460,13 @@ If you'd like to interact with the matches/captures of a query, see the
 <doc-item id="Query.is_pattern_guaranteed_at_step"><h2><a href="#Query.is_pattern_guaranteed_at_step">❖</a><code>Query.is_pattern_guaranteed_at_step: function(Query, pattern_zero_index: integer): boolean</code></h2><div>Returns whether the pattern at the given index is guaranteed to match when it is reached</div></doc-item>
 <doc-item id="Query.is_pattern_non_local"><h2><a href="#Query.is_pattern_non_local">❖</a><code>Query.is_pattern_non_local: function(Query, pattern_zero_index: integer): boolean</code></h2><div>Returns whether the pattern at the given index is non-local</div></doc-item>
 <doc-item id="Query.is_pattern_rooted"><h2><a href="#Query.is_pattern_rooted">❖</a><code>Query.is_pattern_rooted: function(Query, pattern_zero_index: integer): boolean</code></h2><div>Returns whether the pattern at the given index is rooted</div></doc-item>
-<doc-item id="Query.match"><h2><a href="#Query.match">❖</a><code>Query.match: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): Match</code></h2><div>Iterate over the matches of a given query.
+<doc-item id="Query.match"><h2><a href="#Query.match">❖</a><code>Query.match: function(
+    Query,
+    Node,
+    predicates?: {string:Predicate},
+    start?: integer | Point,
+    end_?: integer | Point
+): function(): Match</code></h2><div>Iterate over the matches of a given query.
 <code>start</code> and <code>end</code> are optional.
 They must be passed together with the same type, describing either two bytes or two points.
 If passed, the query will be executed within the range denoted.
@@ -569,8 +597,16 @@ local q = c:query [[
 <code>Query.match</code> for executing predicates.</div></doc-item>
 <doc-item id="QueryCursor.remove_match"><h2><a href="#QueryCursor.remove_match">❖</a><code>QueryCursor.remove_match: function(QueryCursor, match_id: integer)</code></h2><div>Prevent the given query cursor from matching the given match id</div></doc-item>
 <doc-item id="QueryCursor.set_byte_range"><h2><a href="#QueryCursor.set_byte_range">❖</a><code>QueryCursor.set_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean</code></h2><div>returns true when the given range was non-empty</div></doc-item>
-<doc-item id="QueryCursor.set_containing_byte_range"><h2><a href="#QueryCursor.set_containing_byte_range">❖</a><code>QueryCursor.set_containing_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean</code></h2><div>Set the byte range within which all matches must be <em>fully</em> contained.</div></doc-item>
-<doc-item id="QueryCursor.set_containing_point_range"><h2><a href="#QueryCursor.set_containing_point_range">❖</a><code>QueryCursor.set_containing_point_range: function(QueryCursor, start_point: Point, end_point: Point): boolean</code></h2><div>Set the byte range within which all matches must be <em>fully</em> contained.</div></doc-item>
+<doc-item id="QueryCursor.set_containing_byte_range"><h2><a href="#QueryCursor.set_containing_byte_range">❖</a><code>QueryCursor.set_containing_byte_range: function(
+    QueryCursor,
+    start_byte: integer,
+    end_byte: integer
+): boolean</code></h2><div>Set the byte range within which all matches must be <em>fully</em> contained.</div></doc-item>
+<doc-item id="QueryCursor.set_containing_point_range"><h2><a href="#QueryCursor.set_containing_point_range">❖</a><code>QueryCursor.set_containing_point_range: function(
+    QueryCursor,
+    start_point: Point,
+    end_point: Point
+): boolean</code></h2><div>Set the byte range within which all matches must be <em>fully</em> contained.</div></doc-item>
 <doc-item id="QueryCursor.set_match_limit"><h2><a href="#QueryCursor.set_match_limit">❖</a><code>QueryCursor.set_match_limit: function(QueryCursor, integer)</code></h2><div>Set the maximum number of in-progress matches allowed by this query cursor.
 
 Set to nil to set to the maximum limit (2^32-1)</div></doc-item>

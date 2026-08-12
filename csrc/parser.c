@@ -190,29 +190,34 @@ static char const *read_callback(void *payload, uint32_t byte_index, TSPoint pos
 // TODO: allow taking a DecodeFunction
 
 // @teal-export Parser.parse_with: function(
-//          Parser,
-//          reader: (function(integer, Point): string),
-//          progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
-//          encoding?: Encoding,
-//          old_tree?: Tree
-//       ): Tree [[
-//
+//    Parser,
+//    reader: (function(integer, Point): string),
+//    progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
+//    encoding?: Encoding,
+//    old_tree?: Tree
+// ): Tree [[
+//    <p>
 //    <code>reader</code> should be a function that takes a byte index
 //    and a <code>Point</code> and returns the text at that point. The
 //    function should return either <code>nil</code> or an empty string
 //    to signal that there is no more text.
+//    </p>
 //
+//    <p>
 //    <code>progress_callback</code> should be a function that takes a boolean
 //    signalling if an error has occurred, and an integer byte offset. This
 //    function will be called intermittently while parsing and may return <code>true</code>
 //    to cancel parsing.
+//    </p>
 //
+//    <p>
 //    A <code>Tree</code> can be provided to reuse parts of it for parsing,
 //    provided that <code>Tree:edit</code> has been called previously
+//    </p>
 //
-//    <code>encoding</code> defaults to <code>"utf-8"</code> when not provided.
+//    <p><code>encoding</code> defaults to <code>"utf-8"</code> when not provided.</p>
 //
-//    May return nil if the progress callback cancelled parsing
+//    <p>May return nil if the progress callback cancelled parsing.</p>
 // ]]
 static int parser_parse_with(lua_State *L) {
 	lua_settop(L, 5);
