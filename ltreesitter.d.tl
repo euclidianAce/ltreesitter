@@ -33,29 +33,29 @@ local record ltreesitter
       descendant_for_byte_range: function(Node, start_byte: integer, end_byte: integer): Node
       descendant_for_point_range: function(Node, start_point: Point, end_point: Point): Node
       edit: function(
-      Node,
-      start_byte: integer,
-      old_end_byte: integer,
-      new_end_byte: integer,
-      start_point_row: integer,
-      start_point_col: integer,
-      old_end_point_row: integer,
-      old_end_point_col: integer,
-      new_end_point_row: integer,
-      new_end_point_col: integer
+         Node,
+         start_byte: integer,
+         old_end_byte: integer,
+         new_end_byte: integer,
+         start_point_row: integer,
+         start_point_col: integer,
+         old_end_point_row: integer,
+         old_end_point_col: integer,
+         new_end_point_row: integer,
+         new_end_point_col: integer
       )
       edit: function(Node, Edit)
       edit_p: function(
-      Node,
-      start_byte: integer,
-      old_end_byte: integer,
-      new_end_byte: integer,
-      start_point_row: integer,
-      start_point_col: integer,
-      old_end_point_row: integer,
-      old_end_point_col: integer,
-      new_end_point_row: integer,
-      new_end_point_col: integer
+         Node,
+         start_byte: integer,
+         old_end_byte: integer,
+         new_end_byte: integer,
+         start_point_row: integer,
+         start_point_col: integer,
+         old_end_point_row: integer,
+         old_end_point_col: integer,
+         new_end_point_row: integer,
+         new_end_point_col: integer
       )
       edit_s: function(Node, Edit)
       end_byte_offset: function(Node): integer
@@ -96,27 +96,45 @@ local record ltreesitter
       get_ranges: function(Parser): {Range}
       parse_string: function(Parser, string, ?Encoding, ?Tree): Tree
       parse_with: function(
-      Parser,
-      reader: (function(integer, Point): string),
-      progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
-      encoding?: Encoding,
-      old_tree?: Tree
+         Parser,
+         reader: (function(integer, Point): string),
+         progress_callback?: (function(has_error: boolean, byte_offset: integer): boolean),
+         encoding?: Encoding,
+         old_tree?: Tree
       ): Tree
       reset: function(Parser)
       set_ranges: function(Parser, {Range}): boolean
    end
    record Query is userdata
-      capture: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): (Node, string)
+      capture: function(
+         Query,
+         Node,
+         predicates?: {string:Predicate},
+         start?: integer | Point,
+         end_?: integer | Point
+      ): function(): (Node, string)
       capture_count: function(Query): integer
       cursor: function(Query, Node): QueryCursor
       disable_capture: function(Query, name: string)
       disable_pattern: function(Query, pattern_zero_index: integer)
       end_byte_for_pattern: function(Query, pattern_zero_index: integer): integer
-      exec: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point)
+      exec: function(
+         Query,
+         Node,
+         predicates?: {string:Predicate},
+         start?: integer | Point,
+         end_?: integer | Point
+      )
       is_pattern_guaranteed_at_step: function(Query, pattern_zero_index: integer): boolean
       is_pattern_non_local: function(Query, pattern_zero_index: integer): boolean
       is_pattern_rooted: function(Query, pattern_zero_index: integer): boolean
-      match: function(Query, Node, predicates?: {string:Predicate}, start?: integer | Point, end_?: integer | Point): function(): Match
+      match: function(
+         Query,
+         Node,
+         predicates?: {string:Predicate},
+         start?: integer | Point,
+         end_?: integer | Point
+      ): function(): Match
       pattern_count: function(Query): integer
       predicates_for_pattern: function(Query, pattern_index: integer): {{string | Capture}}
       start_byte_for_pattern: function(Query, pattern_zero_index: integer): integer
@@ -129,8 +147,16 @@ local record ltreesitter
       next_match_without_executing_predicates: function(QueryCursor): Match
       remove_match: function(QueryCursor, match_id: integer)
       set_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean
-      set_containing_byte_range: function(QueryCursor, start_byte: integer, end_byte: integer): boolean
-      set_containing_point_range: function(QueryCursor, start_point: Point, end_point: Point): boolean
+      set_containing_byte_range: function(
+         QueryCursor,
+         start_byte: integer,
+         end_byte: integer
+      ): boolean
+      set_containing_point_range: function(
+         QueryCursor,
+         start_point: Point,
+         end_point: Point
+      ): boolean
       set_match_limit: function(QueryCursor, integer)
       set_max_start_depth: function(QueryCursor, integer)
       set_point_range: function(QueryCursor, start: Point, end_: Point): boolean
@@ -140,29 +166,29 @@ local record ltreesitter
    record Tree is userdata
       copy: function(Tree): Tree
       edit: function(
-      Tree,
-      start_byte: integer,
-      old_end_byte: integer,
-      new_end_byte: integer,
-      start_point_row: integer,
-      start_point_col: integer,
-      old_end_point_row: integer,
-      old_end_point_col: integer,
-      new_end_point_row: integer,
-      new_end_point_col: integer
+         Tree,
+         start_byte: integer,
+         old_end_byte: integer,
+         new_end_byte: integer,
+         start_point_row: integer,
+         start_point_col: integer,
+         old_end_point_row: integer,
+         old_end_point_col: integer,
+         new_end_point_row: integer,
+         new_end_point_col: integer
       )
       edit: function(Tree, Edit)
       edit_p: function(
-      Tree,
-      start_byte: integer,
-      old_end_byte: integer,
-      new_end_byte: integer,
-      start_point_row: integer,
-      start_point_col: integer,
-      old_end_point_row: integer,
-      old_end_point_col: integer,
-      new_end_point_row: integer,
-      new_end_point_col: integer
+         Tree,
+         start_byte: integer,
+         old_end_byte: integer,
+         new_end_byte: integer,
+         start_point_row: integer,
+         start_point_col: integer,
+         old_end_point_row: integer,
+         old_end_point_col: integer,
+         new_end_point_row: integer,
+         new_end_point_col: integer
       )
       edit_s: function(Tree, Edit)
       get_changed_ranges: function(old: Tree, new: Tree): {Range}

@@ -243,7 +243,10 @@ local function generate_record_defs(defs: {NamedRecordDef}, indent: integer)
             ti(output, ("   "):rep(indent))
             ti(output, def.name)
             ti(output, ": ")
-            ti(output, (t:gsub("\n +", "\n" .. ("   "):rep(indent))))
+            ti(output, (
+               t:gsub("\n +", "\n" .. ("   "):rep(indent + 1))
+                  :gsub("\n[ \t]*([^\n]*)$", "\n" .. ("   "):rep(indent) .. "%1")
+            ))
             ti(output, "\n")
          end
       end
