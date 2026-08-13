@@ -402,7 +402,7 @@ FILE *testfile(lua_State *L, int idx) {
 int fd_from_file(FILE *f) {
 	int fd = -1;
 #ifdef _WIN32
-	int _fileno(FILE *);
+	__declspec(dllimport) int _fileno(FILE *);
 	fd = _fileno(f);
 #else
 	int fileno(FILE *);

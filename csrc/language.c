@@ -123,10 +123,11 @@ int language_load(lua_State *L) {
 			opened = *dl;
 			cached = true;
 		} else {
-			char const *err = NULL;
-			if (!dynlib_open(dl_file, &opened, &err)) {
+			char err_buf[1024];
+			size_t err_len = sizeof err_buf;
+			if (!dynlib_open(dl_file, &opened, &err_len, err_buf)) {
 				lua_pushnil(L);
-				lua_pushstring(L, err);
+				lua_pushlstring(L, err_buf, err_len);
 				return 2;
 			}
 		}
@@ -166,7 +167,6 @@ static bool try_load_from_path(
 	size_t lang_name_len,
 	char const *lang_name,
 	StringBuilder *err_buf) {
-	char const *dynlib_error = NULL;
 	TSLanguage const *lang = NULL;
 	bool should_cache_dl = false;
 
@@ -184,8 +184,10 @@ static bool try_load_from_path(
 	Dynlib dl;
 	if (!lang) {
 		should_cache_dl = true;
-		if (!dynlib_open(dl_file, &dl, &dynlib_error)) {
-			sb_push_fmt(err_buf, "\n\tTried %s: %s", dl_file, dynlib_error);
+		char dl_err_buf[1024];
+		size_t err_len = sizeof dl_err_buf;
+		if (!dynlib_open(dl_file, &dl, &err_len, dl_err_buf)) {
+			sb_push_fmt(err_buf, "\n\tTried %s: %.*s", dl_file, (int)err_len, dl_err_buf);
 			return false;
 		}
 		lang = language_load_from(dl, lang_name_len, lang_name);

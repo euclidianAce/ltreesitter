@@ -25,7 +25,7 @@ typedef struct {
 #define LTREESITTER_DL_EXT "so"
 #endif
 
-bool dynlib_open(char const *name, Dynlib *handle, char const **out_error);
+bool dynlib_open(char const *name, Dynlib *handle, size_t *out_error_buf_len, char *out_error_buf);
 void *dynlib_sym(Dynlib *handle, char const *sym_name);
 void dynlib_close(Dynlib *handle);
 
