@@ -295,7 +295,7 @@ local predicates = {
 
 		local function check(prefix, header)
 			if name:match("^" .. prefix .. "[a-z]") then
-				report(point, "Enumeration constant name ‘", name, "’ is reserved by <", header, ".h> since it starts with ", prefix, " followed by a lowercase letter")
+				report(point, "Enumeration constant name ‘", name, "’ is reserved by <", header, ".h> since it starts with ‘", prefix, "’ followed by a lowercase letter")
 			end
 		end
 
