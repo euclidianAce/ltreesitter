@@ -131,6 +131,16 @@ local keywords = {
 	_Thread_local = true,
 }
 
+local complex_h_names = {
+	cerf = true, cerfc = true, cexp2 = true, cexpm1 = true,
+	clog10 = true, clog1p = true, clog2 = true,
+	clgamma = true, ctgamma = true, csinpi = true, ccospi = true,
+	ctanpi = true, casinpi = true, cacospi = true, catanpi = true,
+	ccompoundn = true, cpown = true, cpowr = true, crootn = true,
+	crsqrt = true, cexp10m1 = true, cexp10 = true, cexp2m1 = true,
+	clog10p1 = true, clog2p1 = true, clogp1 = true,
+}
+
 local function check_common(name_node, kind)
 	kind = kind or "Name"
 	local name = name_node:source()
@@ -163,15 +173,6 @@ local predicates = {
 
 		check_common(name_node, "Function name")
 
-		local complex_h_names = {
-			cerf = true, cerfc = true, cexp2 = true, cexpm1 = true,
-			clog10 = true, clog1p = true, clog2 = true,
-			clgamma = true, ctgamma = true, csinpi = true, ccospi = true,
-			ctanpi = true, casinpi = true, cacospi = true, catanpi = true,
-			ccompoundn = true, cpown = true, cpowr = true, crootn = true,
-			crsqrt = true, cexp10m1 = true, cexp10 = true, cexp2m1 = true,
-			clog10p1 = true, clog2p1 = true, clogp1 = true,
-		}
 		if complex_h_names[name] or name:match("[fl]$") and complex_h_names[name:sub(1, -2)] then
 			report(point, "Function name ‘", name, "’ is reserved by <complex.h>")
 		end
