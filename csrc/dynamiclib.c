@@ -50,12 +50,13 @@ bool dynlib_open(char const *name, Dynlib *handle, size_t *out_error_buf_len, ch
 void *dynlib_sym(Dynlib *handle, char const *sym_name) {
 #ifdef _WIN32
 	FARPROC sym = GetProcAddress(handle->opaque_handle, sym_name);
-	return *(void **)(&sym);
+	void *result;
+	memcpy(&result, &sym, sizeof result);
+	return result;
 #elif LTREESITTER_USE_LIBUV
 	void *sym = NULL;
-	if (uv_dlsym(handle, sym_name, &sym) == 0) {
+	if (uv_dlsym(handle, sym_name, &sym) == 0)
 		return sym;
-	}
 	return NULL;
 #else
 	return dlsym(handle->opaque_handle, sym_name);
