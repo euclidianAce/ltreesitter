@@ -12,7 +12,7 @@
 #include "tree_cursor.h"
 
 // @teal-export version: string [[The version of ltreesitter]]
-static const char version_str[] = "0.2.0+dev";
+static const char version_str[] = "0.3.0+dev";
 
 static const luaL_Reg lib_funcs[] = {
 	{"_reg", push_registry_table},
