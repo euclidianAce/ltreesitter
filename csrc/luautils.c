@@ -1,5 +1,6 @@
 #include "luautils.h"
 #include <stdio.h>
+#include <inttypes.h>
 
 char *str_ldup(char const *s, const size_t len) {
 	char *dup = malloc(sizeof(char) * (len + 1));
@@ -149,7 +150,7 @@ void setup_registry_index(lua_State *L) {
 int push_registry_table(lua_State *L) {
 	lua_pushvalue(L, LUA_REGISTRYINDEX);                           // { <Registry> }
 	lua_pushlightuserdata(L, (void *)&ltreesitter_registry_index); // { <Registry> }, <void *>
-	lua_rawget(L, -2);                                             //  { <Registry> }, { <ltreesitter Registry> }
+	lua_rawget(L, -2);                                             // { <Registry> }, { <ltreesitter Registry> }
 	lua_remove(L, -2);                                             // { <ltreesitter Registry> }
 	return 1;
 }
@@ -304,31 +305,65 @@ bool mos_eq(MaybeOwnedString a, MaybeOwnedString b) {
 	return a.length == b.length && memcmp(a.data, b.data, a.length) == 0;
 }
 
-uint32_t u32_argcheck(lua_State *L, int idx) {
+bool test_u32(lua_State *L, int idx, uint32_t *out) {
+	lua_Integer arg = lua_tointeger(L, idx);
+	if (!lua_isinteger(L, idx)) return false;
+	if (arg < 0) return false;
+	if (arg > (lua_Integer)UINT32_MAX) return false;
+	*out = (uint32_t)arg;
+	return true;
+}
+
+bool test_u32_one_index(lua_State *L, int idx, uint32_t end_inclusive, uint32_t *out) {
+	lua_Integer arg = lua_tointeger(L, idx);
+	if (!lua_isinteger(L, idx)) return false;
+	if (arg < 0) return false;
+	if (arg > (lua_Integer)end_inclusive) return false;
+	*out = (uint32_t)arg;
+	return true;
+}
+
+bool test_u32_zero_index(lua_State *L, int idx, uint32_t end_exclusive, uint32_t *out) {
 	lua_Integer arg = luaL_checkinteger(L, idx);
-	luaL_argcheck(L, arg >= 0 && arg <= UINT32_MAX, idx, "expected an integer within [0, 2^32-1]");
-	return (uint32_t)arg;
+	if (arg < 0) return false;
+	if (arg >= (lua_Integer)end_exclusive) return false;
+	*out = (uint32_t)arg;
+	return true;
+}
+
+bool clamp_u32(lua_State *L, int idx, uint32_t *out) {
+	lua_Integer arg = lua_tointeger(L, idx);
+	if (!lua_isinteger(L, idx))
+		return false;
+	if (arg < 0)
+		*out = 0;
+	else if (arg > (lua_Integer)UINT32_MAX)
+		*out = UINT32_MAX;
+	else
+		*out = (uint32_t)arg;
+	return true;
+}
+
+uint32_t clamp_u32_or_argerror(lua_State *L, int idx) {
+	uint32_t result;
+	if (!clamp_u32(L, idx, &result)) {
+		char buf[128];
+		snprintf(buf, sizeof buf, "Expected integer, got `%s'", lua_typename(L, lua_type(L, idx)));
+		luaL_argerror(L, idx, buf);
+	}
+	return result;
 }
 
 // ( any -- )
 static uint32_t u32_check(lua_State *L, int argument_index, char const *field_name) {
 	char buf[256];
-	int type = lua_type(L, -1);
-	if (type != LUA_TNUMBER) {
-		snprintf(buf, sizeof buf, "Expected field `%s' to be a integer within [0, 2^32-1], but got a `%s'", field_name, lua_typename(L, type));
+	uint32_t arg = 0;
+	if (!clamp_u32(L, -1, &arg)) {
+		snprintf(buf, sizeof buf, "Expected field `%s' to be an integer, but got a `%s'", field_name, lua_typename(L, lua_type(L, -1)));
 		luaL_argerror(L, argument_index, buf);
-		return 0;
-	}
-
-	lua_Integer arg = lua_tointeger(L, -1);
-	if (!(arg >= 0 && arg <= UINT32_MAX)) {
-		char const *as_str = lua_tostring(L, -1);
-		snprintf(buf, sizeof buf, "Expected field `%s' to be an within [0, 2^32-1], but got %s", field_name, as_str);
-		luaL_argerror(L, argument_index, buf);
-		return 0;
 	}
 	lua_pop(L, 1);
-	return (uint32_t)arg;
+	return arg;
 }
 
 TSInputEdit expect_edit_table_arg(lua_State *L, int arg) {
@@ -370,18 +405,18 @@ TSInputEdit expect_edit_table_arg(lua_State *L, int arg) {
 TSInputEdit expect_edit_positional_args(lua_State *L, int first_arg) {
 	TSInputEdit edit;
 
-	edit.start_byte           = u32_argcheck(L, first_arg + 0);
-	edit.old_end_byte         = u32_argcheck(L, first_arg + 1);
-	edit.new_end_byte         = u32_argcheck(L, first_arg + 2);
+	edit.start_byte           = clamp_u32_or_argerror(L, first_arg + 0);
+	edit.old_end_byte         = clamp_u32_or_argerror(L, first_arg + 1);
+	edit.new_end_byte         = clamp_u32_or_argerror(L, first_arg + 2);
 
-	edit.start_point.row      = u32_argcheck(L, first_arg + 3);
-	edit.start_point.column   = u32_argcheck(L, first_arg + 4);
+	edit.start_point.row      = clamp_u32_or_argerror(L, first_arg + 3);
+	edit.start_point.column   = clamp_u32_or_argerror(L, first_arg + 4);
 
-	edit.old_end_point.row    = u32_argcheck(L, first_arg + 5);
-	edit.old_end_point.column = u32_argcheck(L, first_arg + 6);
+	edit.old_end_point.row    = clamp_u32_or_argerror(L, first_arg + 5);
+	edit.old_end_point.column = clamp_u32_or_argerror(L, first_arg + 6);
 
-	edit.new_end_point.row    = u32_argcheck(L, first_arg + 7);
-	edit.new_end_point.column = u32_argcheck(L, first_arg + 8);
+	edit.new_end_point.row    = clamp_u32_or_argerror(L, first_arg + 7);
+	edit.new_end_point.column = clamp_u32_or_argerror(L, first_arg + 8);
 
 	return edit;
 }
@@ -409,4 +444,29 @@ int fd_from_file(FILE *f) {
 	fd = fileno(f);
 #endif
 	return fd;
+}
+
+TSPoint to_clamped_point(lua_State *L, int const idx) {
+	int const absidx = absindex(L, idx);
+	TSPoint result;
+	if (getfield_type(L, absidx, "row") != LUA_TNUMBER || !clamp_u32(L, -1, &result.row))
+		luaL_error(L, "Expected `row' of point to be an integer, got `%s'", lua_typename(L, lua_type(L, -1)));
+	if (getfield_type(L, absidx, "column") != LUA_TNUMBER || !clamp_u32(L, -1, &result.column))
+		luaL_error(L, "Expected `column' of point to be an integer, got `%s'", lua_typename(L, lua_type(L, -1)));
+	lua_pop(L, 2);
+	return result;
+}
+
+void push_point(lua_State *L, TSPoint point) {
+	lua_createtable(L, 0, 2);
+	pushinteger(L, point.row); lua_setfield(L, -2, "row");
+	pushinteger(L, point.column); lua_setfield(L, -2, "column");
+}
+
+void push_range(lua_State *L, TSRange range) {
+	lua_createtable(L, 0, 4);
+	pushinteger(L, range.start_byte); lua_setfield(L, -2, "start_byte");
+	pushinteger(L, range.end_byte); lua_setfield(L, -2, "end_byte");
+	push_point(L, range.start_point); lua_setfield(L, -2, "start_point");
+	push_point(L, range.end_point); lua_setfield(L, -2, "end_point");
 }

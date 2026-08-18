@@ -48,7 +48,7 @@ void mos_push_to_lua(lua_State *, MaybeOwnedString);
 void mos_free(MaybeOwnedString *);
 bool mos_eq(MaybeOwnedString, MaybeOwnedString);
 
-char *str_ldup(char const *s, const size_t len);
+char *str_ldup(char const *s, size_t len);
 
 // ( {T} -- {T} T )
 void table_geti(lua_State *L, int idx, int i);
@@ -73,9 +73,18 @@ bool expect_field(lua_State *L, int idx, char const *field_name, int expected_ty
 bool expect_nested_field(lua_State *L, int idx, char const *parent_name, char const *field_name, int expected_type);
 int absindex(lua_State *L, int idx);
 
-uint32_t u32_argcheck(lua_State *L, int idx);
+
+bool test_u32(lua_State *L, int idx, uint32_t *out);
+bool test_u32_one_index(lua_State *L, int idx, uint32_t end_inclusive, uint32_t *out);
+bool test_u32_zero_index(lua_State *L, int idx, uint32_t end_exclusive, uint32_t *out);
+
+uint32_t clamp_u32_or_argerror(lua_State *L, int idx);
+bool clamp_u32(lua_State *L, int idx, uint32_t *out);
+
 TSInputEdit expect_edit_table_arg(lua_State *L, int arg);
 TSInputEdit expect_edit_positional_args(lua_State *L, int first_arg);
+
+TSPoint to_clamped_point(lua_State *L, int idx);
 
 // ( T -- T )
 void setmetatable(lua_State *L, char const *mt_name);
@@ -96,6 +105,11 @@ void *testudata(lua_State *, int idx, char const *);
 
 FILE *testfile(lua_State *, int idx);
 int fd_from_file(FILE *);
+
+// ( -- Point )
+void push_point(lua_State *, TSPoint);
+// ( -- Range )
+void push_range(lua_State *, TSRange);
 
 #if LUA_VERSION_NUM > 501
 void dump_stack(lua_State *L, int from);

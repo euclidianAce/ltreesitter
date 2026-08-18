@@ -51,19 +51,6 @@ void source_text_init_metatable(lua_State *L) {
 	create_metatable(L, LTREESITTER_SOURCE_TEXT_METATABLE_NAME, source_text_metamethods, NULL);
 }
 
-TSPoint topoint(lua_State *L, int const idx) {
-	int const absidx = absindex(L, idx);
-	expect_field(L, absidx, "row", LUA_TNUMBER);
-	expect_field(L, absidx, "column", LUA_TNUMBER);
-	uint32_t const row = lua_tonumber(L, -2);
-	uint32_t const col = lua_tonumber(L, -1);
-	lua_pop(L, 2);
-	return (TSPoint){
-		.row = row,
-		.column = col,
-	};
-}
-
 void push_match(lua_State *L, TSQueryMatch m, TSQuery const *q, int tree_index) {
 	lua_createtable(L, 0, 5); // { <match> }
 	pushinteger(L, m.id);

@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "dynamiclib.h"
 #include "luautils.h"
@@ -300,6 +301,24 @@ static int parser_reset(lua_State *L) {
 //   end
 // ]]
 
+static void expect_range(lua_State *L, TSRange *out) {
+	if (getfield_type(L, -1, "start_byte") != LUA_TNUMBER || !clamp_u32(L, -1, &out->start_byte))
+		luaL_error(L, "Expected `start_byte' of Range to be an integer, got `%s'", lua_typename(L, lua_type(L, -1)));
+	lua_pop(L, 1);
+
+	if (getfield_type(L, -1, "end_byte") != LUA_TNUMBER || !clamp_u32(L, -1, &out->end_byte))
+		luaL_error(L, "Expected `end_byte' of Range to be an integer, got `%s'", lua_typename(L, lua_type(L, -1)));
+	lua_pop(L, 1);
+
+	lua_getfield(L, -1, "start_point");
+	out->start_point = to_clamped_point(L, -1);
+	lua_pop(L, 1);
+
+	lua_getfield(L, -1, "end_point");
+	out->end_point = to_clamped_point(L, -1);
+	lua_pop(L, 1);
+}
+
 // @teal-export Parser.set_ranges: function(Parser, {Range}): boolean [[
 //    Sets the ranges that <code>Parser</code> will include when parsing, so you don't have to parse an entire document, but the ranges in the tree will still match the document.
 //    The array of <code>Range</code>s must satisfy the following relationship: for a positive integer <code>i</code> within the length of <code>ranges: {Range}</code>:
@@ -319,67 +338,25 @@ static int parser_set_ranges(lua_State *L) {
 	}
 
 	size_t len = length_of(L, -1);
-	TSRange *ranges = malloc(len * sizeof(TSRange));
+	// NOTE: we alloc this as userdata in case of a lua error `longjmp`s away from here before we get to free it
+	TSRange *ranges = lua_newuserdata(L, len * sizeof(TSRange));
 	if (!ranges)
 		return ALLOC_FAIL(L);
 
-#define COPY_FIELD(field_name, field_type, method)           \
-	do {                                                     \
-		if (!expect_field(L, -1, #field_name, field_type)) { \
-			free(ranges);                                    \
-			return 0;                                        \
-		}                                                    \
-		ranges[i].field_name = method(L, -1);                \
-		lua_pop(L, 1);                                       \
-	} while (0)
-
 	for (size_t i = 0; i < len; ++i) {
 		table_geti(L, 2, i + 1);
-		COPY_FIELD(start_byte, LUA_TNUMBER, lua_tonumber);
-		COPY_FIELD(end_byte, LUA_TNUMBER, lua_tonumber);
-		COPY_FIELD(start_point, LUA_TTABLE, topoint);
-		COPY_FIELD(end_point, LUA_TTABLE, topoint);
+		expect_range(L, &ranges[i]);
 		lua_pop(L, 1);
 
 		if (i > 0 && ranges[i - 1].end_byte > ranges[i].start_byte) {
-			int end_byte = (int)ranges[i - 1].end_byte;
-			int start_byte = (int)ranges[i].start_byte;
-			free(ranges);
-			return luaL_error(L, "Error in ranges: range[%d].end_byte (%d) is greater than range[%d].start_byte (%d)", i, end_byte, i + 1, start_byte);
+			uint32_t end_byte = ranges[i - 1].end_byte;
+			uint32_t start_byte = ranges[i].start_byte;
+			return luaL_error(L, "Error in ranges: range[%zu].end_byte (%"PRIu32") is greater than range[%zu].start_byte (%"PRIu32")", i, end_byte, i + 1, start_byte);
 		}
 	}
 
-#undef COPY_FIELD
-
 	lua_pushboolean(L, ts_parser_set_included_ranges(p, ranges, len));
-	free(ranges);
 	return 1;
-}
-
-#define SET_FIELD(L, push_fn, struct_ptr, field_name) \
-	do {                                              \
-		push_fn(L, (struct_ptr)->field_name);         \
-		lua_setfield(L, -2, #field_name);             \
-	} while (0);
-
-#define SET_FIELD_P(L, push_fn, struct_ptr, field_name) \
-	do {                                                \
-		push_fn(L, &(struct_ptr)->field_name);          \
-		lua_setfield(L, -2, #field_name);               \
-	} while (0);
-
-static void push_point(lua_State *L, TSPoint const *point) {
-	lua_createtable(L, 0, 2);
-	SET_FIELD(L, pushinteger, point, row);
-	SET_FIELD(L, pushinteger, point, column);
-}
-
-static void push_range(lua_State *L, TSRange const *range) {
-	lua_createtable(L, 0, 4);
-	SET_FIELD(L, pushinteger, range, start_byte);
-	SET_FIELD(L, pushinteger, range, end_byte);
-	SET_FIELD_P(L, push_point, range, start_point);
-	SET_FIELD_P(L, push_point, range, end_point);
 }
 
 // @teal-export Parser.get_ranges: function(Parser): {Range} [[
@@ -392,7 +369,7 @@ static int parser_get_ranges(lua_State *L) {
 	TSRange const *ranges = ts_parser_included_ranges(p, &length);
 	lua_createtable(L, (int)length, 0);
 	for (uint32_t i = 0; i < length; ++i) {
-		push_range(L, ranges + i);
+		push_range(L, ranges[i]);
 		lua_rawseti(L, -2, i + 1);
 	}
 

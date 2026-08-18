@@ -86,15 +86,7 @@ static int node_end_byte(lua_State *L) {
 // ]]
 static int node_start_point(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
-	TSPoint p = ts_node_start_point(n);
-	lua_newtable(L);
-
-	pushinteger(L, p.row);
-	lua_setfield(L, -2, "row");
-
-	pushinteger(L, p.column);
-	lua_setfield(L, -2, "column");
-
+	push_point(L, ts_node_start_point(n));
 	return 1;
 }
 
@@ -103,14 +95,7 @@ static int node_start_point(lua_State *L) {
 // ]]
 static int node_end_point(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
-	TSPoint p = ts_node_end_point(n);
-	lua_newtable(L);
-
-	pushinteger(L, p.row);
-	lua_setfield(L, -2, "row");
-
-	pushinteger(L, p.column);
-	lua_setfield(L, -2, "column");
+	push_point(L, ts_node_end_point(n));
 	return 1;
 }
 
@@ -162,14 +147,14 @@ void node_push(lua_State *L, int tree_idx, TSNode n) {
 //    Get the node's <code>zero_index</code>'th child (0-indexed)
 // ]]
 static int node_child(lua_State *L) {
-	TSNode *parent = node_assert(L, 1);
-	uint32_t const idx = luaL_checknumber(L, 2);
-	if (idx >= ts_node_child_count(*parent)) {
+	TSNode parent = *node_assert(L, 1);
+	uint32_t idx = 0;
+	if (!test_u32_zero_index(L, 2, ts_node_child_count(parent), &idx)) {
 		lua_pushnil(L);
-	} else {
-		push_kept(L, 1);
-		node_push(L, -1, ts_node_child(*parent, idx));
+		return 1;
 	}
+	push_kept(L, 1);
+	node_push(L, -1, ts_node_child(parent, idx));
 	return 1;
 }
 
@@ -186,14 +171,14 @@ static int node_child_count(lua_State *L) {
 //    Get the node's <code>zero_index</code>'th named child
 // ]]
 static int node_named_child(lua_State *L) {
-	TSNode *parent = node_assert(L, 1);
-	uint32_t const idx = luaL_checknumber(L, 2);
-	if (idx >= ts_node_named_child_count(*parent)) {
+	TSNode parent = *node_assert(L, 1);
+	uint32_t idx = 0;
+	if (!test_u32_zero_index(L, 2, ts_node_named_child_count(parent), &idx)) {
 		lua_pushnil(L);
-	} else {
-		push_kept(L, 1);
-		node_push(L, -1, ts_node_named_child(*parent, idx));
+		return 1;
 	}
+	push_kept(L, 1);
+	node_push(L, -1, ts_node_named_child(parent, idx));
 	return 1;
 }
 
@@ -603,11 +588,20 @@ static int node_is_error(lua_State *L) {
 	return 1;
 }
 
+#define check_u32_or_return_nil(L, var_name, lua_index) \
+	uint32_t var_name = 0; \
+	do if (!test_u32((L), (lua_index), &var_name)) { \
+		lua_pushnil((L)); \
+		return 1; \
+	} while (0)
+
 // @teal-export Node.field_name_for_child: function(Node, child_zero_index: integer): string [[
 //   Returns the field name for the child at the given zero index (if any)
 // ]]
 static int field_name_for_child(lua_State *L) {
-	lua_pushstring(L, ts_node_field_name_for_child(*node_assert(L, 1), u32_argcheck(L, 2)));
+	TSNode node = *node_assert(L, 1);
+	check_u32_or_return_nil(L, idx, 2);
+	lua_pushstring(L, ts_node_field_name_for_child(node, idx));
 	return 1;
 }
 
@@ -615,7 +609,9 @@ static int field_name_for_child(lua_State *L) {
 //    Returns the field name for the named child at the given zero index (if any)
 // ]]
 static int field_name_for_named_child(lua_State *L) {
-	lua_pushstring(L, ts_node_field_name_for_named_child(*node_assert(L, 1), u32_argcheck(L, 2)));
+	TSNode node = *node_assert(L, 1);
+	check_u32_or_return_nil(L, idx, 2);
+	lua_pushstring(L, ts_node_field_name_for_named_child(node, idx));
 	return 1;
 }
 
@@ -624,14 +620,15 @@ static int field_name_for_named_child(lua_State *L) {
 // ]]
 static int first_child_for_byte(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
-	uint32_t byte_offset = u32_argcheck(L, 2);
+	uint32_t byte_offset = clamp_u32_or_argerror(L, 2);
 	TSNode child = ts_node_first_child_for_byte(n, byte_offset);
 	if (ts_node_is_null(child)) {
 		lua_pushnil(L);
-	} else {
-		push_kept(L, 1);
-		node_push(L, -1, child);
+		return 1;
 	}
+
+	push_kept(L, 1);
+	node_push(L, -1, child);
 	return 1;
 }
 
@@ -640,14 +637,15 @@ static int first_child_for_byte(lua_State *L) {
 // ]]
 static int first_named_child_for_byte(lua_State *L) {
 	TSNode n = *node_assert(L, 1);
-	uint32_t byte_offset = u32_argcheck(L, 2);
+	uint32_t byte_offset = clamp_u32_or_argerror(L, 2);
 	TSNode child = ts_node_first_named_child_for_byte(n, byte_offset);
 	if (ts_node_is_null(child)) {
 		lua_pushnil(L);
-	} else {
-		push_kept(L, 1);
-		node_push(L, -1, child);
+		return 1;
 	}
+
+	push_kept(L, 1);
+	node_push(L, -1, child);
 	return 1;
 }
 
@@ -662,8 +660,8 @@ static int descendant_count(lua_State *L) {
 // ]]
 static int descendant_for_byte_range(lua_State *L) {
 	TSNode const n = *node_assert(L, 1);
-	uint32_t const start = u32_argcheck(L, 2);
-	uint32_t const end = u32_argcheck(L, 3);
+	uint32_t const start = clamp_u32_or_argerror(L, 2);
+	uint32_t const end = clamp_u32_or_argerror(L, 3);
 	TSNode descendant = ts_node_descendant_for_byte_range(n, start, end);
 	push_kept(L, 1);
 	node_push(L, -1, descendant);
@@ -675,8 +673,8 @@ static int descendant_for_byte_range(lua_State *L) {
 // ]]
 static int descendant_for_point_range(lua_State *L) {
 	TSNode const n = *node_assert(L, 1);
-	TSPoint const start = topoint(L, 2);
-	TSPoint const end = topoint(L, 3);
+	TSPoint const start = to_clamped_point(L, 2);
+	TSPoint const end = to_clamped_point(L, 3);
 	TSNode descendant = ts_node_descendant_for_point_range(n, start, end);
 	push_kept(L, 1);
 	node_push(L, -1, descendant);
@@ -688,8 +686,10 @@ static int descendant_for_point_range(lua_State *L) {
 // ]]
 static int named_descendant_for_byte_range(lua_State *L) {
 	TSNode const n = *node_assert(L, 1);
-	uint32_t const start = u32_argcheck(L, 2);
-	uint32_t const end = u32_argcheck(L, 3);
+	uint32_t start, end;
+	if (!clamp_u32(L, 2, &start)) luaL_argerror(L, 2, "Expected an integer");
+	if (!clamp_u32(L, 3, &end))   luaL_argerror(L, 3, "Expected an integer");
+
 	TSNode descendant = ts_node_named_descendant_for_byte_range(n, start, end);
 	push_kept(L, 1);
 	node_push(L, -1, descendant);
@@ -701,8 +701,8 @@ static int named_descendant_for_byte_range(lua_State *L) {
 // ]]
 static int named_descendant_for_point_range(lua_State *L) {
 	TSNode const n = *node_assert(L, 1);
-	TSPoint const start = topoint(L, 2);
-	TSPoint const end = topoint(L, 3);
+	TSPoint const start = to_clamped_point(L, 2);
+	TSPoint const end = to_clamped_point(L, 3);
 	TSNode descendant = ts_node_named_descendant_for_point_range(n, start, end);
 	push_kept(L, 1);
 	node_push(L, -1, descendant);

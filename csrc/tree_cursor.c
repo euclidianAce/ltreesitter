@@ -128,7 +128,7 @@ static int tree_cursor_goto_first_child_for_byte(lua_State *L) {
 // ]]
 static int tree_cursor_goto_first_child_for_point(lua_State *L) {
 	TSTreeCursor *const c = tree_cursor_assert(L, 1);
-	TSPoint goal = topoint(L, 2);
+	TSPoint goal = to_clamped_point(L, 2);
 	int64_t idx = ts_tree_cursor_goto_first_child_for_point(c, goal);
 	if (idx == -1) {
 		lua_pushnil(L);

@@ -39,8 +39,6 @@ void source_text_init_metatable(lua_State *);
 
 def_check_assert(SourceText, source_text, LTREESITTER_SOURCE_TEXT_METATABLE_NAME)
 
-TSPoint topoint(lua_State *L, int idx);
-
 void push_match(lua_State *L, TSQueryMatch, TSQuery const *, int tree_index);
 
 #endif

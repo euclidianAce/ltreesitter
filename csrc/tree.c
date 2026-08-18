@@ -65,7 +65,7 @@ static int tree_push_root_with_offset(lua_State *L) {
 	TSTree *const t = *tree_assert(L, 1);
 	luaL_argcheck(L, lua_type(L, 2) == LUA_TNUMBER, 2, "expected integer");
 	uint32_t offset_bytes = lua_tointeger(L, 2);
-	TSPoint offset_extent = topoint(L, 3);
+	TSPoint offset_extent = to_clamped_point(L, 3);
 	node_push(L, 1, ts_tree_root_node_with_offset(t, offset_bytes, offset_extent));
 	return 1;
 }
