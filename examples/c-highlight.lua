@@ -95,7 +95,6 @@ for i = 1, select("#", ...) do
 	file:close()
 
 	local tree = parser:parse_string(contents)
-	local last_emitted_byte_index = 0
 
 	local decoration = {}
 
