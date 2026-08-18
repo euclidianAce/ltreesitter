@@ -6,6 +6,7 @@
 #include "node.h"
 #include "object.h"
 #include "parser.h"
+#include "pave.h"
 #include "query.h"
 #include "query_cursor.h"
 #include "tree.h"
@@ -23,11 +24,7 @@ static const luaL_Reg lib_funcs[] = {
 	{NULL, NULL},
 };
 
-#ifdef _WIN32
-__declspec(dllexport)
-#else
-__attribute__((visibility("default")))
-#endif
+pave_export
 int luaopen_ltreesitter(lua_State *L);
 
 int luaopen_ltreesitter(lua_State *L) {

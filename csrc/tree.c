@@ -8,10 +8,11 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "luautils.h"
 #include "language.h"
+#include "luautils.h"
 #include "node.h"
 #include "object.h"
+#include "pave.h"
 #include "tree.h"
 #include "types.h"
 

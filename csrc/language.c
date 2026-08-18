@@ -1,6 +1,7 @@
-#include "language.h"
 #include "dynamiclib.h"
+#include "language.h"
 #include "object.h"
+#include "pave.h"
 #include "query.h"
 
 #include <assert.h>
@@ -109,7 +110,7 @@ int language_load(lua_State *L) {
 	char const *dl_file = luaL_checkstring(L, 1);
 	size_t lang_name_len = 0;
 	char const *lang_name = luaL_checklstring(L, 2, &lang_name_len);
-	if (lang_name_len > MAX_LANG_NAME_LEN) {
+	if pave_unlikely(lang_name_len > MAX_LANG_NAME_LEN) {
 		lua_pushnil(L);
 		lua_pushfstring(L, "Language name is too long (%zu bytes, max of %d is allowed)", lang_name_len, MAX_LANG_NAME_LEN);
 		return 2;
@@ -352,7 +353,7 @@ int language_require(lua_State *L) {
 	char const *so_name = luaL_checkstring(L, 1);
 	size_t lang_name_len = 0;
 	char const *lang_name = luaL_optlstring(L, 2, so_name, &lang_name_len);
-	if (lang_name_len > MAX_LANG_NAME_LEN) {
+	if pave_unlikely(lang_name_len > MAX_LANG_NAME_LEN) {
 		char buf[128];
 		snprintf(buf, sizeof buf, "Language name is too long (%zu bytes, max of %d is allowed)", lang_name_len, MAX_LANG_NAME_LEN);
 		luaL_argcheck(L, false, 2, buf);
@@ -360,15 +361,15 @@ int language_require(lua_State *L) {
 	}
 
 	lua_getglobal(L, "package"); // lang_name, <ts path>, package
-	if (lua_isnil(L, -1))
+	if pave_unlikely(lua_isnil(L, -1))
 		return luaL_error(L, "Unable to load language %s, `package` was nil", lang_name);
 	lua_getfield(L, -1, "cpath"); // lang_name, <ts path>, package, package.cpath
-	if (lua_isnil(L, -1))
+	if pave_unlikely(lua_isnil(L, -1))
 		return luaL_error(L, "Unable to load language %s, `package.cpath` was nil", lang_name);
 	lua_remove(L, -2); // lang_name, <ts path>, package.cpath
 	size_t cpath_len;
 	char const *cpath = lua_tolstring(L, -1, &cpath_len);
-	if (!cpath)
+	if pave_unlikely(!cpath)
 		return luaL_error(L, "Unable to load language %s, `package.cpath` was not a string", lang_name);
 
 	StringBuilder path = {0};
@@ -396,7 +397,7 @@ int language_require(lua_State *L) {
 static int make_parser(lua_State *L) {
 	TSLanguage const *l = *language_assert(L, 1);
 	TSParser *parser = ts_parser_new();
-	if (!ts_parser_set_language(parser, l))
+	if pave_unlikely(!ts_parser_set_language(parser, l))
 		return luaL_error(L, "Internal error: an incompatible language was loaded");
 
 	TSParser **result = lua_newuserdata(L, sizeof(TSParser *));

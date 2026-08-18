@@ -1,4 +1,3 @@
-
 #include <inttypes.h>
 #include <stddef.h>
 #include <string.h>
@@ -7,6 +6,7 @@
 #include "luautils.h"
 #include "node.h"
 #include "object.h"
+#include "pave.h"
 #include "query.h"
 #include "query_cursor.h"
 #include "tree.h"
@@ -42,7 +42,7 @@ bool query_handle_error(
 	TSQueryError err_type,
 	char const *query_src,
 	size_t query_src_len) {
-	if (q)
+	if pave_likely(q)
 		return true;
 	char slice[16] = {0};
 	{
@@ -199,7 +199,7 @@ static bool do_predicates(
 				break;
 			}
 		}
-		if (!lua_checkstack(L, max_args))
+		if pave_unlikely(!lua_checkstack(L, max_args))
 			luaL_error(L, "Internal lua error, unable to handle %d arguments to predicate", max_args);
 	}
 
@@ -263,7 +263,7 @@ static bool do_predicates(
 				break;
 			}
 			case TSQueryPredicateStepTypeDone:
-				if (lua_pcall(L, num_args, 1, 0) != LUA_OK) {
+				if pave_unlikely(lua_pcall(L, num_args, 1, 0) != LUA_OK) {
 					lua_pushfstring(L, "Error calling predicate '%s': ", func_name);
 					lua_insert(L, -2);
 					lua_concat(L, 2);
@@ -624,7 +624,7 @@ static bool ensure_predicate_arg_string(
 // Predicates
 static int eq_predicate(lua_State *L) {
 	int const num_args = lua_gettop(L);
-	if (num_args < 2) {
+	if pave_unlikely(num_args < 2) {
 		luaL_error(L, "predicate eq? expects 2 or more arguments, got %d", num_args);
 	}
 	MaybeOwnedString a;
@@ -635,7 +635,7 @@ static int eq_predicate(lua_State *L) {
 	}
 	MaybeOwnedString b;
 	for (int i = 2; i <= num_args; ++i) {
-		if (!predicate_arg_to_string(L, i, &b)) {
+		if pave_unlikely(!predicate_arg_to_string(L, i, &b)) {
 			lua_pushboolean(L, false);
 			mos_free(&a);
 			mos_free(&b);
@@ -658,7 +658,7 @@ static int eq_predicate(lua_State *L) {
 
 static int not_eq_predicate(lua_State *L) {
 	int const num_args = lua_gettop(L);
-	if (num_args != 2) {
+	if pave_unlikely(num_args != 2) {
 		luaL_error(L, "predicate not-eq? expects exactly 2 arguments, got %d", num_args);
 	}
 	MaybeOwnedString a;
@@ -692,7 +692,7 @@ static inline void open_stringlib(lua_State *L) {
 
 static int match_predicate(lua_State *L) {
 	int const num_args = lua_gettop(L);
-	if (num_args != 2) {
+	if pave_unlikely(num_args != 2) {
 		luaL_error(L, "predicate match? expects exactly 2 arguments, got %d", num_args);
 	}
 
@@ -715,7 +715,7 @@ static int match_predicate(lua_State *L) {
 
 static int not_match_predicate(lua_State *L) {
 	int const num_args = lua_gettop(L);
-	if (num_args != 2) {
+	if pave_unlikely(num_args != 2) {
 		luaL_error(L, "predicate not-match? expects exactly 2 arguments, got %d", num_args);
 	}
 
@@ -727,7 +727,7 @@ static int not_match_predicate(lua_State *L) {
 
 static int find_predicate(lua_State *L) {
 	int const num_args = lua_gettop(L);
-	if (num_args != 2) {
+	if pave_unlikely(num_args != 2) {
 		return luaL_error(L, "predicate find? expects exactly 2 arguments, got %d", num_args);
 	}
 
@@ -752,7 +752,7 @@ static int find_predicate(lua_State *L) {
 
 static int not_find_predicate(lua_State *L) {
 	int const num_args = lua_gettop(L);
-	if (num_args != 2) {
+	if pave_unlikely(num_args != 2) {
 		return luaL_error(L, "predicate not-find? expects exactly 2 arguments, got %d", num_args);
 	}
 

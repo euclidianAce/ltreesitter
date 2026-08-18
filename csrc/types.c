@@ -1,5 +1,6 @@
 #include "luautils.h"
 #include "node.h"
+#include "pave.h"
 #include "types.h"
 
 #include <lauxlib.h>
@@ -30,7 +31,7 @@ static const luaL_Reg source_text_metamethods[] = {
 
 SourceText *source_text_push_uninitialized(lua_State *L, uint32_t len) {
 	SourceText *src_text = lua_newuserdata(L, sizeof(SourceText) + len);
-	if (!src_text) {
+	if pave_unlikely(!src_text) {
 		lua_pushnil(L);
 		return NULL;
 	}
@@ -41,7 +42,7 @@ SourceText *source_text_push_uninitialized(lua_State *L, uint32_t len) {
 
 SourceText *source_text_push(lua_State *L, uint32_t len, char const *src) {
 	SourceText *st = source_text_push_uninitialized(L, len);
-	if (!st)
+	if pave_unlikely(!st)
 		return NULL;
 	memcpy(&st->text, src, len);
 	return st;

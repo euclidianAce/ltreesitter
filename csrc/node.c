@@ -13,6 +13,7 @@
 #include "tree.h"
 #include "tree_cursor.h"
 #include "types.h"
+#include "pave.h"
 
 #include <tree_sitter/api.h>
 
@@ -22,7 +23,7 @@
 TSTree *node_push_tree(lua_State *L, int node_idx) {
 	push_kept(L, node_idx);
 	TSTree *const tree = *tree_check(L, -1);
-	if (!tree) luaL_error(L, internal_err);
+	if pave_unlikely(!tree) luaL_error(L, internal_err);
 	return tree;
 }
 
@@ -134,7 +135,7 @@ void node_push(lua_State *L, int tree_idx, TSNode n) {
 	lua_pushvalue(L, tree_idx); // tree
 	tree_idx = lua_gettop(L);
 
-	if (!tree_check(L, tree_idx))
+	if pave_unlikely(!tree_check(L, tree_idx))
 		luaL_error(L, internal_err);
 	TSNode *node = lua_newuserdata(L, sizeof(TSNode)); // tree, node
 	*node = n;
@@ -149,7 +150,7 @@ void node_push(lua_State *L, int tree_idx, TSNode n) {
 static int node_child(lua_State *L) {
 	TSNode parent = *node_assert(L, 1);
 	uint32_t idx = 0;
-	if (!test_u32_zero_index(L, 2, ts_node_child_count(parent), &idx)) {
+	if pave_unlikely(!test_u32_zero_index(L, 2, ts_node_child_count(parent), &idx)) {
 		lua_pushnil(L);
 		return 1;
 	}
@@ -173,7 +174,7 @@ static int node_child_count(lua_State *L) {
 static int node_named_child(lua_State *L) {
 	TSNode parent = *node_assert(L, 1);
 	uint32_t idx = 0;
-	if (!test_u32_zero_index(L, 2, ts_node_named_child_count(parent), &idx)) {
+	if pave_unlikely(!test_u32_zero_index(L, 2, ts_node_named_child_count(parent), &idx)) {
 		lua_pushnil(L);
 		return 1;
 	}
@@ -469,7 +470,7 @@ MaybeOwnedString node_get_source(lua_State *L) { // node
 	TSPoint position = ts_node_start_point(n);
 
 	StringBuilder sb = {0};
-	if (!sb_ensure_cap(&sb, expected_byte_length))
+	if pave_unlikely(!sb_ensure_cap(&sb, expected_byte_length))
 		ALLOC_FAIL(L);
 
 	while (needed_bytes > 0) {
@@ -486,7 +487,7 @@ MaybeOwnedString node_get_source(lua_State *L) { // node
 			lua_setfield(L, -2, "column");
 		} // ..., reader, index, point
 
-		if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
+		if pave_unlikely(lua_pcall(L, 2, 1, 0) != LUA_OK) {
 			sb_free(&sb);
 			lua_error(L);
 		}
@@ -590,7 +591,7 @@ static int node_is_error(lua_State *L) {
 
 #define check_u32_or_return_nil(L, var_name, lua_index) \
 	uint32_t var_name = 0; \
-	do if (!test_u32((L), (lua_index), &var_name)) { \
+	do if pave_unlikely(!test_u32((L), (lua_index), &var_name)) { \
 		lua_pushnil((L)); \
 		return 1; \
 	} while (0)
@@ -687,8 +688,8 @@ static int descendant_for_point_range(lua_State *L) {
 static int named_descendant_for_byte_range(lua_State *L) {
 	TSNode const n = *node_assert(L, 1);
 	uint32_t start, end;
-	if (!clamp_u32(L, 2, &start)) luaL_argerror(L, 2, "Expected an integer");
-	if (!clamp_u32(L, 3, &end))   luaL_argerror(L, 3, "Expected an integer");
+	if pave_unlikely(!clamp_u32(L, 2, &start)) luaL_argerror(L, 2, "Expected an integer");
+	if pave_unlikely(!clamp_u32(L, 3, &end))   luaL_argerror(L, 3, "Expected an integer");
 
 	TSNode descendant = ts_node_named_descendant_for_byte_range(n, start, end);
 	push_kept(L, 1);

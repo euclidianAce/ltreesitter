@@ -1,6 +1,7 @@
 #include "luautils.h"
 #include "node.h"
 #include "object.h"
+#include "pave.h"
 #include "query.h"
 #include "query_cursor.h"
 #include "types.h"
@@ -39,7 +40,7 @@ static int match_limit(lua_State *L) {
 static int set_match_limit(lua_State *L) {
 	TSQueryCursor *qc = *query_cursor_assert(L, 1);
 	uint32_t limit = UINT32_MAX;
-	if (!lua_isnoneornil(L, 2) && !clamp_u32(L, 2, &limit))
+	if pave_unlikely(!lua_isnoneornil(L, 2) && !clamp_u32(L, 2, &limit))
 		return luaL_argerror(L, 2, "Expected an integer");
 	ts_query_cursor_set_match_limit(qc, limit);
 	return 0;
@@ -51,8 +52,8 @@ static int set_match_limit(lua_State *L) {
 static int set_byte_range(lua_State *L) {
 	TSQueryCursor *qc = *query_cursor_assert(L, 1);
 	uint32_t start, end;
-	if (!clamp_u32(L, 2, &start)) return luaL_argerror(L, 2, "Expected an integer");
-	if (!clamp_u32(L, 3, &end)) return luaL_argerror(L, 2, "Expected an integer");
+	if pave_unlikely(!clamp_u32(L, 2, &start)) return luaL_argerror(L, 2, "Expected an integer");
+	if pave_unlikely(!clamp_u32(L, 3, &end)) return luaL_argerror(L, 2, "Expected an integer");
 	lua_pushboolean(L, ts_query_cursor_set_byte_range(qc, start, end));
 	return 1;
 }
@@ -146,7 +147,7 @@ static int remove_match(lua_State *L) {
 static int set_max_start_depth(lua_State *L) {
 	TSQueryCursor *qc = *query_cursor_assert(L, 1);
 	uint32_t depth = UINT32_MAX;
-	if (!lua_isnoneornil(L, 2) && !clamp_u32(L, 2, &depth))
+	if pave_unlikely(!lua_isnoneornil(L, 2) && !clamp_u32(L, 2, &depth))
 		return luaL_argerror(L, 2, "Expected an integer");
 	ts_query_cursor_set_max_start_depth(qc, depth);
 	return 0;
@@ -162,8 +163,8 @@ static int set_max_start_depth(lua_State *L) {
 static int set_containing_byte_range(lua_State *L) {
 	TSQueryCursor *qc = *query_cursor_assert(L, 1);
 	uint32_t start_byte, end_byte;
-	if (!clamp_u32(L, 2, &start_byte)) return luaL_argerror(L, 2, "Expected an integer");
-	if (!clamp_u32(L, 3, &end_byte)) return luaL_argerror(L, 3, "Expected an integer");
+	if pave_unlikely(!clamp_u32(L, 2, &start_byte)) return luaL_argerror(L, 2, "Expected an integer");
+	if pave_unlikely(!clamp_u32(L, 3, &end_byte)) return luaL_argerror(L, 3, "Expected an integer");
 	lua_pushboolean(L, ts_query_cursor_set_containing_byte_range(qc, start_byte, end_byte));
 	return 1;
 }

@@ -15,7 +15,7 @@
 #include "luautils.h"
 #include "object.h"
 #include "parser.h"
-
+#include "pave.h"
 #include "query.h"
 #include "tree.h"
 
@@ -53,7 +53,7 @@ static TSInputEncoding encoding_from_str(lua_State *L, int str_index) {
 
 	if (!encoding_str) {
 		int type = lua_type(L, str_index);
-		if (type == LUA_TNIL)
+		if pave_likely(type == LUA_TNIL)
 			return TSInputEncodingUTF8;
 		luaL_error(L, "Expected one of `utf-8`, `utf-16le`, `utf-16be`, got %s", lua_typename(L, type));
 		return TSInputEncodingUTF8;
@@ -134,7 +134,7 @@ static bool progress_callback(TSParseState *state) {
 	lua_pushvalue(L, -1);
 	lua_pushboolean(L, state->has_error);
 	pushinteger(L, state->current_byte_offset);
-	if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
+	if pave_unlikely(lua_pcall(L, 2, 1, 0) != LUA_OK) {
 		info->callback_errored = true;
 		return true;
 	}
@@ -164,7 +164,7 @@ static char const *read_callback(void *payload, uint32_t byte_index, TSPoint pos
 	pushinteger(L, position.column); // byte_index, { row = row }, column
 	lua_setfield(L, -2, "column");   // byte_index, { row = row, column = column }
 
-	if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
+	if pave_unlikely(lua_pcall(L, 2, 1, 0) != LUA_OK) {
 		i->read_error = READERR_PCALL;
 		*bytes_read = 0;
 		return NULL;
@@ -176,7 +176,7 @@ static char const *read_callback(void *payload, uint32_t byte_index, TSPoint pos
 		return NULL;
 	}
 
-	if (lua_type(L, -1) != LUA_TSTRING) {
+	if pave_unlikely(lua_type(L, -1) != LUA_TSTRING) {
 		i->read_error = READERR_TYPE;
 		*bytes_read = 0;
 		return NULL;
@@ -269,7 +269,7 @@ static int parser_parse_with(lua_State *L) {
 		break;
 	}
 
-	if (progress_payload.callback_errored) {
+	if pave_unlikely(progress_payload.callback_errored) {
 		return luaL_error(L, "Progress function errored: %s", lua_tostring(L, -1));
 	}
 
@@ -302,11 +302,11 @@ static int parser_reset(lua_State *L) {
 // ]]
 
 static void expect_range(lua_State *L, TSRange *out) {
-	if (getfield_type(L, -1, "start_byte") != LUA_TNUMBER || !clamp_u32(L, -1, &out->start_byte))
+	if pave_unlikely(getfield_type(L, -1, "start_byte") != LUA_TNUMBER || !clamp_u32(L, -1, &out->start_byte))
 		luaL_error(L, "Expected `start_byte' of Range to be an integer, got `%s'", lua_typename(L, lua_type(L, -1)));
 	lua_pop(L, 1);
 
-	if (getfield_type(L, -1, "end_byte") != LUA_TNUMBER || !clamp_u32(L, -1, &out->end_byte))
+	if pave_unlikely(getfield_type(L, -1, "end_byte") != LUA_TNUMBER || !clamp_u32(L, -1, &out->end_byte))
 		luaL_error(L, "Expected `end_byte' of Range to be an integer, got `%s'", lua_typename(L, lua_type(L, -1)));
 	lua_pop(L, 1);
 
@@ -340,7 +340,7 @@ static int parser_set_ranges(lua_State *L) {
 	size_t len = length_of(L, -1);
 	// NOTE: we alloc this as userdata in case of a lua error `longjmp`s away from here before we get to free it
 	TSRange *ranges = lua_newuserdata(L, len * sizeof(TSRange));
-	if (!ranges)
+	if pave_unlikely(!ranges)
 		return ALLOC_FAIL(L);
 
 	for (size_t i = 0; i < len; ++i) {
@@ -348,7 +348,7 @@ static int parser_set_ranges(lua_State *L) {
 		expect_range(L, &ranges[i]);
 		lua_pop(L, 1);
 
-		if (i > 0 && ranges[i - 1].end_byte > ranges[i].start_byte) {
+		if pave_unlikely(i > 0 && ranges[i - 1].end_byte > ranges[i].start_byte) {
 			uint32_t end_byte = ranges[i - 1].end_byte;
 			uint32_t start_byte = ranges[i].start_byte;
 			return luaL_error(L, "Error in ranges: range[%zu].end_byte (%"PRIu32") is greater than range[%zu].start_byte (%"PRIu32")", i, end_byte, i + 1, start_byte);

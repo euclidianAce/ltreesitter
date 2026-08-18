@@ -1,10 +1,11 @@
 #include "luautils.h"
+#include "pave.h"
 #include <stdio.h>
 #include <inttypes.h>
 
 char *str_ldup(char const *s, const size_t len) {
 	char *dup = malloc(sizeof(char) * (len + 1));
-	if (!dup)
+	if pave_unlikely(!dup)
 		return NULL;
 	memcpy(dup, s, len);
 	dup[len] = '\0';
@@ -78,12 +79,12 @@ int getfield_type(lua_State *L, int idx, char const *field_name) {
 // (raises an error if the check fails)
 // leaves the value on the stack whether or not the type check passed
 bool expect_field(lua_State *L, int idx, char const *field_name, int expected_type) {
-	if (lua_type(L, idx) != LUA_TTABLE) {
+	if pave_unlikely(lua_type(L, idx) != LUA_TTABLE) {
 		luaL_error(L, "expected table");
 		return false;
 	}
 	int const actual_type = getfield_type(L, idx, field_name);
-	if (actual_type != expected_type) {
+	if pave_unlikely(actual_type != expected_type) {
 		luaL_error(
 			L,
 			"expected field `%s' to be of type %s (got %s)",
@@ -97,7 +98,7 @@ bool expect_field(lua_State *L, int idx, char const *field_name, int expected_ty
 
 bool expect_nested_field(lua_State *L, int idx, char const *parent_name, char const *field_name, int expected_type) {
 	int const actual_type = getfield_type(L, idx, field_name);
-	if (actual_type != expected_type) {
+	if pave_unlikely(actual_type != expected_type) {
 		luaL_error(
 			L,
 			"expected field `%s.%s' to be of type %s (got %s)",
@@ -124,12 +125,12 @@ void *testudata(lua_State *L, int idx, char const *tname) {
 #if LUA_VERSION_NUM < 502
 	// Adapted from lua 5.4 source
 	void *p = lua_touserdata(L, idx);
-	if (!p)
+	if pave_unlikely(!p)
 		return NULL;
-	if (!lua_getmetatable(L, idx)) // t1
+	if pave_unlikely(!lua_getmetatable(L, idx)) // t1
 		return NULL;
 	luaL_getmetatable(L, tname); // t1, t2
-	if (!lua_rawequal(L, -1, -2))
+	if pave_unlikely(!lua_rawequal(L, -1, -2))
 		p = NULL;
 	lua_pop(L, 2);
 	return p;
@@ -241,7 +242,7 @@ bool sb_ensure_cap(StringBuilder *sb, size_t n) {
 }
 
 bool sb_push_char(StringBuilder *sb, char c) {
-	if (!sb_ensure_cap(sb, sb->length + 1))
+	if pave_unlikely(!sb_ensure_cap(sb, sb->length + 1))
 		return false;
 	sb->data[sb->length] = c;
 	sb->length += 1;
@@ -254,7 +255,7 @@ bool sb_push_str(StringBuilder *sb, char const *str) {
 }
 
 bool sb_push_lstr(StringBuilder *sb, size_t len, char const *str) {
-	if (!sb_ensure_cap(sb, sb->length + len))
+	if pave_unlikely(!sb_ensure_cap(sb, sb->length + len))
 		return false;
 	memcpy(sb->data + sb->length, str, len);
 	sb->length += len;
@@ -271,7 +272,7 @@ bool sb_push_fmt(StringBuilder *sb, char const *fmt, ...) {
 		n = vsnprintf(NULL, 0, fmt, copy);
 		va_end(copy);
 	}
-	if (!sb_ensure_cap(sb, sb->length + n + 1)) {
+	if pave_unlikely(!sb_ensure_cap(sb, sb->length + n + 1)) {
 		va_end(args);
 		return false;
 	}
@@ -307,37 +308,37 @@ bool mos_eq(MaybeOwnedString a, MaybeOwnedString b) {
 
 bool test_u32(lua_State *L, int idx, uint32_t *out) {
 	lua_Integer arg = lua_tointeger(L, idx);
-	if (!lua_isinteger(L, idx)) return false;
-	if (arg < 0) return false;
-	if (arg > (lua_Integer)UINT32_MAX) return false;
+	if pave_unlikely(!lua_isinteger(L, idx)) return false;
+	if pave_unlikely(arg < 0) return false;
+	if pave_unlikely(arg > (lua_Integer)UINT32_MAX) return false;
 	*out = (uint32_t)arg;
 	return true;
 }
 
 bool test_u32_one_index(lua_State *L, int idx, uint32_t end_inclusive, uint32_t *out) {
 	lua_Integer arg = lua_tointeger(L, idx);
-	if (!lua_isinteger(L, idx)) return false;
-	if (arg < 0) return false;
-	if (arg > (lua_Integer)end_inclusive) return false;
+	if pave_unlikely(!lua_isinteger(L, idx)) return false;
+	if pave_unlikely(arg < 0) return false;
+	if pave_unlikely(arg > (lua_Integer)end_inclusive) return false;
 	*out = (uint32_t)arg;
 	return true;
 }
 
 bool test_u32_zero_index(lua_State *L, int idx, uint32_t end_exclusive, uint32_t *out) {
 	lua_Integer arg = luaL_checkinteger(L, idx);
-	if (arg < 0) return false;
-	if (arg >= (lua_Integer)end_exclusive) return false;
+	if pave_unlikely(arg < 0) return false;
+	if pave_unlikely(arg >= (lua_Integer)end_exclusive) return false;
 	*out = (uint32_t)arg;
 	return true;
 }
 
 bool clamp_u32(lua_State *L, int idx, uint32_t *out) {
 	lua_Integer arg = lua_tointeger(L, idx);
-	if (!lua_isinteger(L, idx))
+	if pave_unlikely(!lua_isinteger(L, idx))
 		return false;
-	if (arg < 0)
+	if pave_unlikely(arg < 0)
 		*out = 0;
-	else if (arg > (lua_Integer)UINT32_MAX)
+	else if pave_unlikely(arg > (lua_Integer)UINT32_MAX)
 		*out = UINT32_MAX;
 	else
 		*out = (uint32_t)arg;
@@ -346,7 +347,7 @@ bool clamp_u32(lua_State *L, int idx, uint32_t *out) {
 
 uint32_t clamp_u32_or_argerror(lua_State *L, int idx) {
 	uint32_t result;
-	if (!clamp_u32(L, idx, &result)) {
+	if pave_unlikely(!clamp_u32(L, idx, &result)) {
 		char buf[128];
 		snprintf(buf, sizeof buf, "Expected integer, got `%s'", lua_typename(L, lua_type(L, idx)));
 		luaL_argerror(L, idx, buf);
@@ -358,7 +359,7 @@ uint32_t clamp_u32_or_argerror(lua_State *L, int idx) {
 static uint32_t u32_check(lua_State *L, int argument_index, char const *field_name) {
 	char buf[256];
 	uint32_t arg = 0;
-	if (!clamp_u32(L, -1, &arg)) {
+	if pave_unlikely(!clamp_u32(L, -1, &arg)) {
 		snprintf(buf, sizeof buf, "Expected field `%s' to be an integer, but got a `%s'", field_name, lua_typename(L, lua_type(L, -1)));
 		luaL_argerror(L, argument_index, buf);
 	}
@@ -449,9 +450,9 @@ int fd_from_file(FILE *f) {
 TSPoint to_clamped_point(lua_State *L, int const idx) {
 	int const absidx = absindex(L, idx);
 	TSPoint result;
-	if (getfield_type(L, absidx, "row") != LUA_TNUMBER || !clamp_u32(L, -1, &result.row))
+	if pave_unlikely(getfield_type(L, absidx, "row") != LUA_TNUMBER || !clamp_u32(L, -1, &result.row))
 		luaL_error(L, "Expected `row' of point to be an integer, got `%s'", lua_typename(L, lua_type(L, -1)));
-	if (getfield_type(L, absidx, "column") != LUA_TNUMBER || !clamp_u32(L, -1, &result.column))
+	if pave_unlikely(getfield_type(L, absidx, "column") != LUA_TNUMBER || !clamp_u32(L, -1, &result.column))
 		luaL_error(L, "Expected `column' of point to be an integer, got `%s'", lua_typename(L, lua_type(L, -1)));
 	lua_pop(L, 2);
 	return result;
