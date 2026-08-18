@@ -8,7 +8,6 @@
 local ts = require "ltreesitter"
 local c = ts.require "c"
 
-local parser = c:parser()
 local query = c:query[[
 ((cast_expression
    value: (call_expression function: (identifier) @function-name) @cast)
@@ -322,6 +321,7 @@ for k, v in pairs(predicates) do
 	end
 end
 
+local parser = c:parser()
 for i = 1, select("#", ...) do
 	current_file_name = select(i, ...)
 	local file = assert(io.open(current_file_name, "r"))
