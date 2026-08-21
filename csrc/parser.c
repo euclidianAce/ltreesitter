@@ -184,7 +184,10 @@ static char const *read_callback(void *payload, uint32_t byte_index, TSPoint pos
 
 	size_t n = 0;
 	char const *read_str = lua_tolstring(L, -1, &n);
-	*bytes_read = n;
+	if pave_likely(n <= UINT32_MAX)
+		*bytes_read = n;
+	else
+		*bytes_read = UINT32_MAX;
 	return read_str;
 }
 
@@ -198,10 +201,10 @@ static char const *read_callback(void *payload, uint32_t byte_index, TSPoint pos
 //    old_tree?: Tree
 // ): Tree [[
 //    <p>
-//    <code>reader</code> should be a function that takes a byte index
-//    and a <code>Point</code> and returns the text at that point. The
-//    function should return either <code>nil</code> or an empty string
-//    to signal that there is no more text.
+//    <code>reader</code> should be a function that takes a zero-based byte
+//    offset and a <code>Point</code> and returns the text at that point. The
+//    function should return either <code>nil</code> or an empty string to
+//    signal that there is no more text.
 //    </p>
 //
 //    <p>
