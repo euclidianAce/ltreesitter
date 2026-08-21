@@ -86,7 +86,7 @@ describe("Parser", function()
 				end)
 			end)
 		end)
-		it("should use the given function to parse chunks of text", function()
+		it("should use the given function to parse chunks of text (by point)", function()
 			local lines = {
 				"#include <stdio.h>\n",
 				"int main(void) {\n",
@@ -94,13 +94,33 @@ describe("Parser", function()
 				"    return 0;\n",
 				"}\n",
 			}
-			local function read_lines(_byte_idx, point)
+			local function read_lines(_byte_offset, point)
 				local ln = lines[point.row + 1]
 				if ln then
 					return ln:sub(point.column + 1, point.column + math.random(1, 10))
 				end
 			end
 			local tree = p:parse_with(read_lines)
+			assert.are.equal(
+				util.assert_userdata_type(
+					util.assert_userdata_type(
+						tree, "ltreesitter.Tree"
+					):root(), "ltreesitter.Node"
+				):child_count(),
+				2
+			)
+		end)
+		it("should use the given function to parse chunks of text (by offset)", function()
+			local text =
+				"#include <stdio.h>\n" ..
+				"int main(void) {\n" ..
+				"    printf(\"hello world\\n\");\n" ..
+				"    return 0;\n" ..
+				"}\n"
+			local function read(byte_offset)
+				return text:sub(byte_offset + 1, byte_offset + math.random(1, 4))
+			end
+			local tree = p:parse_with(read)
 			assert.are.equal(
 				util.assert_userdata_type(
 					util.assert_userdata_type(

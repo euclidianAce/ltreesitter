@@ -466,20 +466,17 @@ MaybeOwnedString node_get_source(lua_State *L) { // node
 	uint32_t const start_byte = ts_node_start_byte(n);
 	uint32_t const end_byte = ts_node_end_byte(n);
 	uint32_t const expected_byte_length = end_byte - start_byte;
-	uint32_t needed_bytes = expected_byte_length;
 	TSPoint position = ts_node_start_point(n);
 
 	StringBuilder sb = {0};
 	if pave_unlikely(!sb_ensure_cap(&sb, expected_byte_length))
 		ALLOC_FAIL(L);
 
-	while (needed_bytes > 0) {
+	for (uint32_t offset = start_byte; offset < end_byte;) {
 		lua_pushvalue(L, -1); // ..., reader
 
-		uint32_t const start_index = start_byte + end_byte - needed_bytes;
-
-		pushinteger(L, start_index); // ..., reader, index
-		lua_newtable(L);
+		pushinteger(L, offset); // ..., reader, index
+		lua_createtable(L, 0, 2);
 		{ // ..., reader, index, point
 			pushinteger(L, position.row);
 			lua_setfield(L, -2, "row");
@@ -497,15 +494,19 @@ MaybeOwnedString node_get_source(lua_State *L) { // node
 		int ret_type = lua_type(L, -1);
 		switch (ret_type) {
 		case LUA_TNIL:
-			needed_bytes = 0;
+			offset = end_byte;
 			break;
 		case LUA_TSTRING: {
 			size_t len;
 			char const *str = lua_tolstring(L, -1, &len);
-			if (len > needed_bytes)
-				len = needed_bytes;
+			if (len == 0) {
+				offset = end_byte;
+				break;
+			}
+			if (offset + len > end_byte)
+				len = end_byte - offset;
 			sb_push_lstr(&sb, len, str);
-			needed_bytes -= len;
+			offset += len;
 
 			// According to https://github.com/tree-sitter/tree-sitter/discussions/1286
 			// `column` is just a byte offset
