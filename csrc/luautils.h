@@ -113,10 +113,6 @@ void push_point(lua_State *, TSPoint);
 // ( -- Range )
 void push_range(lua_State *, TSRange);
 
-#if LUA_VERSION_NUM > 501
-void dump_stack(lua_State *L, int from);
-#endif
-
 #ifndef LUA_OK
 #define LUA_OK 0
 #endif

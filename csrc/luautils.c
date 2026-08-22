@@ -212,19 +212,6 @@ size_t length_of(lua_State *L, int index) {
 #endif
 }
 
-#if LUA_VERSION_NUM > 501
-void dump_stack(lua_State *L, int from) {
-	int top = lua_gettop(L);
-	fprintf(stderr, "==============\n");
-	fprintf(stderr, "Lua Stack:\n");
-	for (int i = from; i <= top; ++i) {
-		fprintf(stderr, "   %d: %s\n", i, luaL_tolstring(L, i, NULL));
-		lua_pop(L, 1);
-	}
-	fprintf(stderr, "==============\n");
-}
-#endif
-
 bool sb_ensure_cap(StringBuilder *sb, size_t n) {
 	if (sb->capacity >= n) {
 		return true;
