@@ -59,6 +59,8 @@ int table_rawget(lua_State *L, int idx);
 // ( -- int )
 void pushinteger(lua_State *L, int n);
 
+bool test_int(lua_State *, int index, lua_Integer *out);
+
 // ( table -- table )
 void setfuncs(lua_State *L, const luaL_Reg l[]);
 

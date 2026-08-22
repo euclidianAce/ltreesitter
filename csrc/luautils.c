@@ -306,9 +306,20 @@ bool mos_eq(MaybeOwnedString a, MaybeOwnedString b) {
 	return a.length == b.length && memcmp(a.data, b.data, a.length) == 0;
 }
 
+bool test_int(lua_State *L, int index, lua_Integer *out) {
+#if LUA_VERSION_NUM < 503
+	if pave_unlikely(!lua_isnumber(L, index)) return false;
+#else
+	if pave_unlikely(!lua_isinteger(L, index)) return false;
+#endif
+
+	*out = lua_tointeger(L, index);
+	return true;
+}
+
 bool test_u32(lua_State *L, int idx, uint32_t *out) {
-	lua_Integer arg = lua_tointeger(L, idx);
-	if pave_unlikely(!lua_isinteger(L, idx)) return false;
+	lua_Integer arg;
+	if pave_unlikely(!test_int(L, idx, &arg)) return false;
 	if pave_unlikely(arg < 0) return false;
 	if pave_unlikely(arg > (lua_Integer)UINT32_MAX) return false;
 	*out = (uint32_t)arg;
@@ -316,8 +327,8 @@ bool test_u32(lua_State *L, int idx, uint32_t *out) {
 }
 
 bool test_u32_one_index(lua_State *L, int idx, uint32_t end_inclusive, uint32_t *out) {
-	lua_Integer arg = lua_tointeger(L, idx);
-	if pave_unlikely(!lua_isinteger(L, idx)) return false;
+	lua_Integer arg;
+	if pave_unlikely(!test_int(L, idx, &arg)) return false;
 	if pave_unlikely(arg < 0) return false;
 	if pave_unlikely(arg > (lua_Integer)end_inclusive) return false;
 	*out = (uint32_t)arg;
@@ -333,8 +344,8 @@ bool test_u32_zero_index(lua_State *L, int idx, uint32_t end_exclusive, uint32_t
 }
 
 bool clamp_u32(lua_State *L, int idx, uint32_t *out) {
-	lua_Integer arg = lua_tointeger(L, idx);
-	if pave_unlikely(!lua_isinteger(L, idx))
+	lua_Integer arg;
+	if pave_unlikely(!test_int(L, idx, &arg))
 		return false;
 	if pave_unlikely(arg < 0)
 		*out = 0;
