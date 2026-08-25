@@ -120,21 +120,6 @@ static int query_string_count(lua_State *L) {
 	return 1;
 }
 
-// the capture table is just a map of @name -> Node
-static void add_capture_to_table(
-	lua_State *L,
-	int table_index,
-
-	char const *key,
-	size_t key_len,
-
-	int child_index,
-	TSNode value) {
-	lua_pushlstring(L, key, key_len);
-	node_push(L, child_index, value);
-	lua_rawset(L, table_index);
-}
-
 static void get_capture_from_table(
 	lua_State *L,
 	int table_index,
@@ -142,6 +127,21 @@ static void get_capture_from_table(
 	size_t key_len) {
 	lua_pushlstring(L, key, key_len);
 	lua_rawget(L, table_index);
+}
+
+static bool get_predicate(lua_State *L, int predicate_table_index, char const *name) {
+	if (predicate_table_index != 0) {
+		lua_getfield(L, predicate_table_index, name);
+		if (lua_isnil(L, -1))
+			lua_pop(L, 1);
+		else
+			return true;
+	}
+
+	push_default_predicate_table(L);
+	bool result = getfield_type(L, -1, name) != LUA_TNIL;
+	if (!result) lua_pop(L, 1);
+	return result;
 }
 
 // TODO: this function cannot handle upvalue indexes for query_idx, tree_idx, nor predicate_table_idx
@@ -248,6 +248,7 @@ static bool do_predicates(
 	for (int step = questions; step < end; ++step) {
 		int num_args = 0;
 		bool is_question = false; // if a predicate is a question then the query should only match if it results in a truthy value
+		bool should_invert = false; // if a predicate starts with `not-`, invert it
 		char const *func_name = NULL;
 		for (uint32_t j = 0; j < num_steps; ++j) {
 			switch (predicate_step[j].type) {
@@ -257,25 +258,18 @@ static bool do_predicates(
 				uint32_t len;
 				char const *pred_name = ts_query_string_value_for_id(q, predicate_step[j].value_id, &len);
 				if (!func_name) {
-					bool predicate_found = false;
-					if (predicates_provided) {
-						lua_getfield(L, predicate_table_idx, pred_name);
-						if (lua_isnil(L, -1))
-							lua_pop(L, 1);
-						else
-							predicate_found = true;
+					is_question = pred_name[len - 1] == '?';
+
+					bool predicate_found = get_predicate(L, predicates_provided ? predicate_table_idx : 0, pred_name);
+					if (is_question && len >= 4 && memcmp(pred_name, "not-", 4) == 0) {
+						pred_name += 4;
+						predicate_found = get_predicate(L, predicates_provided ? predicate_table_idx : 0, pred_name);
+						should_invert = true;
 					}
-					if (!predicate_found) {
-						push_default_predicate_table(L);
-						predicate_found = getfield_type(L, -1, pred_name) != LUA_TNIL;
-						lua_remove(L, -2);
-					}
+
 					if (!predicate_found)
 						luaL_error(L, "Query doesn't have predicate '%s'", pred_name);
 					func_name = pred_name;
-					if (func_name[len - 1] == '?') {
-						is_question = true;
-					}
 
 					if ((step == questions) != is_question) {
 						do j += 1;
@@ -283,6 +277,7 @@ static bool do_predicates(
 						num_args = 0;
 						func_name = NULL;
 						is_question = false;
+						should_invert = false;
 						continue;
 					}
 				} else {
@@ -307,7 +302,7 @@ static bool do_predicates(
 					lua_error(L);
 				}
 
-				if (is_question && !lua_toboolean(L, -1)) {
+				if (is_question && lua_toboolean(L, -1) == should_invert) {
 					result = false;
 					goto break_predicate_loop;
 				}
@@ -315,6 +310,7 @@ static bool do_predicates(
 				num_args = 0;
 				func_name = NULL;
 				is_question = false;
+				should_invert = false;
 				break;
 			}
 		}
@@ -344,7 +340,7 @@ static int query_iterator_next_match(lua_State *L) {
 	int const tree_index = lua_gettop(L);
 
 	lua_pushvalue(L, initial_query_idx);
-	int const query_idx = lua_gettop(L);
+	// int const query_idx = lua_gettop(L);
 
 	lua_pushvalue(L, lua_upvalueindex(3));
 	int const predicate_table_index = lua_gettop(L);
@@ -368,7 +364,7 @@ static int query_iterator_next_capture(lua_State *L) {
 	TSQueryMatch m;
 	uint32_t capture_index;
 	lua_pushvalue(L, initial_query_idx);
-	int const query_idx = lua_gettop(L);
+	// int const query_idx = lua_gettop(L);
 
 	lua_pushvalue(L, lua_upvalueindex(3));
 	int const predicate_table_idx = lua_gettop(L);
@@ -652,9 +648,7 @@ static bool predicate_arg_to_string(
 	return true;
 }
 
-static bool ensure_predicate_arg_string(
-	lua_State *L,
-	int index) {
+static bool ensure_predicate_arg_string(lua_State *L, int index) {
 	index = absindex(L, index);
 	MaybeOwnedString str;
 	if (!predicate_arg_to_string(L, index, &str))
@@ -700,32 +694,6 @@ static int eq_predicate(lua_State *L) {
 	return 1;
 }
 
-static int not_eq_predicate(lua_State *L) {
-	int const num_args = lua_gettop(L);
-	if pave_unlikely(num_args != 2) {
-		luaL_error(L, "predicate not-eq? expects exactly 2 arguments, got %d", num_args);
-	}
-	MaybeOwnedString a;
-	if (!predicate_arg_to_string(L, 1, &a)) {
-		lua_pushboolean(L, false);
-		mos_free(&a);
-		return 1;
-	}
-	MaybeOwnedString b;
-	if (!predicate_arg_to_string(L, 2, &b)) {
-		lua_pushboolean(L, false);
-		mos_free(&a);
-		mos_free(&b);
-		return 1;
-	}
-
-	lua_pushboolean(L, !mos_eq(a, b));
-	mos_free(&a);
-	mos_free(&b);
-	return 1;
-}
-
-
 static inline void open_stringlib(lua_State *L) {
 #if LUA_VERSION_NUM <= 501
 	lua_getglobal(L, "string");
@@ -757,18 +725,6 @@ static int match_predicate(lua_State *L) {
 	return 1;
 }
 
-static int not_match_predicate(lua_State *L) {
-	int const num_args = lua_gettop(L);
-	if pave_unlikely(num_args != 2) {
-		luaL_error(L, "predicate not-match? expects exactly 2 arguments, got %d", num_args);
-	}
-
-	match_predicate(L);
-	lua_pushboolean(L, !lua_toboolean(L, -1));
-
-	return 1;
-}
-
 static int find_predicate(lua_State *L) {
 	int const num_args = lua_gettop(L);
 	if pave_unlikely(num_args != 2) {
@@ -790,18 +746,6 @@ static int find_predicate(lua_State *L) {
 	pushinteger(L, 0);        // string.find, string, pattern, 0
 	lua_pushboolean(L, true); // string.find, string, pattern, 0, true
 	lua_call(L, 4, 1);
-
-	return 1;
-}
-
-static int not_find_predicate(lua_State *L) {
-	int const num_args = lua_gettop(L);
-	if pave_unlikely(num_args != 2) {
-		return luaL_error(L, "predicate not-find? expects exactly 2 arguments, got %d", num_args);
-	}
-
-	find_predicate(L);
-	lua_pushboolean(L, !lua_toboolean(L, -1));
 
 	return 1;
 }
@@ -988,13 +932,8 @@ static int query_disable_pattern(lua_State *L) {
 
 static const luaL_Reg default_query_predicates[] = {
 	{"eq?", eq_predicate},
-	{"not-eq?", not_eq_predicate},
-
 	{"match?", match_predicate},
-	{"not-match?", not_match_predicate},
-
 	{"find?", find_predicate},
-	{"not-find?", not_find_predicate},
 
 	{NULL, NULL}};
 
