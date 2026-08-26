@@ -108,6 +108,42 @@ describe("Query", function()
 			end
 			assert.are.equal(1, count)
 		end)
+		it("should give an array for +", function()
+			local tree = assert(p:parse_string[[
+				// hello
+				// world
+				// hello
+				// world
+				// hello
+				// world
+			]])
+			local count = 0
+			for match in l
+				:query("(comment)+ @a")
+				:match(tree:root())
+			do
+				count = count + 1
+				assert.is.table(match.captures.a)
+				assert.are.equal(6, match.capture_count)
+			end
+			assert.are.equal(1, count)
+		end)
+		it("should give an array or nil for *", function()
+			local tree = assert(p:parse_string[[
+				// hello
+				// world
+				// hello
+				// world
+				// hello
+				// world
+			]])
+			for match in l
+				:query("(comment)* @a")
+				:match(tree:root())
+			do
+				assert(type(match.captures.a) == "table" or not match.captures.a)
+			end
+		end)
 	end)
 	describe("capture", function()
 		it("should return a function", function()
@@ -137,7 +173,6 @@ describe("Query", function()
 				collectgarbage()
 				collectgarbage()
 			end
-
 		end)
 		it("should return the name of the capture", function()
 			local tree = assert(p:parse_string[[
