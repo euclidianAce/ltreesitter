@@ -131,6 +131,7 @@ doc-item {
 <a href="#Node.grammar_type">Node.grammar_type</a>
 <a href="#Node.has_changes">Node.has_changes</a>
 <a href="#Node.has_error">Node.has_error</a>
+<a href="#Node.id">Node.id</a>
 <a href="#Node.is_extra">Node.is_extra</a>
 <a href="#Node.is_missing">Node.is_missing</a>
 <a href="#Node.is_named">Node.is_named</a>
@@ -322,6 +323,7 @@ This is what should be used in <code>Parser:language_next_state()</code> instead
 <doc-item id="Node.grammar_type"><h2><a href="#Node.grammar_type">❖</a><code>Node.grammar_type: function(Node): string</code></h2><div>Returns the type of a given node as a string as it appears in the grammar ignoring aliases</div></doc-item>
 <doc-item id="Node.has_changes"><h2><a href="#Node.has_changes">❖</a><code>Node.has_changes: function(Node): boolean</code></h2><div>Returns true when the node has been changed by an edit</div></doc-item>
 <doc-item id="Node.has_error"><h2><a href="#Node.has_error">❖</a><code>Node.has_error: function(Node): boolean</code></h2><div>Returns true when the node is an error</div></doc-item>
+<doc-item id="Node.id"><h2><a href="#Node.id">❖</a><code>Node.id: function(Node): NodeId</code></h2><div>Returns the language used to parse the Node</div></doc-item>
 <doc-item id="Node.is_extra"><h2><a href="#Node.is_extra">❖</a><code>Node.is_extra: function(Node): boolean</code></h2><div>Get whether or not the current node is extra</div></doc-item>
 <doc-item id="Node.is_missing"><h2><a href="#Node.is_missing">❖</a><code>Node.is_missing: function(Node): boolean</code></h2><div>Get whether or not the current node is missing</div></doc-item>
 <doc-item id="Node.is_named"><h2><a href="#Node.is_named">❖</a><code>Node.is_named: function(Node): boolean</code></h2><div>Get whether or not the current node is named</div></doc-item>
@@ -361,10 +363,10 @@ If <code>Tree</code> is provided then it will be used to create a new updated tr
     encoding?: Encoding,
     old_tree?: Tree
 ): Tree</code></h2><div><p>
-<code>reader</code> should be a function that takes a byte index
-and a <code>Point</code> and returns the text at that point. The
-function should return either <code>nil</code> or an empty string
-to signal that there is no more text.
+<code>reader</code> should be a function that takes a zero-based byte
+offset and a <code>Point</code> and returns the text at that point. The
+function should return either <code>nil</code> or an empty string to
+signal that there is no more text.
 </p>
 
 <p>

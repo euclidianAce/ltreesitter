@@ -237,8 +237,8 @@ local function generate_record_defs(defs: {NamedRecordDef}, indent: integer)
          ti(output, ("   "):rep(indent))
          ti(output, "end\n")
       else
-         for t in split(rec_def, "&", true) do
-            t = trim(t)
+         for t_ in split(rec_def, "&", true) do
+            local t = trim(t_)
             ti(output, ("   "):rep(indent))
             ti(output, def.name)
             ti(output, ": ")
@@ -297,8 +297,8 @@ local function traverse_docs(t: DocDef, prefix?: string, entries?: {DocInfo}): {
          local pre <const> = '<doc-item id="' .. full_name .. '"><h2><a href="#' .. full_name .. '">❖</a>'
          local suf <const> = "</h2><div>" .. content .. "</div></doc-item>"
          local mid = {}
-         for chunk in split(typ, "&", true) do
-            chunk = trim(chunk)
+         for chunk_ in split(typ, "&", true) do
+            local chunk = trim(chunk_)
             chunk = chunk:gsub("\n([ \t]+)([^\n]*)$", "\n%2")
             ti(mid, "<code>" .. full_name .. ": " .. chunk .. "</code><br>")
          end

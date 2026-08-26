@@ -774,6 +774,19 @@ static int lang(lua_State *L) {
 	return 1;
 }
 
+// @teal-inline [[
+//    record NodeId is userdata
+//    end
+// ]]
+
+// @teal-export Node.id: function(Node): NodeId [[
+//     Returns the language used to parse the Node
+// ]]
+static int node_id(lua_State *L) {
+	lua_pushlightuserdata(L, (void *)node_assert(L, 1)->id);
+	return 1;
+}
+
 static const luaL_Reg node_methods[] = {
 	{"child", node_child},
 	{"child_by_field_id", node_child_by_field_id},
@@ -799,6 +812,7 @@ static const luaL_Reg node_methods[] = {
 	{"grammar_type", node_grammar_type},
 	{"has_changes", node_has_changes},
 	{"has_error", node_has_error},
+	{"id", node_id},
 	{"is_error", node_is_error},
 	{"is_extra", node_is_extra},
 	{"is_missing", node_is_missing},

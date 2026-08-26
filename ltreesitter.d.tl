@@ -69,6 +69,7 @@ local record ltreesitter
       grammar_type: function(Node): string
       has_changes: function(Node): boolean
       has_error: function(Node): boolean
+      id: function(Node): NodeId
       is_extra: function(Node): boolean
       is_missing: function(Node): boolean
       is_named: function(Node): boolean
@@ -265,6 +266,8 @@ local record ltreesitter
    interface Point
       row: integer
       column: integer
+   end
+   record NodeId is userdata
    end
    type StateId = integer
    type Symbol = integer
