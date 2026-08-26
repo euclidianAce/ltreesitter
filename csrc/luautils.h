@@ -98,10 +98,6 @@ void set_registry_field(lua_State *L, char const *f);
 void newtable_with_mode(lua_State *L, bool weak_keys, bool weak_values);
 size_t length_of(lua_State *L, int index);
 
-bool push_ref_from_registry(lua_State *, int ref);
-int ref_into_registry(lua_State *, int object_to_ref);
-void unref_from_registry(lua_State *, int ref);
-
 // ( [idx]=any -- )
 void *testudata(lua_State *, int idx, char const *);
 
