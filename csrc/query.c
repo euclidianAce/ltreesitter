@@ -175,9 +175,9 @@ static bool do_predicates(
 		case TSQuantifierZero:
 		case TSQuantifierZeroOrOne:
 		case TSQuantifierOne: {
-			lua_pushlstring(L, name, name_len);
-			node_push(L, tree_idx, capture.node);
-			lua_rawset(L, capture_table_index);
+			lua_pushlstring(L, name, name_len); // ..., @name
+			node_push(L, tree_idx, capture.node); // ..., @name, Node
+			lua_rawset(L, capture_table_index); // ...
 			break;
 		}
 
@@ -332,19 +332,22 @@ break_predicate_loop:
 
 static int query_iterator_next_match(lua_State *L) {
 	// upvalues: Query, Node, Predicate Map, Cursor
-	int const initial_query_idx = lua_upvalueindex(1);
-	TSQuery *const q = *query_assert(L, initial_query_idx);
-	TSQueryCursor *c = *query_cursor_assert(L, lua_upvalueindex(4));
-	TSQueryMatch m;
-	node_push_tree(L, lua_upvalueindex(2));
+	enum {
+		upvalue_query = 1,
+		upvalue_node,
+		upvalue_predicate_map,
+		upvalue_cursor,
+	};
+
+	TSQuery *const q = *query_assert(L, lua_upvalueindex(upvalue_query));
+	TSQueryCursor *c = *query_cursor_assert(L, lua_upvalueindex(upvalue_cursor));
+	node_push_tree(L, lua_upvalueindex(upvalue_node)); // tree
 	int const tree_index = lua_gettop(L);
 
-	lua_pushvalue(L, initial_query_idx);
-	// int const query_idx = lua_gettop(L);
-
-	lua_pushvalue(L, lua_upvalueindex(3));
+	lua_pushvalue(L, lua_upvalueindex(upvalue_predicate_map)); // tree, predicate map
 	int const predicate_table_index = lua_gettop(L);
 
+	TSQueryMatch m;
 	do {
 		if (!ts_query_cursor_next_match(c, &m))
 			return 0;
@@ -356,19 +359,22 @@ static int query_iterator_next_match(lua_State *L) {
 
 static int query_iterator_next_capture(lua_State *L) {
 	// upvalues: Query, Node, Predicate Map, Cursor
-	int const initial_query_idx = lua_upvalueindex(1);
-	TSQuery *const q = *query_assert(L, initial_query_idx);
-	TSQueryCursor *c = *query_cursor_assert(L, lua_upvalueindex(4));
-	node_push_tree(L, lua_upvalueindex(2));
-	int const tree_index = lua_gettop(L);
-	TSQueryMatch m;
-	uint32_t capture_index;
-	lua_pushvalue(L, initial_query_idx);
-	// int const query_idx = lua_gettop(L);
+	enum {
+		upvalue_query = 1,
+		upvalue_node,
+		upvalue_predicate_map,
+		upvalue_cursor,
+	};
 
-	lua_pushvalue(L, lua_upvalueindex(3));
+	TSQuery *const q = *query_assert(L, lua_upvalueindex(upvalue_query));
+	TSQueryCursor *c = *query_cursor_assert(L, lua_upvalueindex(upvalue_cursor));
+	node_push_tree(L, lua_upvalueindex(upvalue_node));
+	int const tree_index = lua_gettop(L);
+	lua_pushvalue(L, lua_upvalueindex(upvalue_predicate_map));
 	int const predicate_table_idx = lua_gettop(L);
 
+	TSQueryMatch m;
+	uint32_t capture_index;
 	do {
 		if (!ts_query_cursor_next_capture(c, &m, &capture_index))
 			return 0;
