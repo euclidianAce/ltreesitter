@@ -42,7 +42,7 @@ local c_language = ltreesitter.require("c")
 local c_parser = c_language:parser()
 ```
 
-You have a `parser.so` (or `.dll` or `.dynlib`) with the symbol `tree_sitter_lua` to load the language
+You have a `parser.so` (or `.dll` or `.dylib`) with the symbol `tree_sitter_lua` to load the language
 ```lua
 local lua_language = ltreesitter.require("parser", "lua")
 ```
